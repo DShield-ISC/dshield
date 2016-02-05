@@ -46,8 +46,8 @@ fi
 
 echo "Updating your Raspbian Installation"
 
-apt-get update > /dev/null
-apt-get upgrade > /dev/null
-apt-get install dialog > /dev/null
+sudo apt-get update > /dev/null
+sudo apt-get upgrade > /dev/null
+sudo apt-get install dialog > /dev/null
 
 
