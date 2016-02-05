@@ -27,7 +27,7 @@ fi
 # creating a temporary directory
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
-
+trap "rm -rf $TMPDIR" 0 1 2 5 15
 
 echo "Basic security checks"
 
@@ -44,10 +44,38 @@ if [ "$shadowhash" == "$testhash" ]; then
   exit
 fi
 
-echo "Updating your Raspbian Installation"
+echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 
 sudo apt-get update > /dev/null
 sudo apt-get upgrade > /dev/null
+
+echo "Installing additional packages"
+
 sudo apt-get install dialog > /dev/null
+
+: ${DIALOG_OK=0}
+: ${DIALOG_CANCEL=1}
+: ${DIALOG_HELP=2}
+: ${DIALOG_EXTRA=3}
+: ${DIALOG_ITEM_HELP=4}
+: ${DIALOG_ESC=255}
+
+export NCURSES_NO_UTF8_ACS=1
+dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
+return_value=$?
+return=`cat $TMPDIR/dialog`
+case $return_value in 
+    $DIALOG_OK)
+       echo pressed $return and ok
+    $DIALOG_CANCEL)
+       echo cancel
+       exit
+    $DIALOG_ESC)
+       echo escape
+       exit
+    ;;
+esac
+
+
 
 
