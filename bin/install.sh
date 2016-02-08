@@ -8,6 +8,13 @@
 
 echo "Checking Pre-Requisits"
 
+uid=`id -u`
+if [ ! "$uid" = "0" ]; then
+   echo "you have to run this script as root. eg."
+   echo "  sudo install.sh"
+   exit
+fi
+
 if [ ! -f /etc/os-release ] ; then
   echo "I can not fine the /etc/os-release file. You are likely not running a supported operating systems"
   echo "please email info@dshield.org for help."
@@ -33,7 +40,7 @@ echo "Basic security checks"
 
 # making sure default password was changed
 
-hashline=`sudo grep '^pi:' /etc/shadow`
+hashline=`grep '^pi:' /etc/shadow`
 salt=`echo $x | cut -d '$' -f2-3`
 shadowhash=`echo $hashline | cut -f2 -d':' | md5sum | cut -f1 -d' '`
 perl -e "print crypt('raspberry','\$$salt\$')" | md5sum | cut -f1 -d ' '> $TMPDIR/passcheck
@@ -45,12 +52,12 @@ if [ $shadowhash =  $testhash ]; then
 fi
 echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 
-# sudo apt-get update > /dev/null
-# sudo apt-get upgrade > /dev/null
+# apt-get update > /dev/null
+# apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
 
-sudo apt-get install dialog > /dev/null
+apt-get install dialog > /dev/null
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
@@ -61,11 +68,16 @@ sudo apt-get install dialog > /dev/null
 
 export NCURSES_NO_UTF8_ACS=1
 
+
+
+if [ -f /etc/dshield.ini ] ; then
+    echo reading old configuration
+    . /etc/dshield.ini
+fi
+
 dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
 return_value=$?
 return=`cat $TMPDIR/dialog`
-user=''
-apikey=''
 echo return $return $return_value
 if [ $return_value -eq  $DIALOG_OK ]; then
     if [ $return = "1" ] ; then
@@ -73,7 +85,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	while [ "$apikeyok" = 0 ] ; do
        exec 3>&1
        VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information" 10 60 0 \
-		       "E-Mail Address:" 1 2 "$user"   1 17 35 100 \
+		       "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
        exec 3>&-
@@ -91,9 +103,35 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	done
    fi
 fi
+dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next.' 5 40
+if [ "$interface" = "" ] ; then
+interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo`
+fi
+exec 3>&1
+interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
+		   "Honeypot Interface:" 1 2 "$interface" 1 20 10 10 2>&1 1>&3)
+exec 3>&-
+echo "Interface: $interface"
+ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
+localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
+bash -c 'iptables-save > /etc/network/iptables'
+if ! grep -q iptables-restore /etc/network/interfaces ; then
+    echo "add iptables support"
+    echo 'pre-up iptables-restore < /etc/network/iptables' >> /etc/network/interfaces
+fi
+cat > /etc/network/iptables <<EOF
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -i lo -j ACCEPT
+-A INPUT -i $interface -s $localnet -j ACCEPT
+-A INPUT -i $interface -p tcp -m tcp --dport 22 -j ACCEPT
+-A INPUT -i $interface -p tcp -m tcp --dport 12222 -j ACCEPT
+-A INPUT -i $interface -j LOG --log-prefix " INPUT "
+*nat
+-A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+COMMIT
+EOF
 
-cls
-echo "api key verified"
-
-
-
+sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
