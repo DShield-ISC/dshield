@@ -34,7 +34,7 @@ fi
 # creating a temporary directory
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
-# trap "rm -r $TMPDIR" 0 1 2 5 15
+trap "rm -r $TMPDIR" 0 1 2 5 15
 
 echo "Basic security checks"
 
@@ -103,17 +103,21 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	done
    fi
 fi
-dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next.' 5 40
+dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next.' 7 40
 if [ "$interface" = "" ] ; then
 interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo`
 fi
 exec 3>&1
 interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
-		   "Honeypot Interface:" 1 2 "$interface" 1 20 10 10 2>&1 1>&3)
+		   "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
 exec 3>&-
 echo "Interface: $interface"
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
+exec 3>&1
+localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
+		   "Trusted Admin Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
+exec 3>&-
 bash -c 'iptables-save > /etc/network/iptables'
 if ! grep -q iptables-restore /etc/network/interfaces ; then
     echo "add iptables support"
