@@ -139,3 +139,18 @@ COMMIT
 EOF
 
 sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
+
+sed "s/%%interface%%/$interface/" < ../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
+sed "s/%%dshieldparser%%/$parser/" < ../etc/logrotate.d/dshield > /etc/logrotate.d/dshield
+dialog --title 'Claiming Unused Disk Space' --msgbox 'I am now attempting to claim unused disk space if your SD Card is > 4GB.' 7 40
+fdisk -l /dev/$disk
+fdisk /dev/$disk  <<EOF
+n
+p
+
+
+
+w
+q
+EOF
+partprobe

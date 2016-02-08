@@ -9,6 +9,9 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 - expose the Pi to inbound traffic. For example, in many firewalls
   you will be able to configure it as a "DMZ Hosts"
 
+git clone https://github.com/DShield-ISC/dshield.git
+sudo dshield/bin/install.sh
+
   This script will:
 
 - enable firewall logging and submitting of logs to DShield
