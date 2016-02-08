@@ -96,8 +96,10 @@ if [ $return_value -eq  $DIALOG_OK ]; then
        user=`echo $user | sed 's/@/%40/'`
        echo $user;
        echo https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash
-       if curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep -q '<result>ok</result>' ; then
+       curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
+       if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
 	   apikeyok=1;
+	   $uid=`grep  '<id>.*<\/id>' /tmp/x | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/`
        fi	   
 
 	done
@@ -147,15 +149,14 @@ disk=`ls -l /dev | grep '^brw-rw---- 1 root disk  179,' | awk '{print $10}' | he
 disksize=`sfdisk -s /dev/$disk`
 bootpart=${disk}p1
 rootpart=${disk}p2
-bootsize=`sfdisk -s /dev/bootpart`
-rootsize=`sfdisk -s /dev/rootpart`
-if [ $diff -gt 10000 ]; then
+bootsize=`sfdisk -s /dev/$bootpart`
+rootsize=`sfdisk -s /dev/$rootpart`
+diff=$((disksize-bootsize-rootsize))
+if [ "$diff" -gt "10000" ]; then
  dialog --title 'Claiming Unused Disk Space' --yesno 'Your SD Card has significant unused disk space. Should I extend the root partition?' 7 40 
  response=$?
  if [ $response -eq 0 ] ; then
-     newsize=$((disksize-bootsize))
-     resizepart /dev/$disk 2 $newisze
-     resize2fs /dev/mmcblk0p2
+
      dialog --title 'Partition Expanded' --msgbox 'Root Expansion Complete' 7 40
  fi      
 fi
