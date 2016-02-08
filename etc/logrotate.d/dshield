@@ -1,7 +1,0 @@
-/var/log/dshield.log {
-		     hourly
-		     missingok
-		     rotate 100
-		     compress
-		     postrotate %%dshieldparser%%
-}
