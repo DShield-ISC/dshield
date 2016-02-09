@@ -7,7 +7,10 @@
 ####
 
 echo "Checking Pre-Requisits"
-
+progname=$0;
+progdir=`dirname $0`;
+progdir=$PWD/$progdir;
+cd $progdir
 uid=`id -u`
 if [ ! "$uid" = "0" ]; then
    echo "you have to run this script as root. eg."
@@ -34,7 +37,7 @@ fi
 # creating a temporary directory
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
-trap "rm -r $TMPDIR" 0 1 2 5 15
+# trap "rm -r $TMPDIR" 0 1 2 5 15
 
 echo "Basic security checks"
 
@@ -58,6 +61,7 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 echo "Installing additional packages"
 
 apt-get install dialog > /dev/null
+apt-get install libswitch-perl > /dev/null
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
@@ -70,42 +74,42 @@ export NCURSES_NO_UTF8_ACS=1
 
 
 
-if [ -f /etc/dshield.ini ] ; then
+if [ -f /etc/dshield.conf ] ; then
     echo reading old configuration
-    . /etc/dshield.ini
+    . /etc/dshield.conf
 fi
 
 dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
 return_value=$?
 return=`cat $TMPDIR/dialog`
-echo return $return $return_value
+
 if [ $return_value -eq  $DIALOG_OK ]; then
     if [ $return = "1" ] ; then
 	apikeyok=0
 	while [ "$apikeyok" = 0 ] ; do
-       exec 3>&1
-       VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information" 10 60 0 \
+	    exec 3>&1
+	    VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information" 10 60 0 \
 		       "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
-       exec 3>&-
-       user=`echo $VALUES | cut -f1 -d' '`
-       apikey=`echo $VALUES | cut -f2 -d' '`
-       nonce=`openssl rand -hex 10`
-       hash=`echo -n $user:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-       user=`echo $user | sed 's/@/%40/'`
-       echo $user;
-       echo https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash
-       curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
-       if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
-	   apikeyok=1;
-	   $uid=`grep  '<id>.*<\/id>' /tmp/x | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/`
-       fi	   
+	    exec 3>&-
+	    email=`echo $VALUES | cut -f1 -d' '`
+	    apikey=`echo $VALUES | cut -f2 -d' '`
+	    nonce=`openssl rand -hex 10`
+	    hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
 
+	    user=`echo $email | sed 's/@/%40/'`
+	    curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
+	    if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
+		apikeyok=1;
+		uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
+	    fi	   
 	done
-   fi
+
+    fi
 fi
-dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next.' 7 40
+echo $uid
+dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next. ' 7 40
 if [ "$interface" = "" ] ; then
 interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo`
 fi
@@ -126,6 +130,7 @@ if ! grep -q iptables-restore /etc/network/interfaces ; then
     echo 'pre-up iptables-restore < /etc/network/iptables' >> /etc/network/interfaces
 fi
 cat > /etc/network/iptables <<EOF
+
 *filter
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
@@ -135,16 +140,28 @@ cat > /etc/network/iptables <<EOF
 -A INPUT -i $interface -p tcp -m tcp --dport 22 -j ACCEPT
 -A INPUT -i $interface -p tcp -m tcp --dport 12222 -j ACCEPT
 -A INPUT -i $interface -j LOG --log-prefix " INPUT "
+COMMIT
 *nat
--A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 COMMIT
 EOF
 
 sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
-sed "s/%%interface%%/$interface/" < ../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
+sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
 
 
 
+#
+# Update Configuration
+#
 
-
+echo "uid=$uid" > /etc/dshield.conf
+echo "apikey=$apikey" >> /etc/dshield.conf
+echo "email=$email" >> /etc/dshield.conf
+echo "interface=$interface" >> /etc/dshield.conf
+echo "localnet=$localnet" >> /etc/dshield.conf
