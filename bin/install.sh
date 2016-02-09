@@ -143,22 +143,8 @@ EOF
 sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
 sed "s/%%interface%%/$interface/" < ../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
-sed "s/%%dshieldparser%%/$parser/" < ../etc/logrotate.d/dshield > /etc/logrotate.d/dshield
 
-disk=`ls -l /dev | grep '^brw-rw---- 1 root disk  179,' | awk '{print $10}' | head -1`
-disksize=`sfdisk -s /dev/$disk`
-bootpart=${disk}p1
-rootpart=${disk}p2
-bootsize=`sfdisk -s /dev/$bootpart`
-rootsize=`sfdisk -s /dev/$rootpart`
-diff=$((disksize-bootsize-rootsize))
-if [ "$diff" -gt "10000" ]; then
- dialog --title 'Claiming Unused Disk Space' --yesno 'Your SD Card has significant unused disk space. Should I extend the root partition?' 7 40 
- response=$?
- if [ $response -eq 0 ] ; then
 
-     dialog --title 'Partition Expanded' --msgbox 'Root Expansion Complete' 7 40
- fi      
-fi
+
 
 
