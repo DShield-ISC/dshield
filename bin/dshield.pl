@@ -16,28 +16,44 @@ open(F,'/var/log/dshield.log');
 
 while (<F>) {
     $line=$_;
+    $valid=1;
+    $flags='';
     switch ($line) {
 	case /^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=TCP SPT=([0-9]+) DPT=([0-9]+)/  {
+	    $line=~/^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=TCP SPT=([0-9]+) DPT=([0-9]+)/;
 	    $time=$1;
 	    $src=$2;
 	    $dst=$3;
 	    $proto=6;
 	    $spt=$4;
 	    $dpt=$5;
-	    if ( $line=~ / ACK / ) {
-		$flags='A';
+	    if ( $line=~ / FIN / ) {
+		$flags.='F';
 	    }
 	    if ( $line=~ / SYN / ) {
 		$flags.='S';
 	    }
-	    if ( $line=~ / RES/ && ! $line=~/ RES=0x00/ ) {
+	    if ( $line=~ / RST / ) {
 		$flags.='R';
 	    }
-	    if ( $line=~ / RES=0x00 / ) {
-		$flags.='R';
+	    if ( $line=~ / PSH / ) {
+		$flags.='P';
+	    }
+	    if ( $line=~ / ACK / ) {
+		$flags.='A';
+	    }
+	    if ( $line=~ / URG / ) {
+		$flags.='U';
+	    }
+	    if ( $line=~ / ECE / ) {
+		$flags.='1';
+	    }
+	    if ( $line=~ / CWR / ) {
+		$flags.='2';
 	    }
 	}
 	case /^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=UDP SPT=([0-9]+) DPT=([0-9]+)/  {
+	    $line=~/^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=UDP SPT=([0-9]+) DPT=([0-9]+)/;
 	    $time=$1;
 	    $src=$2;
 	    $dst=$3;
@@ -45,13 +61,24 @@ while (<F>) {
 	    $spt=$4;
 	    $dpt=$5;
 	}
-	else {
-	    print "ERROR $line\n";
-	    
+	case /^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=(\d+) /  {
+	    $line=~/^([0-9]+) .* SRC=([0-9\.]+) DST=([0-9\.]+) .* PROTO=(\d+) /;
+	    $time=$1;
+	    $src=$2;
+	    $dst=$3;
+	    $proto=$4;
+	    $spt=0;
+	    $dpt=0;
 	}
-    }
-    print "$time $src $dst $proto $spt $dpt\n";
+	else {
+	    $valid=0;
+	    print "ERROR $line\n";
+	}
 
+    }
+    if ( $valid==1 ) {
+    	print "$time\t$src\t$dst\t$spt\t$dpt\t$proto\t$flags\n";
+    }
 }
 
 
