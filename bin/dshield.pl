@@ -1,19 +1,27 @@
 #!/usr/bin/perl
 
+use strict;
 use Switch;
+use File::Temp qw/ tempfile tempdir /;
+use LWP::UserAgent;
+use Digest::SHA;
+use Digest::MD5;
+use MIME::Base64 qw( encode_base64 decode_base64);
 
 #rename('/var/log/dshield.log','/var/log/dshield.log.old');
 # `/etc/init.d/rsyslog restart`
 open(F,'/var/log/dshield.log');
+my ($line,$valid,$flags,$time,$src,$dst,$proto,$spt,$dpt,$linecnt,$log,$apikey,$userid,$email);
+readconfig();
 
-##
-#  TCP
-# 1455032630 raspberrypi kernel:[ 1159.158107] INPUT IN=eth0 OUT= MAC=b8:27:eb:99:8b:40:00:50:b6:7e:14:50:08:00:45:10:00:34:01:62:40:00:40:06:22:50 SRC=10.5.1.17 DST=10.5.1.232 LEN=52 TOS=0x10 PREC=0x00 TTL=64 ID=354 DF PROTO=TCP SPT=57982 DPT=12222 WINDOW=4094 RES=0x00 ACK URGP=0
-#  UDP
-#                                              INPUT IN=eth0 OUT= MAC=ff:ff:ff:ff:ff:ff:68:a8:6d:0b:7f:80:08:00:45:00:01:48:c5:5c:00:00:ff:11:f5:48 SRC=0.0.0.0 DST=255.255.255.255 LEN=328 TOS=0x00 PREC=0x00 TTL=255 ID=50524 PROTO=UDP SPT=68 DPT=67 LEN=308
-#
-##
+if ( ($apikey eq "") or ($userid eq "") or ($email eq "" )) {
+    die("Incomplete configuration\n");
+}
+my ($tempfh,$tempfname)=tempfile('dshieldrepXXXXXX',DIR=>'/tmp');
 
+
+
+my $tz=`date +%z`;
 while (<F>) {
     $line=$_;
     $valid=1;
@@ -77,8 +85,75 @@ while (<F>) {
 
     }
     if ( $valid==1 ) {
-    	print "$time\t$src\t$dst\t$spt\t$dpt\t$proto\t$flags\n";
+	my @time=localtime($time);
+	$time[5]+=1900;
+	$time[4]++;
+	
+	$linecnt++;
+	$time=sprintf('%04d-%02d-%02d %02d:%02d:%02d',$time[5],$time[4],$time[3],$time[2],$time[1],$time[0]);
+    	$log.="$time $tz\t$src\t$dst\t$spt\t$dpt\t$proto\t$flags\n";
     }
 }
+submit();
 
+sub submit() {
+    my $ua=LWP::UserAgent->new;
+    my $nonce=Digest::SHA::hmac_sha256(rand(),$$);
+    my $nonce=int(rand(9999999));
+    my $hash=Digest::SHA::hmac_sha256_base64(decode_base64($apikey),$nonce.$userid);
+    my $header= "credentials=$hash nonce=$nonce userid=$userid";
+    $ua->timeout(10);
+    $ua->ssl_opts(verify_hostname=>1);
+    $ua->ssl_opts(SSL_ca_path=>'/etc/ssl/certs');
+    print "Submitting Log\nLines: $linecnt Bytes: ".length($log)."\n";
+    my $req=new HTTP::Request('PUT','https://secure.dshield.org/api/file/dshieldlog');
+    $req->header('X-ISC-Authorization',$header);
+    $req->header('Content-Type','text/plain');
+    $req->header('Content-Length',length($log));
+    $req->content($log);
+    print "Sending Request\n";
+    my $result=$ua->request($req);
+    print "Done\n";
+    if ($result->is_success) {
+	my $return=$result->decoded_content;
+	$return=~/<bytes>(\d+)<\/bytes>/;
+	my $receivedbytes=$1;
+	if ( $receivedbytes !=length($log) ) {
+	    print "\nERROR: Size Mismatch\n";
+	} else {
+	    print "Size OK ";
+	}
+	$return=~/<sha1checksum>([^<]+)<\/sha1checksum>/;
+	my $receivedsha1=$1;
+	if ( $receivedsha1 ne Digest::SHA::sha1_hex($log) ) {
+	    print "\nERROR: SHA1 Mismatch $receivedsha1 ".Digest::SHA::sha1_hex($log)."\n";
+	} else {
+	    print "SHA1 OK ";
+	}
+	$return=~/<md5checksum>([^<]+)<\/md5checksum>/;
+	my $receivedmd5=$1;
+	if ( $receivedmd5 ne Digest::MD5::md5_hex($log) ) {
+	    print "\nERROR: MD5 Mismatch $receivedmd5 ".Digest::MD5::md5_hex($log)."\n";
+	} else {
+	    print "MD5 OK\n";
+	}
+    }
+    else {
+	die $result->status_line;
+    }
+    print "---\n";
+}
 
+sub readconfig() {
+    my ($key,$value);
+    open(C,'/etc/dshield.conf');
+    while ( <C> ) {
+	($key,$value)=split(/=/,$_,2);
+	chomp($value);
+	switch($key) {
+	    case 'uid' { $userid=$value;}
+	    case 'email' {$email=$value;}
+	case 'apikey' {$apikey=$value;}
+	}
+    }
+}

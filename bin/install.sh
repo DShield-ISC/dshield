@@ -62,6 +62,7 @@ echo "Installing additional packages"
 
 apt-get install dialog > /dev/null
 apt-get install libswitch-perl > /dev/null
+apt-get install libwww-perl > /dev/null
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
@@ -136,6 +137,7 @@ cat > /etc/network/iptables <<EOF
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
 -A INPUT -i lo -j ACCEPT
+-A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A INPUT -i $interface -s $localnet -j ACCEPT
 -A INPUT -i $interface -p tcp -m tcp --dport 22 -j ACCEPT
 -A INPUT -i $interface -p tcp -m tcp --dport 12222 -j ACCEPT
