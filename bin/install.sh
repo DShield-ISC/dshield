@@ -60,9 +60,8 @@ apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
 
-apt-get install dialog > /dev/null
-apt-get install libswitch-perl > /dev/null
-apt-get install libwww-perl > /dev/null
+apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 > /dev/null
+pip install python-dateutil > /dev/null
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
@@ -80,9 +79,12 @@ if [ -f /etc/dshield.conf ] ; then
     . /etc/dshield.conf
 fi
 
-dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
-return_value=$?
-return=`cat $TMPDIR/dialog`
+# dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
+# return_value=$?
+# return=`cat $TMPDIR/dialog`
+
+return_value=$DIALOG_OK
+return=1
 
 if [ $return_value -eq  $DIALOG_OK ]; then
     if [ $return = "1" ] ; then
@@ -175,3 +177,61 @@ echo "apikey=$apikey" >> /etc/dshield.conf
 echo "email=$email" >> /etc/dshield.conf
 echo "interface=$interface" >> /etc/dshield.conf
 echo "localnet=$localnet" >> /etc/dshield.conf
+
+#
+# installing cowrie
+#
+
+wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
+unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip 
+if [ -d /srv/cowrie ]; then
+    rm -rf /srv/cowrie
+fi
+mv $TMPDIR/cowrie-master /srv/cowrie
+
+if ! grep '^cowrie:' -q /etc/passwd; then
+sudo adduser --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie <<EOF
+Cowrie Honeypot
+none
+none
+none
+none
+Y
+EOF
+echo Added user 'cowrie'
+else
+echo User 'cowrie' already exists. Making no changes
+fi    
+
+
+cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
+cat >> /srv/cowrie/cowrie.cfg <<EOF
+[output_dshield]
+userid = $uid
+auth_key = $apikey
+batch_size = 10
+EOF
+
+sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg
+sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg
+
+# make output of simple text commands more real
+
+df > /srv/cowrie/txtcmds/bin/df
+dmesg > /srv/cowrie/txtcmds/bin/dmesg
+mount > /srv/cowrie/txtcmds/bin/mount
+ulimit > /srv/cowrie/txtcmds/bin/ulimit
+lscpu > /srv/cowrie/txtcmds/usr/bin/lscpu
+echo '-bash: emacs: command not found' > /srv/cowrie/txtcmds/usr/bin/emacs
+echo '-bash: locate: command not found' > /srv/cowrie/txtcmds/usr/bin/locate
+chown -R cowrie:cowrie /srv/cowrie
+
+cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
+cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
+cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
+
+
+echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
+echo
+echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
+echo "           connect using ssh -p 12222 $USER@$ipaddr"
