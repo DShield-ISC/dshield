@@ -37,7 +37,7 @@ fi
 # creating a temporary directory
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
-# trap "rm -r $TMPDIR" 0 1 2 5 15
+trap "rm -r $TMPDIR" 0 1 2 5 15
 
 echo "Basic security checks"
 
@@ -55,8 +55,8 @@ if [ $shadowhash =  $testhash ]; then
 fi
 echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 
-# apt-get update > /dev/null
-# apt-get upgrade > /dev/null
+apt-get update > /dev/null
+apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
 
