@@ -60,7 +60,8 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 
 echo "Installing additional packages"
 
-apt-get install -y dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface > /dev/null
+apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 > /dev/null
+pip install python-dateutil > /dev/null
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
@@ -78,9 +79,12 @@ if [ -f /etc/dshield.conf ] ; then
     . /etc/dshield.conf
 fi
 
-dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
-return_value=$?
-return=`cat $TMPDIR/dialog`
+# dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
+# return_value=$?
+# return=`cat $TMPDIR/dialog`
+
+return_value=$DIALOG_OK
+return=1
 
 if [ $return_value -eq  $DIALOG_OK ]; then
     if [ $return = "1" ] ; then
@@ -178,8 +182,11 @@ echo "localnet=$localnet" >> /etc/dshield.conf
 # installing cowrie
 #
 
-wget -O $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
-unzip -d $TMPDIR $TMPDIR/cowrie.zip
+wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
+unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip 
+if [ -d /srv/cowrie ]; then
+    rm -rf /srv/cowrie
+fi
 mv $TMPDIR/cowrie-master /srv/cowrie
 
 if ! grep '^cowrie:' -q /etc/passwd; then
@@ -200,7 +207,7 @@ fi
 cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
 cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
-userid = $userid
+userid = $uid
 auth_key = $apikey
 batch_size = 10
 EOF
@@ -217,14 +224,14 @@ ulimit > /srv/cowrie/txtcmds/bin/ulimit
 lscpu > /srv/cowrie/txtcmds/usr/bin/lscpu
 echo '-bash: emacs: command not found' > /srv/cowrie/txtcmds/usr/bin/emacs
 echo '-bash: locate: command not found' > /srv/cowrie/txtcmds/usr/bin/locate
-
-
-
-
 chown -R cowrie:cowrie /srv/cowrie
+
+cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
+cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
+cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
 
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
-echo "           connect using ssh -p 12222 pi@[ip address]"
+echo "           connect using ssh -p 12222 $USER@$ipaddr"
