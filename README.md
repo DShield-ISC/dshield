@@ -15,6 +15,7 @@ sudo dshield/bin/install.sh
   This script will:
 
 - enable firewall logging and submitting of logs to DShield
-- install the ssh honeypot cowrie
-- configure a default web server and submit logs to DShield
+- change your ssh server to listen on port 12222
+- install the ssh honeypot cowrie (TODO)
+- configure a default web server and submit logs to DShield (TODO)
 

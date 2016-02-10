@@ -133,14 +133,12 @@ fi
 cat > /etc/network/iptables <<EOF
 
 *filter
-:INPUT DROP [0:0]
+:INPUT ACCEPT [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A INPUT -i $interface -s $localnet -j ACCEPT
--A INPUT -i $interface -p tcp -m tcp --dport 22 -j ACCEPT
--A INPUT -i $interface -p tcp -m tcp --dport 12222 -j ACCEPT
 -A INPUT -i $interface -j LOG --log-prefix " INPUT "
 COMMIT
 *nat
