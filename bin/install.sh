@@ -156,6 +156,14 @@ sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
 sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
 
+#
+# random offset for cron job so not everybody is reporting at once
+#
+
+my $offset=int(rand(30));
+open(CRON,"> /etc/cron.d/dshield");
+print CRON $offset.",".$offset+30." * * * * $progdir/dshield.pl\n"
+close(CRON);
 
 
 #

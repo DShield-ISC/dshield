@@ -22,6 +22,7 @@ my ($tempfh,$tempfname)=tempfile('dshieldrepXXXXXX',DIR=>'/tmp');
 
 
 my $tz=`date +%z`;
+chomp($tz);
 while (<F>) {
     $line=$_;
     $valid=1;
@@ -98,16 +99,21 @@ submit();
 
 sub submit() {
     my $ua=LWP::UserAgent->new;
-    my $nonce=Digest::SHA::hmac_sha256(rand(),$$);
-    my $nonce=int(rand(9999999));
+    my $nonce=Digest::SHA::hmac_sha256(rand(99999999),$$);
     my $hash=Digest::SHA::hmac_sha256_base64(decode_base64($apikey),$nonce.$userid);
+    $nonce=encode_base64($nonce);
     my $header= "credentials=$hash nonce=$nonce userid=$userid";
     $ua->timeout(10);
     $ua->ssl_opts(verify_hostname=>1);
     $ua->ssl_opts(SSL_ca_path=>'/etc/ssl/certs');
+    $log="From: $email
+Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI Version 0.1
+
+".$log;
     print "Submitting Log\nLines: $linecnt Bytes: ".length($log)."\n";
     my $req=new HTTP::Request('PUT','https://secure.dshield.org/api/file/dshieldlog');
     $req->header('X-ISC-Authorization',$header);
+    print $header."\n";
     $req->header('Content-Type','text/plain');
     $req->header('Content-Length',length($log));
     $req->content($log);
@@ -116,6 +122,7 @@ sub submit() {
     print "Done\n";
     if ($result->is_success) {
 	my $return=$result->decoded_content;
+	print $return."\n";
 	$return=~/<bytes>(\d+)<\/bytes>/;
 	my $receivedbytes=$1;
 	if ( $receivedbytes !=length($log) ) {
