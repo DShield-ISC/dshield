@@ -60,7 +60,18 @@ apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
 
-apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 > /dev/null
+
+apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client> /dev/null
+mysqlpassword=`head -c10 /dev/random | xxd -p`
+sudo debconf-set-selections "mysql-server mysql-server/root_password password $mysqlpassword"
+sudo debconf-set-selections "mysql-server mysql-server/root_password_again password $mysqlpassword"
+sudo apt-get -y install mysql-server
+cat >> ~/.my.cnf <<EOF
+[mysql]
+user=root
+password=$mysqlpassword
+EOF
+
 pip install python-dateutil > /dev/null
 
 : ${DIALOG_OK=0}
@@ -177,6 +188,8 @@ echo "apikey=$apikey" >> /etc/dshield.conf
 echo "email=$email" >> /etc/dshield.conf
 echo "interface=$interface" >> /etc/dshield.conf
 echo "localnet=$localnet" >> /etc/dshield.conf
+echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
+echo "mysqluser=root" >> /etc/dshield.conf
 
 #
 # installing cowrie
@@ -232,6 +245,7 @@ cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
 
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
+echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
 echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
