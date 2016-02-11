@@ -234,4 +234,4 @@ cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
-echo "           connect using ssh -p 12222 $USER@$ipaddr"
+echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"

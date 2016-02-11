@@ -7,10 +7,15 @@ use LWP::UserAgent;
 use Digest::SHA;
 use Digest::MD5;
 use MIME::Base64 qw( encode_base64 decode_base64);
+use Sys::Syslog;
 
-#rename('/var/log/dshield.log','/var/log/dshield.log.old');
-# `/etc/init.d/rsyslog restart`
-open(F,'/var/log/dshield.log');
+if ( ! -f "/var/log/dshield.log" ) {
+    die("No new log\n");
+}
+
+rename('/var/log/dshield.log','/var/log/dshield.log.old');
+`/etc/init.d/rsyslog restart`;
+open(F,'/var/log/dshield.log.old');
 my ($line,$valid,$flags,$time,$src,$dst,$proto,$spt,$dpt,$linecnt,$log,$apikey,$userid,$email);
 readconfig();
 
@@ -111,6 +116,8 @@ Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI V
 
 ".$log;
     print "Submitting Log\nLines: $linecnt Bytes: ".length($log)."\n";
+    openlog('dshield.pl','cons,pid','user');
+    syslog('info',"submitting dshield logs $linecnt line ".length($log)." bytes");
     my $req=new HTTP::Request('PUT','https://secure.dshield.org/api/file/dshieldlog');
     $req->header('X-ISC-Authorization',$header);
     print $header."\n";
@@ -127,15 +134,18 @@ Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI V
 	my $receivedbytes=$1;
 	if ( $receivedbytes !=length($log) ) {
 	    print "\nERROR: Size Mismatch\n";
+            syslog('error',"submitting dshield logs size mismatch");
 	} else {
 	    print "Size OK ";
 	}
 	$return=~/<sha1checksum>([^<]+)<\/sha1checksum>/;
 	my $receivedsha1=$1;
 	if ( $receivedsha1 ne Digest::SHA::sha1_hex($log) ) {
+            syslog('error',"submitting dshield logs SHA1 mismatch");
 	    print "\nERROR: SHA1 Mismatch $receivedsha1 ".Digest::SHA::sha1_hex($log)."\n";
 	} else {
-	    print "SHA1 OK ";
+            syslog('info',"submitting dshield logs SHA1 ok");
+    	    print "SHA1 OK ";
 	}
 	$return=~/<md5checksum>([^<]+)<\/md5checksum>/;
 	my $receivedmd5=$1;
@@ -146,6 +156,7 @@ Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI V
 	}
     }
     else {
+	syslog('error','dshield log submission http error'.$result->status_line);
 	die $result->status_line;
     }
     print "---\n";
@@ -164,3 +175,4 @@ sub readconfig() {
 	}
     }
 }
+rename('/var/log/dshield.log.old','/var/log/dshield.log.'.time());
