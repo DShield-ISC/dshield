@@ -1,0 +1,53 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides: cowrie
+# Required-Start: $syslog
+# Required-Stop:  $syslog
+# Default-Start:  2 3 4 5
+# Default-Stop:
+# Short-Description:	Cowrie SSH Honeypot
+### END INIT INFO
+
+set -e
+
+test -x /srv/cowrie/start.sh || exit 0
+test -x /srv/cowrie/stop.sh || exit 0
+
+. /lib/lsb/init-functions
+
+case "$1" in
+     start)
+	log_daemon_msg "Starting Cowrie Honeypot"
+	if sudo -u cowrie start-stop-daemon --start --quiet --oknodo --pidfile /var/run/cowrie.pid --exec /srv/cowrie/start.sh; then
+	   log_end_msg 0 || true
+	else
+	   log_end_msg 1 || true
+	fi
+	;;
+     stop)
+     	 log_daemon_msg "Stopping Cowrie Honeypot"
+	 /srv/cowrie/stop.sh
+	if start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/cowrie.pid ; then
+	   log_end_msg 0 || true
+	else
+	   log_end_msg 1 || true
+	fi
+	;;
+     restart)
+         log_daemon_msg "Retarting Cowrie Honeypot"
+	 	 /srv/cowrie/stop.sh
+	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile /var/run/cowrie.pid
+	check_for_non_start log_end_msg
+	check_dev_null log_end_msg
+	if start-stop-daemon --start --quiet --oknodo --pidfile /var/run/cowrie.pid --exec /srv/cowrie/start.sh; then
+	   log_end_msg 0 || true
+	else
+	   log_end_msg 1 || true
+	fi
+	;;
+     *)
+	log_action_msg "Usage: /etc/init.d/cowrie {start|stop|restart}" || true
+	exit 1
+esac
+exit 0

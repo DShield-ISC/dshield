@@ -1,0 +1,10 @@
+/srv/cowrie/log/cowrie.*
+{
+	rotate 7
+	daily
+	missingok
+	compress
+	postrotate
+		/etc/init.d/cowrie restart
+	endscript
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+sudo -u cowrie /srv/cowrie/stop.sh > /dev/null
+sleep 10
+sudo -u cowrie /srv/cowrie/start.sh > /dev/null
