@@ -8,6 +8,13 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 - CHANGE THE DEFAULT SSH PASSWORD (better: use keys to authenticate)
 - expose the Pi to inbound traffic. For example, in many firewalls
   you will be able to configure it as a "DMZ Hosts"
+- update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. To update:
+
+```bash
+sudo apt-get update
+sudo apt-get upgrade
+reboot
+```
 
 only on "Jessie Lite": 
 ```bash
