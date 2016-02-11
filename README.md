@@ -9,7 +9,10 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 - expose the Pi to inbound traffic. For example, in many firewalls
   you will be able to configure it as a "DMZ Hosts"
 
+only on "Jessie Lite": sudo apt-get install git
+
 git clone https://github.com/DShield-ISC/dshield.git
+
 sudo dshield/bin/install.sh
 
   This script will:
@@ -19,3 +22,9 @@ sudo dshield/bin/install.sh
 - install the ssh honeypot cowrie (TODO)
 - configure a default web server and submit logs to DShield (TODO)
 
+Updates:
+
+inside your "dshield" directory (the directory created above when you run "git clone"), run
+
+git pull
+then run the install script again (sudo bin/install)
