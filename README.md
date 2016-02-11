@@ -9,11 +9,17 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 - expose the Pi to inbound traffic. For example, in many firewalls
   you will be able to configure it as a "DMZ Hosts"
 
-only on "Jessie Lite": sudo apt-get install git
+only on "Jessie Lite": 
+```bash
+sudo apt-get install git
+```
 
+on all versions of Raspbian (including Jessie Light):
+
+```bash
 git clone https://github.com/DShield-ISC/dshield.git
-
 sudo dshield/bin/install.sh
+```
 
   This script will:
 
@@ -26,5 +32,10 @@ Updates:
 
 inside your "dshield" directory (the directory created above when you run "git clone"), run
 
+```bash
 git pull
-then run the install script again (sudo bin/install)
+sudo bin/install.sh
+```
+
+Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf
+
