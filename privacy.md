@@ -1,7 +1,7 @@
 # Privacy
 
-** This software assumes that your Raspberry Pi will be dedicated to being
-a honeypot / sensor for DShield. **
+**This software assumes that your Raspberry Pi will be dedicated to being
+a honeypot / sensor for DShield.**
 
    This software will turn your Raspberry Pi into a DShield sensor.
 The software will transmit various logs to DShield.org / isc.sans.edu.
@@ -17,7 +17,7 @@ You may review the data you submitted by logging into these websites.
 
    All data submitted will be shared as part of the DShield website. 
 
-** Please note that we are in our beta test phase. Data submitted may change
+**Please note that we are in our beta test phase. Data submitted may change
 at any time and without notice. We try hard to consider the privacy of our
-submitters, but bugs happen in particular during the beta testing phase **
+submitters, but bugs happen in particular during the beta testing phase**
 
