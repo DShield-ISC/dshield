@@ -5,7 +5,7 @@ a honeypot / sensor for DShield.**
 
    This software will turn your Raspberry Pi into a DShield sensor.
 The software will transmit various logs to DShield.org / isc.sans.edu.
-You may review the data you submitted by logging into these websites.
+You may review the data you submitted by logging into these websites. See the screen shots in the "docs" folder to get an idea what this looks like.
 
    Currently, the following data is transmitted:
 
