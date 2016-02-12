@@ -57,7 +57,7 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 echo "Installing additional packages"
 
 
-apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client random-sound rng-tools > /dev/null
+apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools > /dev/null
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
@@ -83,7 +83,7 @@ if [ -f /etc/dshield.conf ] ; then
 fi
 nomysql=0
 if [ -d /var/lib/mysql ]; then
-  dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50 2>&1 1>&3)
+  dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
   response=$?
   case $response in 
       ${DIALOG_OK}) apt-get purge mysql-server mysql-server-5.5 mysql-server-core-5.5;;
