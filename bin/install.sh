@@ -91,6 +91,7 @@ if [ -d /var/lib/mysql ]; then
       ${DIALOG_ESC}) exit;;
   esac
 fi
+
 if [ "$nomysql" -eq "0" ] ; then
 mysqlpassword=`head -c10 /dev/random | xxd -p`
 echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
@@ -120,11 +121,12 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 		       "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
+
+	      response=$?
 	    exec 3>&-
-	    if [ "$VALUES" -eq "" ] ; then
-		exit;
-            fi
-	    email=`echo $VALUES | cut -f1 -d' '`
+
+	    case $response in 
+		${DIALOG_OK}) 	    email=`echo $VALUES | cut -f1 -d' '`
 	    apikey=`echo $VALUES | cut -f2 -d' '`
 	    nonce=`openssl rand -hex 10`
 	    hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
@@ -136,7 +138,10 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 		uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
             else
 		dialog --title 'API Key Failed' --msgbox 'Your API Key Verification Failed.' 7 40
-	    fi	   
+	    fi;;
+		${DIALOG_CANCEL}) exit;;
+		${DIALOG_ESC}) exit;;
+esac;
 	done
 
     fi
