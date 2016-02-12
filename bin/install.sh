@@ -57,7 +57,7 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 echo "Installing additional packages"
 
 
-apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools > /dev/null
+apt-get -y install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools > /dev/null
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
@@ -86,7 +86,7 @@ if [ -d /var/lib/mysql ]; then
   dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
   response=$?
   case $response in 
-      ${DIALOG_OK}) apt-get purge mysql-server mysql-server-5.5 mysql-server-core-5.5;;
+      ${DIALOG_OK}) apt-get -y -qq purge mysql-server mysql-server-5.5 mysql-server-core-5.5;;
       ${DIALOG_CANCEL}) nomysql=1;;
       ${DIALOG_ESC}) exit;;
   esac
@@ -98,8 +98,8 @@ echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | deb
 echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
 echo "mysql-server mysql-server/root_password password $mysqlpassword" | debconf-set-selections
 echo "mysql-server mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-apt-get install mysql-server
-cat >> ~/.my.cnf <<EOF
+apt-get -qq -y install mysql-server
+cat > ~/.my.cnf <<EOF
 [mysql]
 user=root
 password=$mysqlpassword
@@ -274,8 +274,11 @@ cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
 cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
 
 
+
+
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
 echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
+
