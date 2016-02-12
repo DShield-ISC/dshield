@@ -174,7 +174,7 @@ sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /et
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * $progdir/dshield.pl
+$offset1,$offset2 * * * * root $progdir/dshield.pl
 EOF
 chmod 700 $progdir/dshield.pl
 
