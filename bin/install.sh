@@ -224,8 +224,8 @@ echo "mysqluser=root" >> /etc/dshield.conf
 #
 
 mkdir -p /srv/www/html
-mkdir /srv/www/var/log
-mkdir /srv/www/etc
+mkdir -p /var/log/mini-httpd
+chmod 1777 /var/log/mini-httpd
 
 #
 # installing cowrie
