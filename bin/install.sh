@@ -77,6 +77,7 @@ pip install python-dateutil > /dev/null
 export NCURSES_NO_UTF8_ACS=1
 
 if [ -f /etc/dshield.conf ] ; then
+    chmod 600 /etc/dshield.conf
     echo reading old configuration
     . /etc/dshield.conf
 fi
@@ -192,8 +193,10 @@ chmod 700 $progdir/dshield.pl
 #
 # Update Configuration
 #
-
-echo "uid=$uid" > /etc/dshield.conf
+rm /etc/dshield.conf
+touch /etc/dshield.conf
+chmod 600 /etc/dshield.conf
+echo "uid=$uid" >> /etc/dshield.conf
 echo "apikey=$apikey" >> /etc/dshield.conf
 echo "email=$email" >> /etc/dshield.conf
 echo "interface=$interface" >> /etc/dshield.conf
