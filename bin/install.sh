@@ -118,6 +118,9 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
 	    exec 3>&-
+	    if [ "$VALUES" == "" ] ; then
+		exit;
+            fi
 	    email=`echo $VALUES | cut -f1 -d' '`
 	    apikey=`echo $VALUES | cut -f2 -d' '`
 	    nonce=`openssl rand -hex 10`
@@ -128,6 +131,8 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	    if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
 		apikeyok=1;
 		uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
+            else
+		dialog --title 'API Key Failed' --msgbox 'Your API Key Verification Failed.' 7 40
 	    fi	   
 	done
 
