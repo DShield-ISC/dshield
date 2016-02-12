@@ -44,7 +44,7 @@ echo "Basic security checks"
 # making sure default password was changed
 
 hashline=`grep '^pi:' /etc/shadow`
-salt=`echo $x | cut -d '$' -f2-3`
+salt=`echo $hashline | cut -d '$' -f2-3`
 shadowhash=`echo $hashline | cut -f2 -d':' | md5sum | cut -f1 -d' '`
 perl -e "print crypt('raspberry','\$$salt\$')" | md5sum | cut -f1 -d ' '> $TMPDIR/passcheck
 testhash=`cat $TMPDIR/passcheck`
@@ -61,8 +61,13 @@ apt-get upgrade > /dev/null
 echo "Installing additional packages"
 
 
-apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client> /dev/null
+apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client random-sound rng-tools > /dev/null
 
+#
+# yes. this will make the random number generator less secure. but remember this is for a honeypot
+#
+
+echo HRNGDEVICE=/dev/urandom > /etc/default/rnd-tools
 
 pip install python-dateutil > /dev/null
 
@@ -211,7 +216,7 @@ if [ -d /srv/cowrie ]; then
 fi
 mv $TMPDIR/cowrie-master /srv/cowrie
 
-ssh-keygen -t dsa -b 1024 -f /srv/www/data/ssh_host_dsa_key
+ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key > /dev/null
 
 if ! grep '^cowrie:' -q /etc/passwd; then
 sudo adduser --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie <<EOF
