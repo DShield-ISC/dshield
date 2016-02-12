@@ -62,15 +62,7 @@ echo "Installing additional packages"
 
 
 apt-get -y install dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client> /dev/null
-mysqlpassword=`head -c10 /dev/random | xxd -p`
-sudo debconf-set-selections "mysql-server mysql-server/root_password password $mysqlpassword"
-sudo debconf-set-selections "mysql-server mysql-server/root_password_again password $mysqlpassword"
-sudo apt-get -y install mysql-server
-cat >> ~/.my.cnf <<EOF
-[mysql]
-user=root
-password=$mysqlpassword
-EOF
+
 
 pip install python-dateutil > /dev/null
 
@@ -83,12 +75,29 @@ pip install python-dateutil > /dev/null
 
 export NCURSES_NO_UTF8_ACS=1
 
-
-
 if [ -f /etc/dshield.conf ] ; then
     echo reading old configuration
     . /etc/dshield.conf
 fi
+
+if [ -d /var/lib/mysql ]; then
+  exec 3>&1
+  v=$(dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50 2>&1 1>&3)
+  exec 3>&-
+ 
+fi
+
+mysqlpassword=`head -c10 /dev/random | xxd -p`
+echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
+echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
+apt-get -qq -y install mysql-server
+cat >> ~/.my.cnf <<EOF
+[mysql]
+user=root
+password=$mysqlpassword
+EOF
+
+
 
 # dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
 # return_value=$?
@@ -201,6 +210,8 @@ if [ -d /srv/cowrie ]; then
     rm -rf /srv/cowrie
 fi
 mv $TMPDIR/cowrie-master /srv/cowrie
+
+ssh-keygen -t dsa -b 1024 -f /srv/www/data/ssh_host_dsa_key
 
 if ! grep '^cowrie:' -q /etc/passwd; then
 sudo adduser --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie <<EOF
