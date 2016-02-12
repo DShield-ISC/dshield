@@ -220,6 +220,14 @@ echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
 
 #
+# creating srv directories
+#
+
+mkdir -p /srv/www/html
+mkdir /srv/www/var/log
+mkdir /srv/www/etc
+
+#
 # installing cowrie
 #
 
@@ -273,9 +281,11 @@ cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
 cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
 cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
 
+
+
 cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/mini-httpd
-
+cp $progdir/../etc/mini-httpd.conf /srv/www/etc
 
 
 

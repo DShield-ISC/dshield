@@ -1,2 +1,2 @@
 START=1
-DAEMON_OPTS="-C /etc/mini-httpd.conf"
+DAEMON_OPTS="-C /etc/mini-httpd.conf -r"
