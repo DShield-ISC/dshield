@@ -81,15 +81,17 @@ if [ -f /etc/dshield.conf ] ; then
     echo reading old configuration
     . /etc/dshield.conf
 fi
-
+nomysql=0
 if [ -d /var/lib/mysql ]; then
-  exec 3>&1
-  v=$(dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50 2>&1 1>&3)
-  exec 3>&-
-  echo $v
-  exit
+  dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50 2>&1 1>&3)
+  response=$?
+  case $response in 
+      ${DIALOG_OK}) apt-get purge mysql-server mysql-server-5.5 mysql-server-core-5.5;;
+      ${DIALOG_CANCEL}) nomysql=1;;
+      ${DIALOG_ESC}) exit;;
+  esac
 fi
-
+if [ "$nomysql" -eq "0" ] ; then
 mysqlpassword=`head -c10 /dev/random | xxd -p`
 echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
 echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
@@ -99,7 +101,7 @@ cat >> ~/.my.cnf <<EOF
 user=root
 password=$mysqlpassword
 EOF
-
+fi
 
 
 # dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
