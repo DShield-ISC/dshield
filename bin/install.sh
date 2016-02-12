@@ -118,7 +118,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
 	    exec 3>&-
-	    if [ "$VALUES" == "" ] ; then
+	    if [ "$VALUES" -eq "" ] ; then
 		exit;
             fi
 	    email=`echo $VALUES | cut -f1 -d' '`
