@@ -51,8 +51,8 @@ if $progdir/passwordtest.pl | grep -q 1; then
 fi
 echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 
-apt-get update > /dev/null
-apt-get upgrade > /dev/null
+# apt-get update > /dev/null
+# apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
 
@@ -86,7 +86,8 @@ if [ -d /var/lib/mysql ]; then
   exec 3>&1
   v=$(dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50 2>&1 1>&3)
   exec 3>&-
- 
+  echo $v
+  exit
 fi
 
 mysqlpassword=`head -c10 /dev/random | xxd -p`
