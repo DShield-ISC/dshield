@@ -43,12 +43,8 @@ echo "Basic security checks"
 
 # making sure default password was changed
 
-hashline=`grep '^pi:' /etc/shadow`
-salt=`echo $hashline | cut -d '$' -f2-3`
-shadowhash=`echo $hashline | cut -f2 -d':' | md5sum | cut -f1 -d' '`
-perl -e "print crypt('raspberry','\$$salt\$')" | md5sum | cut -f1 -d ' '> $TMPDIR/passcheck
-testhash=`cat $TMPDIR/passcheck`
-if [ $shadowhash =  $testhash ]; then
+
+if $progdir/passwordtest.pl | grep -q 1; then
   echo "You have not yet changed the default password for the 'pi' user"
   echo "Change it NOW ..."
   exit
