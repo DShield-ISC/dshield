@@ -96,7 +96,9 @@ if [ "$nomysql" -eq "0" ] ; then
 mysqlpassword=`head -c10 /dev/random | xxd -p`
 echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
 echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-apt-get -qq -y install mysql-server
+echo "mysql-server mysql-server/root_password password $mysqlpassword" | debconf-set-selections
+echo "mysql-server mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
+apt-get install mysql-server
 cat >> ~/.my.cnf <<EOF
 [mysql]
 user=root
