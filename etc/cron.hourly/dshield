@@ -6,20 +6,26 @@
 #
 ####
 
+version=0.0
 . /etc/dshield.conf
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
+echo $email
+echo $apikey
 user=`echo $email | sed 's/@/%40/'`
-newversion=`wget -q --no-check-certificate -O - https://devlocalisc.sans.edu/api/checkapikey/demo%40dshield.org/5501b98cc767b1c605cd/20c07c9d9b18f70a68e72e7b6c89a5466d3b9b3dc8da96ab1217185b410e3c0711be7d1cba1210d00738c81382d192eacac95ecb4e9d19d29ca691f19febbd20 | grep '<result>ok</result>' | grep '<version>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
+wget -q --no-check-certificate -O - https://isc.sans.edu/api/checkapikey/$email/$hash
+newversion=`wget -q --no-check-certificate -O - https://isc.sans.edu/api/checkapikey/$email/$hash | grep '<result>ok</result>' | grep '<version>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
+echo $newversion
 majornewversion=`echo $newversion | cut -f1 -d'.'`;
 majoroldversion=`echo $version | cut -f1 -d'.'`;
 minornewversion=`echo $newversion | cut -f2 -d'.'`;
 minoroldversion=`echo $version | cut -f2 -d'.'`;
-if [ "$majoroldversion" < "$majornewversion" ]; then
+echo old $majoroldversion new $majornewversion
+if [ "$majoroldversion" -gt "$majornewversion" ]; then
   echo "UPDATE";
 fi
-if [ "$majoroldversion" = "$majornewversion" ]; then
-  if [ "$minoroldversion" < "$minornewversion" ]; then
+if [ "$majoroldversion" -eq "$majornewversion" ]; then
+  if [ "$minoroldversion" -gt "$minornewversion" ]; then
   echo "UPDATE";
   fi
 fi
