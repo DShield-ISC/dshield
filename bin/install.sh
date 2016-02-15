@@ -6,6 +6,8 @@
 #
 ####
 
+version=0.2
+
 echo "Checking Pre-Requisits"
 progname=$0;
 progdir=`dirname $0`;
@@ -218,6 +220,7 @@ echo "interface=$interface" >> /etc/dshield.conf
 echo "localnet=$localnet" >> /etc/dshield.conf
 echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
+echo "version=$version" >> /etc/dshield.conf
 
 #
 # creating srv directories
@@ -280,14 +283,8 @@ chown -R cowrie:cowrie /srv/cowrie
 cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
 cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
 cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
-
-
-
 cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
-cp $progdir/../etc/default/mini-httpd /etc/mini-httpd
-cp $progdir/../etc/mini-httpd.conf /srv/www/etc
-
-
+cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"

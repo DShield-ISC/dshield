@@ -1,0 +1,13 @@
+#!/bin/sh
+
+####
+#
+#  hourly checking with dshield. to be expanded for update check
+#
+####
+
+. /etc/dshield.conf
+nonce=`openssl rand -hex 10`
+hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
+user=`echo $email | sed 's/@/%40/'`
+curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash?version=$version > /dev/null 2>&1
