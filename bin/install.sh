@@ -283,6 +283,7 @@ chown -R cowrie:cowrie /srv/cowrie
 cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
 cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
 cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
+cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly
 cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
