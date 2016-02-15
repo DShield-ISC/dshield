@@ -166,11 +166,6 @@ exec 3>&1
 localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
 		   "Trusted Admin Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
 exec 3>&-
-bash -c 'iptables-save > /etc/network/iptables'
-if ! grep -q iptables-restore /etc/network/interfaces ; then
-    echo "add iptables support"
-    echo 'pre-up iptables-restore < /etc/network/iptables' >> /etc/network/interfaces
-fi
 cat > /etc/network/iptables <<EOF
 
 *filter
@@ -190,7 +185,8 @@ COMMIT
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 COMMIT
 EOF
-
+cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d
+chmod 700 /etc/network/if-pre-up.d/dshield
 sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
 sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
