@@ -6,6 +6,12 @@
 #
 ####
 
+userid=`id -u`
+if [ ! "$userid" = "0" ]; then
+   echo "you have to run this script as root. eg."
+   echo "  sudo status.sh"
+   exit
+fi
 
 if [ -f /etc/dshield.conf ] ; then
     . /etc/dshield.conf
