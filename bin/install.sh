@@ -13,8 +13,8 @@ progname=$0;
 progdir=`dirname $0`;
 progdir=$PWD/$progdir;
 cd $progdir
-uid=`id -u`
-if [ ! "$uid" = "0" ]; then
+userid=`id -u`
+if [ ! "$userid" = "0" ]; then
    echo "you have to run this script as root. eg."
    echo "  sudo install.sh"
    exit
