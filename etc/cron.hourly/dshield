@@ -18,11 +18,15 @@ minornewversion=`echo $newversion | cut -f2 -d'.'`
 minoroldversion=`echo $version | cut -f2 -d'.'`
 if [ "$majoroldversion" -lt "$majornewversion" ]; then
     echo "UPDATE"
+    git -C $progdir pull -q
+    $progdir/update.sh
     exit
 fi
 if [ $majoroldversion -eq $majornewversion ]; then
   if [ $minoroldversion -lt $minornewversion ]; then
       echo "UPDATE"
+      git -C $progdir  pull -q
+      $progdir/update.sh
       exit
   fi
 fi

@@ -256,6 +256,7 @@ echo "localnet=$localnet" >> /etc/dshield.conf
 echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
 echo "version=$version" >> /etc/dshield.conf
+echo "progdir=$progdir" >> /etc/dshield.conf
 
 #
 # creating srv directories
