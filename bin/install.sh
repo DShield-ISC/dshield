@@ -245,7 +245,10 @@ chmod 700 $progdir/dshield.pl
 #
 # Update Configuration
 #
-rm /etc/dshield.conf
+if [ -f /etc/dshield.conf ]; then
+    rm /etc/dshield.conf
+fi
+
 touch /etc/dshield.conf
 chmod 600 /etc/dshield.conf
 echo "uid=$uid" >> /etc/dshield.conf
@@ -280,18 +283,25 @@ mv $TMPDIR/cowrie-master /srv/cowrie
 ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key > /dev/null
 
 if ! grep '^cowrie:' -q /etc/passwd; then
-sudo adduser --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie <<EOF
-Cowrie Honeypot
-none
-none
-none
-none
-Y
-EOF
-echo Added user 'cowrie'
+    adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie
+    echo Added user 'cowrie'
 else
-echo User 'cowrie' already exists. Making no changes
+    echo User 'cowrie' already exists. Making no changes
 fi    
+
+# check if cowrie db schema exists
+x=`mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'`
+if [ $x -eq 1 ]; then
+    echo "cowrie mysql database already exists. not touching it.
+else
+    mysql -uroot -p$mysqlpassword 'create schema cowrie'
+    if [ "$cowriepassword" = "" ]; then
+       cowriepassword=`head -c10 /dev/random | xxd -p`
+       echo cowriepassword=$cowriepassword >> /etc/dshield.conf
+
+    fi
+fi
+
 
 
 cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
