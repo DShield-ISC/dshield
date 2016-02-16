@@ -162,10 +162,35 @@ exec 3>&-
 echo "Interface: $interface"
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
-exec 3>&1
-localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
-		   "Trusted Admin Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
-exec 3>&-
+localnetok=1
+validifs='';
+for b in `ifconfig | grep '^[a-z]' | cut -f1 -d' ' | grep -v '^lo$'`; do
+  validifs="$validifs $b"
+done
+
+while [[ $localnetok -ne  2 ]] ; do
+    exec 3>&1
+    localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
+		      "Trusted Admin Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
+    exec 3>&-
+    for b in $validifs; do
+	if [[ $b = $interface ]] ; then
+	    localnetok=1
+	    if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
+	    localnetok=2
+	    fi
+	fi	
+    done
+    if [[ $localnetok -eq 1 ]] ; then
+	dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
+    fi
+    if [[ $localnetok -eq 0 ]] ; then
+	dialog --title 'Local Network Error' --msgbox 'You did not specify a valid interface. Valid interfaces are $validifs' 40 10
+    fi
+
+done
+
+
 cat > /etc/network/iptables <<EOF
 
 *filter
