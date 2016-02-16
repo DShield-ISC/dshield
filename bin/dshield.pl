@@ -2,7 +2,6 @@
 
 use strict;
 use Switch;
-use File::Temp qw/ tempfile tempdir /;
 use LWP::UserAgent;
 use Digest::SHA;
 use Digest::MD5;
@@ -30,8 +29,6 @@ rename('/var/log/dshield.log','/var/log/dshield.log.old');
 open(F,'/var/log/dshield.log.old');
 
 
-
-my ($tempfh,$tempfname)=tempfile('dshieldrepXXXXXX',DIR=>'/tmp');
 
 
 
