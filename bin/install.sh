@@ -222,6 +222,7 @@ COMMIT
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
+-A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
 COMMIT
 EOF
 cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d
@@ -292,7 +293,7 @@ fi
 # check if cowrie db schema exists
 x=`mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'`
 if [ $x -eq 1 ]; then
-    echo "cowrie mysql database already exists. not touching it.
+    echo "cowrie mysql database already exists. not touching it."
 else
     mysql -uroot -p$mysqlpassword 'create schema cowrie'
     if [ "$cowriepassword" = "" ]; then
