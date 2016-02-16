@@ -333,6 +333,8 @@ cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly
 cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
+update-rc.d cowrie defaults
+
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
