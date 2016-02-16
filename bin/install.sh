@@ -334,6 +334,7 @@ cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 update-rc.d cowrie defaults
+update-rc.d mini-httpd defaults
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
