@@ -222,7 +222,9 @@ COMMIT
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
+-A PREROUTING -p tcp -m tcp --dport 25 -j REDIRECT --to-ports 2525
 -A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+
 COMMIT
 EOF
 cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d
@@ -336,6 +338,18 @@ cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 update-rc.d cowrie defaults
 update-rc.d mini-httpd defaults
+
+#
+# installing postfix as an MTA
+#
+
+apt-get purge postfix
+echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
+echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
+echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
+echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
+debconf-get-selections | grep postfix
+apt-get -y -qq install postfix
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
