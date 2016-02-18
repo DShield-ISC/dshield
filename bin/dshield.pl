@@ -103,7 +103,7 @@ while (<F>) {
 	
 	$linecnt++;
 	$time=sprintf('%04d-%02d-%02d %02d:%02d:%02d',$time[5],$time[4],$time[3],$time[2],$time[1],$time[0]);
-    	$log.="$time $tz\t1\t$src\t$spt\t$dst\t$dpt\t$proto\t$flags\n";
+    	$log.="$time $tz\t$userid\t1\t$src\t$spt\t$dst\t$dpt\t$proto\t$flags\n";
     }
 }
 submit();
