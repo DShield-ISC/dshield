@@ -118,7 +118,7 @@ sub submit() {
     $ua->ssl_opts(verify_hostname=>1);
     $ua->ssl_opts(SSL_ca_path=>'/etc/ssl/certs');
     $log="From: $email
-Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI Version 0.1
+Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI Version 0.2
 
 ".$log;
     print "Submitting Log\nLines: $linecnt Bytes: ".length($log)."\n";
