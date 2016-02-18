@@ -81,6 +81,9 @@ export NCURSES_NO_UTF8_ACS=1
 if [ -f /etc/dshield.conf ] ; then
     chmod 600 /etc/dshield.conf
     echo reading old configuration
+    if grep -q 'uid=<authkey>' /etc/dshield.conf; then
+	sed -i.bak 's/<.*>//' /etc/dshield.conf
+    fi
     . /etc/dshield.conf
 fi
 nomysql=0
@@ -152,20 +155,56 @@ esac;
 fi
 echo $uid
 dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next. ' 7 40
+
+
+#
+# Default Interface
+#
+
+# if we don't have one configured, try to figure it out
 if [ "$interface" = "" ] ; then
 interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo`
 fi
-exec 3>&1
-interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
-		   "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
-exec 3>&-
+
+# list of valid interfaces
+validifs=`ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'`
+localnetok=0
+
+while [ $localnetok -eq  0 ] ; do
+    exec 3>&1
+    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
+		       "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+    exec 3>&-
+    for b in $validifs; do
+	if [ "$b" = "$interface" ] ; then
+	    localnetok=1
+	fi
+    done
+    if [ $localnetok -eq 0 ] ; then
+	dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
+    fi
+done
 echo "Interface: $interface"
+
+# figuring out local network.
+
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
-exec 3>&1
-localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
-		   "Trusted Admin Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
-exec 3>&-
+localnetok=0
+
+while [ $localnetok -eq  0 ] ; do
+    exec 3>&1
+    localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
+		      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
+
+    exec 3>&-
+    if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
+	localnetok=1
+    fi
+    if [ $localnetok -eq 0 ] ; then
+	dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
+    fi
+done
 cat > /etc/network/iptables <<EOF
 
 *filter
@@ -284,8 +323,10 @@ cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
+echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
 echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
+
 

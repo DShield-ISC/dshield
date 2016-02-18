@@ -13,15 +13,24 @@ if ( ! -f "/var/log/dshield.log" ) {
     die("No new log\n");
 }
 
-rename('/var/log/dshield.log','/var/log/dshield.log.old');
-`/etc/init.d/rsyslog restart`;
-open(F,'/var/log/dshield.log.old');
-my ($line,$valid,$flags,$time,$src,$dst,$proto,$spt,$dpt,$linecnt,$log,$apikey,$userid,$email);
-readconfig();
+if ( $< != 0 ) {
+    die("This script needs to run as root\n");
+}
 
+my ($line,$valid,$flags,$time,$src,$dst,$proto,$spt,$dpt,$linecnt,$log,$apikey,$userid,$email);
+
+readconfig();
 if ( ($apikey eq "") or ($userid eq "") or ($email eq "" )) {
     die("Incomplete configuration\n");
 }
+
+
+rename('/var/log/dshield.log','/var/log/dshield.log.old');
+`/etc/init.d/rsyslog restart`;
+open(F,'/var/log/dshield.log.old');
+
+
+
 my ($tempfh,$tempfname)=tempfile('dshieldrepXXXXXX',DIR=>'/tmp');
 
 
@@ -175,4 +184,4 @@ sub readconfig() {
 	}
     }
 }
-rename('/var/log/dshield.log.old','/var/log/dshield.log.'.time());
+unlink('/var/log/dshield.log.old');
