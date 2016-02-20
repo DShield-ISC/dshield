@@ -130,6 +130,9 @@ Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI V
     $req->header('Content-Type','text/plain');
     $req->header('Content-Length',length($log));
     $req->content($log);
+    open(LOG,"> /tmp/debug.log");
+    print LOG $log;
+    close LOG;
     print "Sending Request\n";
     my $result=$ua->request($req);
     print "Done\n";
