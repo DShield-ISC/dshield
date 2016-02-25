@@ -6,6 +6,13 @@
 #
 ####
 
+userid=`id -u`
+if [ ! "$userid" = "0" ]; then
+   echo "you have to run this script as root. eg."
+   echo "  sudo dshield (or as root from cron)"
+   exit
+fi
+
 version=0.0
 . /etc/dshield.conf
 nonce=`openssl rand -hex 10`
@@ -16,18 +23,32 @@ majornewversion=`echo $newversion | cut -f1 -d'.'`
 majoroldversion=`echo $version | cut -f1 -d'.'`
 minornewversion=`echo $newversion | cut -f2 -d'.'`
 minoroldversion=`echo $version | cut -f2 -d'.'`
+if [ ! -z $PS1 ]; then
+    echo "Current Version: $version ; New Version: $newversion"
+fi
+
+
 if [ "$majoroldversion" -lt "$majornewversion" ]; then
-    echo "UPDATE"
+    if [ ! -z $PS1 ]; then
+       echo "UPDATE"
+    fi
     git -C $progdir pull -q
     $progdir/update.sh
     exit
 fi
 if [ $majoroldversion -eq $majornewversion ]; then
-  if [ $minoroldversion -lt $minornewversion ]; then
-      echo "UPDATE"
-      git -C $progdir  pull -q
-      $progdir/update.sh
-      exit
-  fi
+    if [ $minoroldversion -lt $minornewversion ]; then
+	if [ ! -z $PS1 ]; then
+		echo "UPDATE"
+	fi
+	
+	git -C $progdir  pull -q
+	$progdir/update.sh
+	exit
+    fi
 fi
-echo "NO UPDATE"
+if [ -z $PS1 ]; then
+    exit
+else
+    echo "NO UPDATE"
+fi

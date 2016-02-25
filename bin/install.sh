@@ -59,7 +59,7 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 echo "Installing additional packages"
 
 
-apt-get -y install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools > /dev/null
+apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb > /dev/null
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
@@ -298,12 +298,12 @@ if [ $x -eq 1 ]; then
     echo "cowrie mysql database already exists. not touching it."
 else
     mysql -uroot -p$mysqlpassword -e 'create schema cowrie'
-    if [ "$cowriepassword" = "" ]; then
-       cowriepassword=`head -c10 /dev/random | xxd -p`
-       echo cowriepassword=$cowriepassword >> /etc/dshield.conf
-
-    fi
 fi
+if [ "$cowriepassword" = "" ]; then
+    cowriepassword=`head -c10 /dev/random | xxd -p`
+fi
+echo cowriepassword=$cowriepassword >> /etc/dshield.conf
+mysql -uroot -p$mysqlpassword -e "grant all on \`*\`.\`cowrie\` to \`cowrie\`@\`localhost\` identified by '$cowriepassword'"
 
 
 
@@ -312,7 +312,13 @@ cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
 userid = $uid
 auth_key = $apikey
-batch_size = 10
+batch_size = 1
+[output_mysql]
+host=localhost
+database=cowrie
+username=cowrie
+password=$cowriepassword
+port=3306
 EOF
 
 sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg
@@ -343,7 +349,7 @@ update-rc.d mini-httpd defaults
 # installing postfix as an MTA
 #
 
-apt-get purge postfix
+apt-get -y -qq purge postfix
 echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
 echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
 echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
