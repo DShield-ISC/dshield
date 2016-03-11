@@ -1,4 +1,4 @@
-/srv/cowrie/log/cowrie.*
+/srv/cowrie/log/cowrie.log /srv/cowrie/log/cowrie.json
 {
 	rotate 7
 	daily
