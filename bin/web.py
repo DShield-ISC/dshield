@@ -1,38 +1,46 @@
 #!/usr/bin/python
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from datetime import datetime
 import os
 import sqlite3
 import sys
+import time
+import urlparse
 
 PORT_NUMBER = 8080
 
-db_filename = '\opt\dshield\db\webserver.sqlite'
+# configure config SQLLite DB and log directory
 
-db_is_new = not os.path.exists(db_filename)
+config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
+logdir = '..'+os.path.sep+'log'
 
-conn = sqlite3.connect(db_filename)
+# check if config database exists
 
+db_is_new = not os.path.exists(config)
 if db_is_new:
-        print 'Need to create schema'
+        print 'configuration database is not initicalized'
         sys.exit(0)
+
+# check if log directory exists
+        
+if not os.path.isdir(logdir):
+        print 'log directory does not exist. '+logdir
+        sys.exit(0)
+
+# each time we start, we start a new log file by appending to timestamp to access.log
+
+logfile = logdir+os.path.sep+'access.log.'+str(time.time())
+
+
+conn = sqlite3.connect(config)
 
 #This class will handles any incoming request from
 #the browser
 class myHandler(BaseHTTPRequestHandler):
-
     def do_GET(self):
         #this will get the request headers - will use for querying database
-        req_path = self.path
-        host = self.headers('host')
-        UsrAgent = self.headers('User-Agent')
-        Accept = self.headers('Accept')
-        AcceptLang = self.headers('Accept-Language')
-        Connection = self.headers('Connection')
-    
-        #SqlQuery stuff - set response headers as global
-
+        req_path = urlparse.urlparse(self.path)
         
         #this will be where response will be figured out based on database query        
         print(host)
@@ -53,7 +61,7 @@ try:
 
     print 'Started httpserver on port ' , PORT_NUMBER
 
-    #Wait forever for incoming htto requests
+    #Wait forever for incoming http requests
     server.serve_forever()
 
 except KeyboardInterrupt:
