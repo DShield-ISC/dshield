@@ -38,21 +38,45 @@ conn = sqlite3.connect(config)
 #This class will handles any incoming request from
 #the browser
 class myHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
         #this will get the request headers - will use for querying database
-        req_path = urlparse.urlparse(self.path)
-        
+        parsed_path = urlparse.urlparse(self.path)
+        #req_path = self.path
+        #headers = self.headers
+        #ip = self.client_address
+        #self.requests       
         #this will be where response will be figured out based on database query        
-        print(host)
-        print(req_path)
+        message_parts = [
+                'Client Values:',
+                'client_address=%s (%s)' % (self.client_address, self.address_string()),
+                'command=%s' % self.command,
+                'path %s' % self.path,
+                'real path=%s' % parsed_path.path,
+                'request_version=%s' % self.request_version,
+                '',
+                'Server Values:',
+                'server_version=%s' % self.server_version,
+                'protocol_version=%s' % self.sys_version,
+                'protocol_version=%s' % self.protocol_version,
+                '',
+                'Headers Received:',
+                ]
+        for name, value in sorted(self.headers.items()):
+            message_parts.append('%s=%s' % (name, value.rstrip()))
+        message_parts.append('')
+        message = '\r\n'.join(message_parts)
+                
+        #print(headers)
+        #print(req_path)
+        #print(ip)
         self.send_response(200)
         self.send_header('Date','Thu, 28 Apr 2016 11:10:00 GMT')
         self.send_header('Content-type','text/html')
         self.end_headers()
-        self.wfile.write("Hello World !")
+        self.wfile.write(message)
         return
- 
-
+    
 try:
     #Create a web server and define the handler to manage the
     #incoming request
