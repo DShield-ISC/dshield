@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import time
 import urlparse
+import cgi
 
 PORT_NUMBER = 8080
 
@@ -71,12 +72,47 @@ class myHandler(BaseHTTPRequestHandler):
         #print(req_path)
         #print(ip)
         self.send_response(200)
-        self.send_header('Date','Thu, 28 Apr 2016 11:10:00 GMT')
+        self.send_header('Date', self.date_time_string(time.time()))
         self.send_header('Content-type','text/html')
         self.end_headers()
         self.wfile.write(message)
         return
+
+#placeholder for when need to build post handling - not served at this time
+class PostHandler(BaseHTTPRequestHandler):
     
+    def do_POST(self):
+        # Parse the form data posted
+        form = cgi.FieldStorage(
+            fp=self.rfile, 
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST',
+                     'CONTENT_TYPE':self.headers['Content-Type'],
+                     })
+
+        # Begin the response
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('Client: %s\n' % str(self.client_address))
+        self.wfile.write('User-agent: %s\n' % str(self.headers['user-agent']))
+        self.wfile.write('Path: %s\n' % self.path)
+        self.wfile.write('Form data:\n')
+
+        # Echo back information about what was posted in the form
+        for field in form.keys():
+            field_item = form[field]
+            if field_item.filename:
+                # The field contains an uploaded file
+                file_data = field_item.file.read()
+                file_len = len(file_data)
+                del file_data
+                self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
+                        (field, field_item.filename, file_len))
+            else:
+                # Regular form value
+                self.wfile.write('\t%s=%s\n' % (field, form[field].value))
+        return    
+
 try:
     #Create a web server and define the handler to manage the
     #incoming request
