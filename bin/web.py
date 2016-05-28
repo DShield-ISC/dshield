@@ -13,14 +13,14 @@ PORT_NUMBER = 8080
 
 # configure config SQLLite DB and log directory
 
-config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
+#config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
 logdir = '..'+os.path.sep+'log'
-
+config = './webserver.sqlite'
 # check if config database exists
 
 db_is_new = not os.path.exists(config)
 if db_is_new:
-        print 'configuration database is not initicalized'
+        print 'configuration database is not initialized'
         sys.exit(0)
 
 # check if log directory exists
@@ -33,8 +33,13 @@ if not os.path.isdir(logdir):
 
 logfile = logdir+os.path.sep+'access.log.'+str(time.time())
 
-
 conn = sqlite3.connect(config)
+
+c = conn.cursor()
+
+c.execute('''CREATE TABLE IF NOT EXISTS requests
+            (date text, address text, cmd text, path text, vers text)''')
+conn.commit()
 
 #This class will handles any incoming request from
 #the browser
@@ -42,18 +47,31 @@ class myHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         #this will get the request headers - will use for querying database
-        parsed_path = urlparse.urlparse(self.path)
         #req_path = self.path
         #headers = self.headers
         #ip = self.client_address
         #self.requests       
         #this will be where response will be figured out based on database query        
+        c = conn.cursor()
+        #try:
+        dte = self.date_time_string()
+        cladd = '%s' % self.address_string()
+        cmd = '%s' % self.command
+        path = '%s' % self.path
+        #ppath = parsed_path.path
+        rvers = '%s' % self.request_version
+        c.execute("INSERT INTO requests values('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+rvers+"')")
+
+        conn.commit()
+        #except:
+        #    print('Fail')
+
         message_parts = [
                 'Client Values:',
                 'client_address=%s (%s)' % (self.client_address, self.address_string()),
                 'command=%s' % self.command,
                 'path %s' % self.path,
-                'real path=%s' % parsed_path.path,
+                #'real path=%s' % parsed_path.path,
                 'request_version=%s' % self.request_version,
                 '',
                 'Server Values:',
@@ -127,6 +145,7 @@ try:
 except KeyboardInterrupt:
     print '^C received, shutting down the web server'
     server.socket.close()
+    conn.close()
 
 
     
