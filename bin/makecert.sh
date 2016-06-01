@@ -6,9 +6,6 @@ d=`echo $f | sed -E 's/[^\/]+$//'`
 
 hostname=`hostname`;
 
-
-
-
 exec 3>&1
 dialog --title 'Creating SSL Certificate' --separate-widget $'\n' --form\
 		"Enter the details for your SSL Certificate" 15 50 6 \
@@ -28,15 +25,33 @@ dialog --title 'Creating SSL Certificate' --separate-widget $'\n' --form\
 
 clear
 echo $country
-# openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/$hostname.key -out $d/../etc/$hostname.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
-# openssl req -in $d/../etc/$hostname.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/$hostname.keypin
-# openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/$hostname-spare.key -out $d/../etc/$hostname-spare.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
-# openssl req -in $d/../etc/$hostname-spare.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/$hostname-spare.keypin
+if [ ! -f $d/../etc/CA/keys/$hostname.key ]; then
+    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/$hostname.key -out $d/../etc/CA/requests/$hostname.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
+    openssl req -in $d/../etc/CA/requests/$hostname.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/$hostname.keypin
+fi
+if [ ! -f $d/../etc/CA/keys/$hostname-spare.key ]; then
+    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/$hostname-spare.key -out $d/../etc/CA/requests/$hostname-spare.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
+    openssl req -in $d/../etc/CA/requests/$hostname-spare.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/$hostname-spare.keypin
+fi
 
 dialog --title "Signing Certificate" --yesno "Would you like me to create a CA to sign the certificate? If you select \"No\", then you will be able to send the certificate to another certificate authority for signing" 10 50
-if [ "$?" != "0" ]; then
-    openssl genrsa -aes256 -out $d/../etc/dshieldca.key -passout pass:raspi 4096
-    openssl req -new -x509 -days 3650 -key $d/../etc/dshieldca.key -out $d/../etc/dshieldca.crt -subj "/C=US/ST=Florida/L=Jacksonville/O=DShield/OU=Decoy/CN=ROOT CA"
+
+if [ $? -eq 0  ]; then
+
+    
+    # creating key without passphrase since this is just a simple self signed certificate.
+    # if you want more security, then please use a "real" certificate authority or
+    # a proper internal CA.
+    if [ ! -f $d/../etc/CA/keys/dshieldca.key ] ; then
+	openssl genrsa -aes256 -out $d/../etc/CA/keys/dshieldca.key -passout pass:raspi 4096
+	openssl rsa -in $d/../etc/CA/keys/dshieldca.key -out $d/../etc/CA/keys/dshieldcanp.key -passin pass:raspi
+	mv $d/../etc/CA/keys/dshieldcanp.key $d/../etc/CA/keys/dshieldca.key
+    fi
+    if [ ! -f $d/../etc/CA/certs/dshieldca.crt ]; then
+	openssl req -new -x509 -days 3652 -key $d/../etc/CA/keys/dshieldca.key -out $d/../etc/CA/certs/dshieldca.crt -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=ROOT CA"
+    fi
+    # we will only sign the primary CSR, not the spare one for now.
+    
     
 fi
 
