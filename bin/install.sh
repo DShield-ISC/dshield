@@ -357,6 +357,28 @@ echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, lo
 debconf-get-selections | grep postfix
 apt-get -y -qq install postfix
 
+#
+# modifying motd
+#
+
+cat > $TMPDIR/motd <<EOF
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+
+***
+***    DShield Honeypot - Web Admin on port 8080
+***
+
+EOF
+
+mv $TMPDIR/motd /etc/motd
+
+
 echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
@@ -364,4 +386,4 @@ echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
 echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
 
-
+rm -rf $TMPDIR
