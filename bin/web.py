@@ -38,7 +38,7 @@ conn = sqlite3.connect(config)
 c = conn.cursor()
 
 c.execute('''CREATE TABLE IF NOT EXISTS requests
-            (date text, address text, cmd text, path text, vers text)''')
+            (date text, address text, cmd text, path text, useragent text, vers text)''')
 conn.commit()
 
 #This class will handles any incoming request from
@@ -58,9 +58,9 @@ class myHandler(BaseHTTPRequestHandler):
         cladd = '%s' % self.address_string()
         cmd = '%s' % self.command
         path = '%s' % self.path
-        #ppath = parsed_path.path
+        UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO requests values('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+rvers+"')")
+        c.execute("INSERT INTO requests values('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
 
         conn.commit()
         #except:
@@ -73,6 +73,7 @@ class myHandler(BaseHTTPRequestHandler):
                 'path %s' % self.path,
                 #'real path=%s' % parsed_path.path,
                 'request_version=%s' % self.request_version,
+                'User-agent: %s\n' % str(self.headers['user-agent']),
                 '',
                 'Server Values:',
                 'server_version=%s' % self.server_version,
@@ -89,10 +90,10 @@ class myHandler(BaseHTTPRequestHandler):
         #print(headers)
         #print(req_path)
         #print(ip)
-        self.send_response(200)
-        self.send_header('Date', self.date_time_string(time.time()))
-        self.send_header('Content-type','text/html')
-        self.end_headers()
+        #self.send_response(200)
+        #self.send_header('Date', self.date_time_string(time.time()))
+        #self.send_header('Content-type','text/html')
+        #self.end_header()
         self.wfile.write(message)
         return
 
