@@ -215,6 +215,10 @@ while [ $localnetok -eq  0 ] ; do
 done
 cat > /etc/network/iptables <<EOF
 
+#
+# 
+#
+
 *filter
 :INPUT ACCEPT [0:0]
 :FORWARD DROP [0:0]
@@ -222,7 +226,10 @@ cat > /etc/network/iptables <<EOF
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A INPUT -i $interface -s $localnet -j ACCEPT
+-A INPUT -i $interface -p tcp --dport 12222 -s 10.0.0.0/8 -j ACCEPT
+-A INPUT -i $interface -p tcp --dport 12222 -s 192.168.0.0/8 -j ACCEPT
 -A INPUT -i $interface -j LOG --log-prefix " INPUT "
+-A INPUT -i $interface -p tcp --dport 12222 -j DROP
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
