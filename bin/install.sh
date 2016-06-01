@@ -87,6 +87,14 @@ if [ -f /etc/dshield.conf ] ; then
     . /etc/dshield.conf
 fi
 nomysql=0
+
+dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is dedicated to this task. There is no simple uninstall. Do you want to proceed?" 10 50
+response=$?
+case $response in
+    ${DIALOG_CANCEL}) exit;;
+esac
+
+
 if [ -d /var/lib/mysql ]; then
   dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
   response=$?
@@ -124,7 +132,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	apikeyok=0
 	while [ "$apikeyok" = 0 ] ; do
 	    exec 3>&1
-	    VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information" 10 60 0 \
+	    VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information. Copy/Past from dshield.org/myaccount.html. Use CTRL-V to paste." 12 60 0 \
 		       "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
 		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
 		       2>&1 1>&3)
@@ -194,7 +202,7 @@ localnetok=0
 
 while [ $localnetok -eq  0 ] ; do
     exec 3>&1
-    localnet=$(dialog --title 'Default Interface' --form 'Default Interface' 10 50 0 \
+    localnet=$(dialog --title 'Local Network' --form 'Admin access will be restricted to this network, and logs originating from this network will not be reported.' 10 50 0 \
 		      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
 
     exec 3>&-
@@ -378,12 +386,17 @@ EOF
 
 mv $TMPDIR/motd /etc/motd
 
-
-echo "Done. Please reboot your Pi now. For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
+echo
+echo
+echo Done. 
+echo
+echo "Please reboot your Pi now."
+echo
+echo "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
 echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
 echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 echo
 echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
 echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
 
-rm -rf $TMPDIR
+
