@@ -30,15 +30,29 @@ if not os.path.isdir(logdir):
         sys.exit(0)
 
 # each time we start, we start a new log file by appending to timestamp to access.log
-
-logfile = logdir+os.path.sep+'access.log.'+str(time.time())
+#logfile = logdir+os.path.sep+'access.log.'+str(time.time())
+# not using above using dB for logging now.
 
 conn = sqlite3.connect(config)
-
 c = conn.cursor()
 
+#Create's table for request logging.
 c.execute('''CREATE TABLE IF NOT EXISTS requests
             (date text, address text, cmd text, path text, useragent text, vers text)''')
+
+#Creates table for useragent unique values - RefID will be response RefID
+c.execute('''CREATE TABLE IF NOT EXISTS useragents
+            (
+                ID integer primary key, RefID integer, useragent text,
+                CONSTRAINT useragent_unique UNIQUE (useragent)
+            )''')
+
+#Creates table for useragent unique values - RefID will be response RefID
+c.execute('''CREATE TABLE IF NOT EXISTS responses
+            (
+                ID integer primary key, ContentType text, serverversion text, sysversion text, protocolvers text, useragent text
+            )''')
+
 conn.commit()
 
 #This class will handles any incoming request from
@@ -61,6 +75,12 @@ class myHandler(BaseHTTPRequestHandler):
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
         c.execute("INSERT INTO requests values('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        try:
+            c.execute("INSERT INTO useragents values(NULL,NULL,'"+UserAgentString+"')")
+        except sqlite3.IntegrityError:
+
+            print("here's where we serve a response header based on RefID")
+        #finally:
 
         conn.commit()
         #except:
@@ -90,9 +110,9 @@ class myHandler(BaseHTTPRequestHandler):
         #print(headers)
         #print(req_path)
         #print(ip)
-        #self.send_response(200)
-        #self.send_header('Date', self.date_time_string(time.time()))
-        #self.send_header('Content-type','text/html')
+        self.send_response(200)
+        self.send_header('Date', self.date_time_string(time.time()))
+        self.send_header('Content-type','text/html')
         #self.end_header()
         self.wfile.write(message)
         return
@@ -147,6 +167,3 @@ except KeyboardInterrupt:
     print '^C received, shutting down the web server'
     server.socket.close()
     conn.close()
-
-
-    
