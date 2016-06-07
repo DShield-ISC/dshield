@@ -45,12 +45,16 @@ c.execute('''CREATE TABLE IF NOT EXISTS useragents
             (
                 ID integer primary key, RefID integer, useragent text,
                 CONSTRAINT useragent_unique UNIQUE (useragent)
-            )''')
+            )
+        ''')
 
-#Creates table for useragent unique values - RefID will be response RefID
+#Creates table for responses based on useragents.RefID will be IndexID
 c.execute('''CREATE TABLE IF NOT EXISTS responses
             (
-                ID integer primary key, ContentType text, serverversion text, sysversion text, protocolvers text, useragent text
+                ID integer primary key,
+                RID integer,
+                HeaderField text,
+                dataField text
             )''')
 
 conn.commit()
@@ -74,19 +78,26 @@ class myHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO requests values('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
         try:
-            c.execute("INSERT INTO useragents values(NULL,NULL,'"+UserAgentString+"')")
+            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
         except sqlite3.IntegrityError:
+            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            #print(str(RefID[0]))
+            if str(RefID[0]) != "None":
+                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                #self.send_response(200)
+                #print(Resp[1][3])
+                for i in Resp:
+                    self.send_header(i[2], i[3])
+                #self.send_header(Resp[1][2], Resp[1][3])
+                self.send_header('Date', self.date_time_string(time.time()))
+                self.end_headers()
+            else:
+                print("Useragent: '"+UserAgentString+"' needs a custom response.")
 
-            print("here's where we serve a response header based on RefID")
-        #finally:
-
-        conn.commit()
-        #except:
-        #    print('Fail')
-
-        message_parts = [
+        finally:
+            message_parts = [
                 'Client Values:',
                 'client_address=%s (%s)' % (self.client_address, self.address_string()),
                 'command=%s' % self.command,
@@ -102,18 +113,12 @@ class myHandler(BaseHTTPRequestHandler):
                 '',
                 'Headers Received:',
                 ]
-        for name, value in sorted(self.headers.items()):
-            message_parts.append('%s=%s' % (name, value.rstrip()))
-        message_parts.append('')
-        message = '\r\n'.join(message_parts)
-                
-        #print(headers)
-        #print(req_path)
-        #print(ip)
-        self.send_response(200)
-        self.send_header('Date', self.date_time_string(time.time()))
-        self.send_header('Content-type','text/html')
-        #self.end_header()
+            for name, value in sorted(self.headers.items()):
+                message_parts.append('%s=%s' % (name, value.rstrip()))
+            message_parts.append('')
+            message = '\r\n'.join(message_parts)
+
+        conn.commit()
         self.wfile.write(message)
         return
 
@@ -156,7 +161,7 @@ try:
     #Create a web server and define the handler to manage the
     #incoming request
     server = HTTPServer(('', PORT_NUMBER), myHandler)
-    server.sys_version='test'
+    #server.sys_version = 'test'
 
     print 'Started httpserver on port ' , PORT_NUMBER
 
