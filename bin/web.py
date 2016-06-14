@@ -57,6 +57,13 @@ c.execute('''CREATE TABLE IF NOT EXISTS responses
                 dataField text
             )''')
 
+#post logging database
+c.execute('''CREATE TABLE IF NOT EXISTS posts
+            (
+                date text, address text, cmd text, path text, useragent text, vers text
+            )
+            ''')
+
 conn.commit()
 
 #This class will handles any incoming request from
@@ -122,40 +129,80 @@ class myHandler(BaseHTTPRequestHandler):
         self.wfile.write(message)
         return
 
-#placeholder for when need to build post handling - not served at this time
-class PostHandler(BaseHTTPRequestHandler):
-    
     def do_POST(self):
         # Parse the form data posted
-        form = cgi.FieldStorage(
-            fp=self.rfile, 
-            headers=self.headers,
-            environ={'REQUEST_METHOD':'POST',
-                     'CONTENT_TYPE':self.headers['Content-Type'],
-                     })
+        '''
+        Handle POST requests.
+        '''
+        #logging.debug('POST %s' % (self.path))
+        c = conn.cursor()
+        #try:
+        dte = self.date_time_string()
+        cladd = '%s' % self.address_string()
+        cmd = '%s' % self.command
+        path = '%s' % self.path
+        UserAgentString = '%s' % str(self.headers['user-agent'])
+        rvers = '%s' % self.request_version
+        c.execute("INSERT INTO posts VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
+        ctype, pdict = cgi.parse_header(self.headers['content-type'])
+        if ctype == 'multipart/form-data':
+            postvars = cgi.parse_multipart(self.rfile, pdict)
+        elif ctype == 'application/x-www-form-urlencoded':
+            length = int(self.headers['content-length'])
+            postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+        else:
+            postvars = {}
 
-        # Begin the response
-        self.send_response(200)
+        # Get the "Back" link.
+        back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+
+        # Print out logging information about the path and args.
+        #logging.debug('TYPE %s' % (ctype))
+        #logging.debug('PATH %s' % (self.path))
+        #logging.debug('ARGS %d' % (len(postvars)))
+        #if len(postvars):
+        #    i = 0
+        #    for key in sorted(postvars):
+        #        logging.debug('ARG[%d] %s=%s' % (i, key, postvars[key]))
+        #        i += 1
+
+        # Tell the browser everything is okay and that there is
+        # HTML to display.
+        self.send_response(200)  # OK
+        #self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write('Client: %s\n' % str(self.client_address))
-        self.wfile.write('User-agent: %s\n' % str(self.headers['user-agent']))
-        self.wfile.write('Path: %s\n' % self.path)
-        self.wfile.write('Form data:\n')
 
-        # Echo back information about what was posted in the form
-        for field in form.keys():
-            field_item = form[field]
-            if field_item.filename:
-                # The field contains an uploaded file
-                file_data = field_item.file.read()
-                file_len = len(file_data)
-                del file_data
-                self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
-                        (field, field_item.filename, file_len))
-            else:
-                # Regular form value
-                self.wfile.write('\t%s=%s\n' % (field, form[field].value))
-        return    
+        # Display the POST variables.
+        self.wfile.write('<html>')
+        self.wfile.write('  <head>')
+        self.wfile.write('    <title>Server POST Response</title>')
+        self.wfile.write('  </head>')
+        self.wfile.write('  <body>')
+        self.wfile.write('    <p>POST variables (%d).</p>' % (len(postvars)))
+
+        if len(postvars):
+            # Write out the POST variables in 3 columns.
+            self.wfile.write('    <table>')
+            self.wfile.write('      <tbody>')
+            i = 0
+            for key in sorted(postvars):
+                i += 1
+                val = postvars[key]
+                self.wfile.write('        <tr>')
+                self.wfile.write('          <td align="right">%d</td>' % (i))
+                self.wfile.write('          <td align="right">%s</td>' % key)
+                self.wfile.write('          <td align="left">%s</td>' % val)
+                self.wfile.write('        </tr>')
+            self.wfile.write('      </tbody>')
+            self.wfile.write('    </table>')
+
+        self.wfile.write('    <p><a href="%s">Back</a></p>' % (back))
+        self.wfile.write('  </body>')
+        self.wfile.write('</html>')
+
+
+
 
 try:
     #Create a web server and define the handler to manage the
