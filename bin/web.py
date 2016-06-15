@@ -70,15 +70,10 @@ conn.commit()
 #the browser
 class myHandler(BaseHTTPRequestHandler):
 
-    def do_GET(self):
-        #this will get the request headers - will use for querying database
-        #req_path = self.path
-        #headers = self.headers
-        #ip = self.client_address
-        #self.requests       
-        #this will be where response will be figured out based on database query        
+    def do_HEAD(self):
+        # this will be where response will be figured out based on database query
         c = conn.cursor()
-        #try:
+        # vars
         dte = self.date_time_string()
         cladd = '%s' % self.address_string()
         cmd = '%s' % self.command
@@ -102,28 +97,61 @@ class myHandler(BaseHTTPRequestHandler):
                 self.end_headers()
             else:
                 print("Useragent: '"+UserAgentString+"' needs a custom response.")
-
         finally:
-            message_parts = [
-                'Client Values:',
-                'client_address=%s (%s)' % (self.client_address, self.address_string()),
-                'command=%s' % self.command,
-                'path %s' % self.path,
-                #'real path=%s' % parsed_path.path,
-                'request_version=%s' % self.request_version,
-                'User-agent: %s\n' % str(self.headers['user-agent']),
-                '',
-                'Server Values:',
-                'server_version=%s' % self.server_version,
-                'protocol_version=%s' % self.sys_version,
-                'protocol_version=%s' % self.protocol_version,
-                '',
-                'Headers Received:',
-                ]
-            for name, value in sorted(self.headers.items()):
-                message_parts.append('%s=%s' % (name, value.rstrip()))
-            message_parts.append('')
-            message = '\r\n'.join(message_parts)
+            conn.commit()
+
+
+    def do_GET(self):
+        c = conn.cursor()
+        dte = self.date_time_string()
+        cladd = '%s' % self.address_string()
+        cmd = '%s' % self.command
+        path = '%s' % self.path
+        UserAgentString = '%s' % str(self.headers['user-agent'])
+        rvers = '%s' % self.request_version
+        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+
+        try:
+            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
+        except sqlite3.IntegrityError:
+            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            #print(str(RefID[0]))
+            if str(RefID[0]) != "None":
+                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                #self.send_response(200)
+                #print(Resp[1][3])
+                for i in Resp:
+                    self.send_header(i[2], i[3])
+                #self.send_header(Resp[1][2], Resp[1][3])
+                self.send_header('Date', self.date_time_string(time.time()))
+                self.end_headers()
+                print(self.headers)
+            else:
+                print("Useragent: '"+UserAgentString+"' needs a custom response.")
+                self.send_response(200)  # OK
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+        message_parts = [
+            'Client Values:',
+            'client_address=%s (%s)' % (self.client_address, self.address_string()),
+            'command=%s' % self.command,
+            'path %s' % self.path,
+            #'real path=%s' % parsed_path.path,
+            'request_version=%s' % self.request_version,
+            'User-agent: %s\n' % str(self.headers['user-agent']),
+            '',
+            'Server Values:',
+            'server_version=%s' % self.server_version,
+            'protocol_version=%s' % self.sys_version,
+            'protocol_version=%s' % self.protocol_version,
+            '',
+            'Headers Received:',
+            ]
+        for name, value in sorted(self.headers.items()):
+            message_parts.append('%s=%s' % (name, value.rstrip()))
+        message_parts.append('')
+        message = '\r\n'.join(message_parts)
 
         conn.commit()
         self.wfile.write(message)
@@ -144,6 +172,28 @@ class myHandler(BaseHTTPRequestHandler):
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
         c.execute("INSERT INTO posts VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+
+        try:
+            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
+        except sqlite3.IntegrityError:
+            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            #print(str(RefID[0]))
+            if str(RefID[0]) != "None":
+                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                #self.send_response(200)
+                #print(Resp[1][3])
+                for i in Resp:
+                    self.send_header(i[2], i[3])
+                #self.send_header(Resp[1][2], Resp[1][3])
+                self.send_header('Date', self.date_time_string(time.time()))
+                self.end_headers()
+                print(self.headers)
+            else:
+                print("Useragent: '"+UserAgentString+"' needs a custom response.")
+                self.send_response(200)  # OK
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
         # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
         if ctype == 'multipart/form-data':
@@ -156,22 +206,6 @@ class myHandler(BaseHTTPRequestHandler):
 
         # Get the "Back" link.
         back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
-
-        # Print out logging information about the path and args.
-        #logging.debug('TYPE %s' % (ctype))
-        #logging.debug('PATH %s' % (self.path))
-        #logging.debug('ARGS %d' % (len(postvars)))
-        #if len(postvars):
-        #    i = 0
-        #    for key in sorted(postvars):
-        #        logging.debug('ARG[%d] %s=%s' % (i, key, postvars[key]))
-        #        i += 1
-
-        # Tell the browser everything is okay and that there is
-        # HTML to display.
-        self.send_response(200)  # OK
-        #self.send_header('Content-type', 'text/html')
-        self.end_headers()
 
         # Display the POST variables.
         self.wfile.write('<html>')
@@ -200,8 +234,6 @@ class myHandler(BaseHTTPRequestHandler):
         self.wfile.write('    <p><a href="%s">Back</a></p>' % (back))
         self.wfile.write('  </body>')
         self.wfile.write('</html>')
-
-
 
 
 try:
