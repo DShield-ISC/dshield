@@ -38,7 +38,10 @@ c = conn.cursor()
 
 #Create's table for request logging.
 c.execute('''CREATE TABLE IF NOT EXISTS requests
-            (date text, address text, cmd text, path text, useragent text, vers text)''')
+            (
+                date text, address text, cmd text, path text, useragent text, vers text
+            )
+        ''')
 
 #Creates table for useragent unique values - RefID will be response RefID
 c.execute('''CREATE TABLE IF NOT EXISTS useragents
@@ -55,14 +58,15 @@ c.execute('''CREATE TABLE IF NOT EXISTS responses
                 RID integer,
                 HeaderField text,
                 dataField text
-            )''')
+            )
+        ''')
 
 #post logging database
 c.execute('''CREATE TABLE IF NOT EXISTS posts
             (
-                date text, address text, cmd text, path text, useragent text, vers text
+                date text, address text, cmd text, path text, useragent text, vers text, formkey text, formvalue text
             )
-            ''')
+        ''')
 
 conn.commit()
 
@@ -171,7 +175,9 @@ class myHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO posts VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        c.execute("INSERT INTO posts VALUES("
+                  "'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"',NULL,NULL)"
+                  )
 
         try:
             c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
@@ -223,17 +229,23 @@ class myHandler(BaseHTTPRequestHandler):
             for key in sorted(postvars):
                 i += 1
                 val = postvars[key]
+                c.execute("INSERT INTO posts VALUES"
+                          "("
+                          "'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"','"+key+"','"+val[0]+"')"
+                          )
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % (i))
                 self.wfile.write('          <td align="right">%s</td>' % key)
                 self.wfile.write('          <td align="left">%s</td>' % val)
                 self.wfile.write('        </tr>')
+                conn.commit()
             self.wfile.write('      </tbody>')
             self.wfile.write('    </table>')
 
         self.wfile.write('    <p><a href="%s">Back</a></p>' % (back))
         self.wfile.write('  </body>')
         self.wfile.write('</html>')
+        return
 
 
 try:
