@@ -8,6 +8,16 @@ import sys
 import time
 import urlparse
 import cgi
+import ssl
+import logging
+import argparse
+import mimetypes
+import posixpath
+import re
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 PORT_NUMBER = 8080
 
@@ -18,63 +28,66 @@ logdir = '..'+os.path.sep+'log'
 config = './webserver.sqlite'
 # check if config database exists
 
-db_is_new = not os.path.exists(config)
-if db_is_new:
-        print 'configuration database is not initialized'
-        sys.exit(0)
+def build_DB():
+    db_is_new = not os.path.exists(config)
+    if db_is_new:
+            print 'configuration database is not initialized'
+            sys.exit(0)
 
-# check if log directory exists
-        
-if not os.path.isdir(logdir):
-        print 'log directory does not exist. '+logdir
-        sys.exit(0)
+    # check if log directory exists
 
-# each time we start, we start a new log file by appending to timestamp to access.log
-#logfile = logdir+os.path.sep+'access.log.'+str(time.time())
-# not using above using dB for logging now.
+    if not os.path.isdir(logdir):
+            print 'log directory does not exist. '+logdir
+            sys.exit(0)
 
-conn = sqlite3.connect(config)
-c = conn.cursor()
+    # each time we start, we start a new log file by appending to timestamp to access.log
+    #logfile = logdir+os.path.sep+'access.log.'+str(time.time())
+    # not using above using dB for logging now.
 
-#Create's table for request logging.
-c.execute('''CREATE TABLE IF NOT EXISTS requests
-            (
-                date text, address text, cmd text, path text, useragent text, vers text
-            )
-        ''')
+    conn = sqlite3.connect(config)
+    c = conn.cursor()
 
-#Creates table for useragent unique values - RefID will be response RefID
-c.execute('''CREATE TABLE IF NOT EXISTS useragents
-            (
-                ID integer primary key, RefID integer, useragent text,
-                CONSTRAINT useragent_unique UNIQUE (useragent)
-            )
-        ''')
+    #Create's table for request logging.
+    c.execute('''CREATE TABLE IF NOT EXISTS requests
+                (
+                    date text, address text, cmd text, path text, useragent text, vers text
+                )
+            ''')
 
-#Creates table for responses based on useragents.RefID will be IndexID
-c.execute('''CREATE TABLE IF NOT EXISTS responses
-            (
-                ID integer primary key,
-                RID integer,
-                HeaderField text,
-                dataField text
-            )
-        ''')
+    #Creates table for useragent unique values - RefID will be response RefID
+    c.execute('''CREATE TABLE IF NOT EXISTS useragents
+                (
+                    ID integer primary key, RefID integer, useragent text,
+                    CONSTRAINT useragent_unique UNIQUE (useragent)
+                )
+            ''')
 
-#post logging database
-c.execute('''CREATE TABLE IF NOT EXISTS posts
-            (
-                date text, address text, cmd text, path text, useragent text, vers text, formkey text, formvalue text
-            )
-        ''')
+    #Creates table for responses based on useragents.RefID will be IndexID
+    c.execute('''CREATE TABLE IF NOT EXISTS responses
+                (
+                    ID integer primary key,
+                    RID integer,
+                    HeaderField text,
+                    dataField text
+                )
+            ''')
 
-conn.commit()
+    #post logging database
+    c.execute('''CREATE TABLE IF NOT EXISTS posts
+                (
+                    date text, address text, cmd text, path text, useragent text, vers text, formkey text, formvalue text
+                )
+            ''')
+
+    conn.commit()
+    conn.close()
 
 #This class will handles any incoming request from
 #the browser
 class myHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
+        conn = sqlite3.connect(config)
         # this will be where response will be figured out based on database query
         c = conn.cursor()
         # vars
@@ -106,6 +119,7 @@ class myHandler(BaseHTTPRequestHandler):
 
 
     def do_GET(self):
+        conn = sqlite3.connect(config)
         c = conn.cursor()
         dte = self.date_time_string()
         cladd = '%s' % self.address_string()
@@ -136,7 +150,7 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
 
-        message_parts = [
+            message_parts = [
             'Client Values:',
             'client_address=%s (%s)' % (self.client_address, self.address_string()),
             'command=%s' % self.command,
@@ -151,7 +165,12 @@ class myHandler(BaseHTTPRequestHandler):
             'protocol_version=%s' % self.protocol_version,
             '',
             'Headers Received:',
+            '<title>Upload</title>\
+            <form action=/ method=POST ENCTYPE=multipart/form-data>\
+            <input type=file name=upfile> <input type=submit value=Upload>\
+            </form></body></html>'
             ]
+
         for name, value in sorted(self.headers.items()):
             message_parts.append('%s=%s' % (name, value.rstrip()))
         message_parts.append('')
@@ -162,6 +181,7 @@ class myHandler(BaseHTTPRequestHandler):
         return
 
     def do_POST(self):
+        conn = sqlite3.connect(config)
         # Parse the form data posted
         '''
         Handle POST requests.
@@ -199,6 +219,7 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
+
 
         # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
@@ -247,10 +268,50 @@ class myHandler(BaseHTTPRequestHandler):
         self.wfile.write('</html>')
         return
 
+    def deal_post_data(self):
+        boundary = self.headers.plisttext.split("=")[1]
+        remainbytes = int(self.headers['content-length'])
+        line = self.rfile.readline()
+        remainbytes -= len(line)
+        if not boundary in line:
+            return (False, "Content NOT begin with boundary")
+        line = self.rfile.readline()
+        remainbytes -= len(line)
+        fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line)
+        if not fn:
+            return (False, "Can't find out file name...")
+        path = self.translate_path(self.path)
+        fn = os.path.join(path, fn[0])
+        line = self.rfile.readline()
+        remainbytes -= len(line)
+        line = self.rfile.readline()
+        remainbytes -= len(line)
+        try:
+            out = open(fn, 'wb')
+        except IOError:
+            return (False, "Can't create file to write, do you have permission to write?")
+
+        preline = self.rfile.readline()
+        remainbytes -= len(preline)
+        while remainbytes > 0:
+            line = self.rfile.readline()
+            remainbytes -= len(line)
+            if boundary in line:
+                preline = preline[0:-1]
+                if preline.endswith('\r'):
+                    preline = preline[0:-1]
+                out.write(preline)
+                out.close()
+                return (True, "File '%s' upload success!" % fn)
+            else:
+                out.write(preline)
+                preline = line
+        return (False, "Unexpect Ends of data.")
 
 try:
     #Create a web server and define the handler to manage the
     #incoming request
+    build_DB()
     server = HTTPServer(('', PORT_NUMBER), myHandler)
     #server.sys_version = 'test'
 
