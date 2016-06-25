@@ -50,14 +50,21 @@ def build_DB():
     #Create's table for request logging.
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                 (
-                    date text, address text, cmd text, path text, useragent text, vers text
+                    date text,
+                    address text,
+                    cmd text,
+                    path text,
+                    useragent text,
+                    vers text
                 )
             ''')
 
     #Creates table for useragent unique values - RefID will be response RefID
     c.execute('''CREATE TABLE IF NOT EXISTS useragents
                 (
-                    ID integer primary key, RefID integer, useragent text,
+                    ID integer primary key,
+                    RefID integer,
+                    useragent text,
                     CONSTRAINT useragent_unique UNIQUE (useragent)
                 )
             ''')
@@ -75,7 +82,14 @@ def build_DB():
     #post logging database
     c.execute('''CREATE TABLE IF NOT EXISTS posts
                 (
-                    date text, address text, cmd text, path text, useragent text, vers text, formkey text, formvalue text
+                    date text,
+                    address text,
+                    cmd text,
+                    path text,
+                    useragent text,
+                    vers text,
+                    formkey text,
+                    formvalue blob
                 )
             ''')
 
@@ -311,6 +325,7 @@ class myHandler(BaseHTTPRequestHandler):
 try:
     #Create a web server and define the handler to manage the
     #incoming request
+    conn = sqlite3.connect(config)
     build_DB()
     server = HTTPServer(('', PORT_NUMBER), myHandler)
     #server.sys_version = 'test'
