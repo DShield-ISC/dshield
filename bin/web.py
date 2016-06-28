@@ -14,6 +14,8 @@ import argparse
 import mimetypes
 import posixpath
 import re
+import subprocess
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -21,6 +23,7 @@ except ImportError:
 
 PORT_NUMBER = 8080
 
+#bummer need to fix :(
 # configure config SQLLite DB and log directory
 
 #config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
@@ -82,6 +85,7 @@ def build_DB():
     #post logging database
     c.execute('''CREATE TABLE IF NOT EXISTS posts
                 (
+                    ID integer primary key,
                     date text,
                     address text,
                     cmd text,
@@ -92,6 +96,15 @@ def build_DB():
                     formvalue blob
                 )
             ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files
+                (
+                    ID integer primary key,
+                    RID integer,
+                    filename text,
+                    DATA blob
+                )
+            ''')
+
 
     conn.commit()
     conn.close()
@@ -210,7 +223,7 @@ class myHandler(BaseHTTPRequestHandler):
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
         c.execute("INSERT INTO posts VALUES("
-                  "'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"',NULL,NULL)"
+                  "NULL,'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"',NULL,NULL)"
                   )
 
         try:
@@ -263,15 +276,17 @@ class myHandler(BaseHTTPRequestHandler):
             i = 0
             for key in sorted(postvars):
                 i += 1
+                #print(key)
                 val = postvars[key]
-                c.execute("INSERT INTO posts VALUES"
-                          "("
-                          "'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"','"+key+"','"+val[0]+"')"
-                          )
+                if key == "upfile":
+                    print(val[0])
+                else:
+                    c.execute("INSERT INTO posts VALUES"
+                          "(""'NULL','"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"','"+key+"','"+val[0]+"')")
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % (i))
                 self.wfile.write('          <td align="right">%s</td>' % key)
-                self.wfile.write('          <td align="left">%s</td>' % val)
+                self.wfile.write('          <td align="left">%s</td>' % val[0])
                 self.wfile.write('        </tr>')
                 conn.commit()
             self.wfile.write('      </tbody>')
@@ -292,6 +307,7 @@ class myHandler(BaseHTTPRequestHandler):
         line = self.rfile.readline()
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line)
+        dir(fn)
         if not fn:
             return (False, "Can't find out file name...")
         path = self.translate_path(self.path)
@@ -302,6 +318,8 @@ class myHandler(BaseHTTPRequestHandler):
         remainbytes -= len(line)
         try:
             out = open(fn, 'wb')
+            print(out)
+
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?")
 
