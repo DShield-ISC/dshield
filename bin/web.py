@@ -14,7 +14,6 @@ import argparse
 import mimetypes
 import posixpath
 import re
-import subprocess
 
 try:
     from cStringIO import StringIO
@@ -39,9 +38,9 @@ def build_DB():
 
     # check if log directory exists
 
-    if not os.path.isdir(logdir):
-            print 'log directory does not exist. '+logdir
-            sys.exit(0)
+    #if not os.path.isdir(logdir):
+    #        print 'log directory does not exist. '+logdir
+    #        sys.exit(0)
 
     # each time we start, we start a new log file by appending to timestamp to access.log
     #logfile = logdir+os.path.sep+'access.log.'+str(time.time())
@@ -93,7 +92,7 @@ def build_DB():
                     useragent text,
                     vers text,
                     formkey text,
-                    formvalue blob
+                    formvalue text
                 )
             ''')
     c.execute('''CREATE TABLE IF NOT EXISTS files
@@ -177,30 +176,26 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
 
-            message_parts = [
-            'Client Values:',
-            'client_address=%s (%s)' % (self.client_address, self.address_string()),
-            'command=%s' % self.command,
-            'path %s' % self.path,
-            #'real path=%s' % parsed_path.path,
-            'request_version=%s' % self.request_version,
-            'User-agent: %s\n' % str(self.headers['user-agent']),
-            '',
-            'Server Values:',
-            'server_version=%s' % self.server_version,
-            'protocol_version=%s' % self.sys_version,
-            'protocol_version=%s' % self.protocol_version,
-            '',
-            'Headers Received:',
-            '<title>Upload</title>\
-            <form action=/ method=POST ENCTYPE=multipart/form-data>\
-            <input type=file name=upfile> <input type=submit value=Upload>\
-            </form></body></html>'
-            ]
+        message_parts = [
+        '<title>Upload</title>\
+        <form action=/ method=POST ENCTYPE=multipart/form-data>\
+        <input type=file name=upfile> <input type=submit value=Upload>\
+        <fieldset>\
+        <legend>Form Using GET</legend>\
+        <form method="get">\
+        <p>Form: <input type="text" name="get_arg1"></p>\
+        <p>Enter data: <input type="text" name="get_arg2"></p>\
+        <input type="submit" value="GET Submit">\
+        </form>\
+        </fieldset>\
+        <p>&nbsp;</p>\
+        <fieldset>'
+        ]
+        #print sorted(self.headers.items())
 
-        for name, value in sorted(self.headers.items()):
-            message_parts.append('%s=%s' % (name, value.rstrip()))
-        message_parts.append('')
+        #for name, value in sorted(self.headers.items()):
+        #    message_parts.append('%s=%s' % (name, value.rstrip()))
+        #message_parts.append('')
         message = '\r\n'.join(message_parts)
 
         conn.commit()
@@ -274,15 +269,19 @@ class myHandler(BaseHTTPRequestHandler):
             self.wfile.write('    <table>')
             self.wfile.write('      <tbody>')
             i = 0
+            print(postvars)
             for key in sorted(postvars):
                 i += 1
-                #print(key)
                 val = postvars[key]
                 if key == "upfile":
-                    print(val[0])
+                    #c.execute("INSERT INTO files VALUES"
+                    #          "(""NULL,NULL'" + key + "','" + val[0] + "','" + cmd + "','" + path + "','" +
+                    #          UserAgentString + "','" + rvers + "','" + key + "','" +
+                    #          val[0] + "')")
+                    c.execute(
+                        "INSERT INTO files VALUES(NULL,NULL,'" + key + "','" +val[0] + "')")
                 else:
-                    c.execute("INSERT INTO posts VALUES"
-                          "(""'NULL','"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"','"+key+"','"+val[0]+"')")
+                    c.execute("INSERT INTO posts VALUES(NULL,'" + dte + "','" + cladd + "','" + cmd + "','" + path + "','" + UserAgentString + "','" + rvers + "','" + key + "','" +val[0]+"')")
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % (i))
                 self.wfile.write('          <td align="right">%s</td>' % key)
@@ -318,7 +317,6 @@ class myHandler(BaseHTTPRequestHandler):
         remainbytes -= len(line)
         try:
             out = open(fn, 'wb')
-            print(out)
 
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?")
