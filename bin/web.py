@@ -13,7 +13,7 @@ import logging
 import argparse
 import mimetypes
 import posixpath
-import re
+import magic
 
 try:
     from cStringIO import StringIO
@@ -269,17 +269,16 @@ class myHandler(BaseHTTPRequestHandler):
             self.wfile.write('    <table>')
             self.wfile.write('      <tbody>')
             i = 0
-            print(postvars)
             for key in sorted(postvars):
                 i += 1
                 val = postvars[key]
                 if key == "upfile":
-                    #c.execute("INSERT INTO files VALUES"
-                    #          "(""NULL,NULL'" + key + "','" + val[0] + "','" + cmd + "','" + path + "','" +
-                    #          UserAgentString + "','" + rvers + "','" + key + "','" +
-                    #          val[0] + "')")
-                    c.execute(
-                        "INSERT INTO files VALUES(NULL,NULL,'" + key + "','" +val[0] + "')")
+                    RefID = c.execute("SELECT ID FROM posts WHERE ID=(SELECT MAX(ID)  FROM posts);").fetchone()
+                    try:
+                        c.execute(
+                        "INSERT INTO files VALUES(NULL,'" + str(RefID[0]) + "','" + key + "','" +val[0] + "')")
+                    except:
+                        print("Need to handle binaries.")
                 else:
                     c.execute("INSERT INTO posts VALUES(NULL,'" + dte + "','" + cladd + "','" + cmd + "','" + path + "','" + UserAgentString + "','" + rvers + "','" + key + "','" +val[0]+"')")
                 self.wfile.write('        <tr>')
@@ -317,7 +316,7 @@ class myHandler(BaseHTTPRequestHandler):
         remainbytes -= len(line)
         try:
             out = open(fn, 'wb')
-
+            magic.from_file(out)
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?")
 
