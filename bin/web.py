@@ -4,16 +4,18 @@ from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from datetime import datetime
 import os
 import sqlite3
-import sys
 import time
-import urlparse
 import cgi
-import ssl
-import logging
-import argparse
-import mimetypes
-import posixpath
-import magic
+import xml
+# Dev Libraries:
+#import sys
+#import urlparse
+#import ssl
+#import logging
+#import argparse
+#import mimetypes
+#import posixpath
+#import magic
 
 try:
     from cStringIO import StringIO
@@ -26,8 +28,8 @@ PORT_NUMBER = 8080
 # configure config SQLLite DB and log directory
 
 #config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-logdir = '..'+os.path.sep+'log'
-config = './webserver.sqlite'
+logdir = '..'+os.path.sep+'log' #not using at this time - but will
+config = './webserver.sqlite' # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 # check if config database exists
 
 def build_DB():
@@ -123,11 +125,11 @@ class myHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')") # logging
         try:
-            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
+            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')") # trying to find all the new useragentstrings
         except sqlite3.IntegrityError:
-            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone() #get RefID if there is one - should be set in Backend
             #print(str(RefID[0]))
             if str(RefID[0]) != "None":
                 Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
@@ -136,22 +138,22 @@ class myHandler(BaseHTTPRequestHandler):
                 for i in Resp:
                     self.send_header(i[2], i[3])
                 #self.send_header(Resp[1][2], Resp[1][3])
-                self.send_header('Date', self.date_time_string(time.time()))
-                self.end_headers()
+                self.send_header('Date', self.date_time_string(time.time())) # can potentially have multiple if not careful
+                self.end_headers() #iterates through DB - need to make sure vuln pages and this are synced.
             else:
-                print("Useragent: '"+UserAgentString+"' needs a custom response.")
+                print("Useragent: '"+UserAgentString+"' needs a custom response.")  #get RefID if there is one - should be set in Backend
         finally:
             conn.commit()
 
 
     def do_GET(self):
         conn = sqlite3.connect(config)
-        c = conn.cursor()
-        dte = self.date_time_string()
-        cladd = '%s' % self.address_string()
-        cmd = '%s' % self.command
-        path = '%s' % self.path
-        UserAgentString = '%s' % str(self.headers['user-agent'])
+        c = conn.cursor() #connect sqlite DB
+        dte = self.date_time_string() # date for logs
+        cladd = '%s' % self.address_string() # still trying to resolve - maybe internal DNS in services
+        cmd = '%s' % self.command # same as ubelow
+        path = '%s' % self.path # see below comment
+        UserAgentString = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
         rvers = '%s' % self.request_version
         c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
 
@@ -175,23 +177,28 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-
-        message_parts = [
-        '<title>Upload</title>\
-        <form action=/ method=POST ENCTYPE=multipart/form-data>\
-        <input type=file name=upfile> <input type=submit value=Upload>\
-        <fieldset>\
-        <legend>Form Using GET</legend>\
-        <form method="get">\
-        <p>Form: <input type="text" name="get_arg1"></p>\
-        <p>Enter data: <input type="text" name="get_arg2"></p>\
-        <input type="submit" value="GET Submit">\
-        </form>\
-        </fieldset>\
-        <p>&nbsp;</p>\
-        <fieldset>'
-        ]
-        #print sorted(self.headers.items())
+        #going to use xml or DB for this
+        if path == "/etc/shadow*": #or matches xml page
+            print("trying to grab hashes.") #display vuln page
+        elif path == "/binexecshell": #maybe both?
+            print("shellshock") #display vuln page
+        else:
+            message_parts = [
+                '<title>Upload</title>\
+                <form action=/ method=POST ENCTYPE=multipart/form-data>\
+                <input type=file name=upfile> <input type=submit value=Upload>\
+                <fieldset>\
+                <legend>Form Using GET</legend>\
+                <form method="get">\
+                <p>Form: <input type="text" name="get_arg1"></p>\
+                <p>Enter data: <input type="text" name="get_arg2"></p>\
+                <input type="submit" value="GET Submit">\
+                </form>\
+                </fieldset>\
+                <p>&nbsp;</p>\
+                <fieldset>'
+            ]
+            #print sorted(self.headers.items())
 
         #for name, value in sorted(self.headers.items()):
         #    message_parts.append('%s=%s' % (name, value.rstrip()))
@@ -222,7 +229,10 @@ class myHandler(BaseHTTPRequestHandler):
                   )
 
         try:
-            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
+            c.execute(
+                "INSERT INTO useragents VALUES"
+                    "(NULL,NULL,'"+UserAgentString+"')"
+            )
         except sqlite3.IntegrityError:
             RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
             #print(str(RefID[0]))
@@ -273,14 +283,30 @@ class myHandler(BaseHTTPRequestHandler):
                 i += 1
                 val = postvars[key]
                 if key == "upfile":
-                    RefID = c.execute("SELECT ID FROM posts WHERE ID=(SELECT MAX(ID)  FROM posts);").fetchone()
+                    RefID = c.execute(""
+                                      "SELECT ID FROM posts "
+                                      "WHERE ID=(SELECT MAX(ID)  "
+                                      "FROM posts);").fetchone()
                     try:
                         c.execute(
-                        "INSERT INTO files VALUES(NULL,'" + str(RefID[0]) + "','" + key + "','" +val[0] + "')")
+                        "INSERT INTO files VALUES(NULL,'" +
+                            str(RefID[0]) + "','" +
+                            key + "','" +
+                            val[0] + "')"
+                        )
                     except:
                         print("Need to handle binaries.")
                 else:
-                    c.execute("INSERT INTO posts VALUES(NULL,'" + dte + "','" + cladd + "','" + cmd + "','" + path + "','" + UserAgentString + "','" + rvers + "','" + key + "','" +val[0]+"')")
+                    c.execute("INSERT INTO posts VALUES(NULL,'" +
+                              dte + "','" +
+                              cladd + "','" +
+                              cmd + "','" +
+                              path + "','" +
+                              UserAgentString + "','" +
+                              rvers + "','" +
+                              key + "','" +
+                              val[0] +"')"
+                              )
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % (i))
                 self.wfile.write('          <td align="right">%s</td>' % key)
