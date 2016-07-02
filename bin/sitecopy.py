@@ -4,6 +4,8 @@
 # It will retrieve and save the response for later replay as part of a honeypot.
 
 import sys
+import os
+import io
 import httplib
 import sqlite3
 from urlparse import urlparse
@@ -68,11 +70,13 @@ conn.request(method, url.path)
 re = conn.getresponse()
 header = re.getheaders()
 body = re.read()
-print body
+webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+#print body
 
 
+config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 
-con = sqlite3.connect('webserver.sqlite')
+con = sqlite3.connect(config)
 
 c = con.cursor()
 
@@ -97,9 +101,10 @@ c.execute('''CREATE TABLE IF NOT EXISTS headers
 c.execute('''CREATE TABLE IF NOT EXISTS body
             (
                 RID integer,
-                body text
+                body blob
             )
         ''')
+
 try:
     c.execute("INSERT INTO sites VALUES(NULL,'" + urlstring + "')")
     RefID = c.execute("SELECT ID FROM sites WHERE site='" + urlstring + "'").fetchone()
@@ -108,12 +113,29 @@ try:
         c.execute("INSERT INTO headers VALUES('" + str(RefID[0]) + "','" + i[0] + "','" + i[1] + "')")
     print('Headers uploaded to database for ' + urlstring)
 
-    c.execute("INSERT INTO body VALUES('" + str(RefID[0]) + "','" + str(body) + "')")
-
 except sqlite3.IntegrityError:
-    print("Header and body has been uploaded already for " + urlstring)
+    print("Header has been uploaded already for " + urlstring)
 
 finally:
     con.commit()
+# write the body time
+try:
+    c.execute("INSERT INTO body VALUES('" + str(RefID[0]) + "','" + str(body) + "')")
+except:
+    print("Body file not writing to DB correctly. Should write to file ok.")
+finally:
+    # Open file
+    os.chdir(webpath)
+    print("Writing to www body.html file.")
+    fd = io.open("body.html", 'wb')
+
+    # Writing text
+    #ret = fd.write(unicode(body))
+    for i in str(body):
+        fd.write(i)
+
+    print "written successfully"
+
+
 
 

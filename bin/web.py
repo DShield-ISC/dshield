@@ -24,13 +24,15 @@ except ImportError:
 
 PORT_NUMBER = 8080
 
-#bummer need to fix :(
+# Global Variables - bummer need to fix :(
 # configure config SQLLite DB and log directory
 
 #config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-logdir = '..'+os.path.sep+'log' #not using at this time - but will
-config = './webserver.sqlite' # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
+
+logdir = '..' + os.path.sep + 'log' #not using at this time - but will
+config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite' # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 # check if config database exists
+
 
 def build_DB():
     db_is_new = not os.path.exists(config)
