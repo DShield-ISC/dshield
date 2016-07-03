@@ -46,3 +46,24 @@ sudo bin/install.sh
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf
 
+
+
+
+DEV Instance - web.py and sitecopy.py
+
+sitecopy.py will copy any site serve up the site in using the web.py script just use:
+
+# python sitecopy.py http://www.yoursite.com
+
+- It will not change the links at this time - to do
+- Any data posted or user request strings will be logged to DB\webserver.sqlite
+
+web.py - do not need to run sitecopy however it will serve up a very basic page that can accept input and files. 
+Todo:
+- Need to figure out how to serve up vulnerable pages - probably from the path
+- SQL Injection - will likely use separate dorked database
+- Would like to integrate with cowrie for shell attacks - (BHAG)
+
+Any input appreciated - mweeks9989@gmail.com - thanks!
+
+

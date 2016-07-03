@@ -13,6 +13,7 @@ from urlparse import urlparse
 if len(sys.argv) > 1:
     urlstring = sys.argv[1]
     url = urlparse(urlstring)
+    domain = url.netloc
 else:
     sys.exit('URL is required')
 
@@ -106,8 +107,8 @@ c.execute('''CREATE TABLE IF NOT EXISTS body
         ''')
 
 try:
-    c.execute("INSERT INTO sites VALUES(NULL,'" + urlstring + "')")
-    RefID = c.execute("SELECT ID FROM sites WHERE site='" + urlstring + "'").fetchone()
+    c.execute("INSERT INTO sites VALUES(NULL,'" + domain + "')")
+    RefID = c.execute("SELECT ID FROM sites WHERE site='" + domain + "'").fetchone()
     print('Body and URL uploaded to database')
     for i in header:
         c.execute("INSERT INTO headers VALUES('" + str(RefID[0]) + "','" + i[0] + "','" + i[1] + "')")
@@ -118,6 +119,8 @@ except sqlite3.IntegrityError:
 
 finally:
     con.commit()
+
+
 # write the body time
 try:
     c.execute("INSERT INTO body VALUES('" + str(RefID[0]) + "','" + str(body) + "')")
@@ -125,17 +128,25 @@ except:
     print("Body file not writing to DB correctly. Should write to file ok.")
 finally:
     # Open file
-    os.chdir(webpath)
-    print("Writing to www body.html file.")
-    fd = io.open("body.html", 'wb')
-
-    # Writing text
-    #ret = fd.write(unicode(body))
-    for i in str(body):
-        fd.write(i)
-
-    print "written successfully"
-
+    for i in os.listdir(webpath):
+        file_path = os.path.join(webpath, i)
+        try:
+            if os.path.isfile(file_path):
+                print("Deleting files in webdirectory" + webpath)
+                os.unlink(file_path)
+        except Exception as e:
+            print(e)
+    print("Writing body to www directory.")
+    try:
+        os.chdir(webpath)
+        fd = io.open(domain, 'wb')
+        # Writing text
+        #ret = fd.write(unicode(body))
+        for i in str(body):
+            fd.write(i)
+        print "written successfully"
+    except Exception as e:
+        print("Write failed - do you have permissions?")
 
 
 

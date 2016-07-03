@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
-from datetime import datetime
+#from urlparse import urlparse
 import os
 import sqlite3
 import time
 import cgi
-import xml
+#import xml
 # Dev Libraries:
 #import sys
 #import urlparse
@@ -16,6 +16,7 @@ import xml
 #import mimetypes
 #import posixpath
 #import magic
+#from datetime import datetime
 
 try:
     from cStringIO import StringIO
@@ -26,14 +27,13 @@ PORT_NUMBER = 8080
 
 # Global Variables - bummer need to fix :(
 # configure config SQLLite DB and log directory
-
-#config = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-
+#hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
 logdir = '..' + os.path.sep + 'log' #not using at this time - but will
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite' # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
+#webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+
 # check if config database exists
-
-
+#code removed - will code default page unless sitecopy has not been run.
 def build_DB():
     db_is_new = not os.path.exists(config)
     if db_is_new:
@@ -151,6 +151,10 @@ class myHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         conn = sqlite3.connect(config)
         c = conn.cursor() #connect sqlite DB
+        webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+        for i in os.listdir(webpath):
+            site = i
+            file_path = os.path.join(webpath, i)
         dte = self.date_time_string() # date for logs
         cladd = '%s' % self.address_string() # still trying to resolve - maybe internal DNS in services
         cmd = '%s' % self.command # same as ubelow
@@ -179,12 +183,20 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-        #going to use xml or DB for this
-        if path == "/etc/shadow*": #or matches xml page
-            print("trying to grab hashes.") #display vuln page
+        #going to use xml or DB for this - may even steal some glastopf stuff https://github.com/mushorg/glastopf/tree/master/glastopf
+        if path == "/etc/shadow*": #or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
+            print("trying to grab hashes.") #display vuln page - probably need to write some matching code
         elif path == "/binexecshell": #maybe both?
-            print("shellshock") #display vuln page
-        else:
+            print("shellshock") #display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
+        elif os.path.isfile(file_path):
+            RefID = c.execute("SELECT ID FROM sites WHERE site='" + site + "'").fetchone()
+            siteheaders = c.execute("SELECT * FROM headers WHERE RID=" + str(RefID[0]) + "").fetchall()
+            for i in siteheaders:
+                self.send_header(i[1], i[2])
+            f = open(file_path)
+            self.wfile.write(f.read())
+            f.close()
+        else: #default
             message_parts = [
                 '<title>Upload</title>\
                 <form action=/ method=POST ENCTYPE=multipart/form-data>\
@@ -200,15 +212,10 @@ class myHandler(BaseHTTPRequestHandler):
                 <p>&nbsp;</p>\
                 <fieldset>'
             ]
-            #print sorted(self.headers.items())
-
-        #for name, value in sorted(self.headers.items()):
-        #    message_parts.append('%s=%s' % (name, value.rstrip()))
-        #message_parts.append('')
-        message = '\r\n'.join(message_parts)
+            message = '\r\n'.join(message_parts)
+            self.wfile.write(message)
 
         conn.commit()
-        self.wfile.write(message)
         return
 
     def do_POST(self):
