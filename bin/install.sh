@@ -393,6 +393,8 @@ EOF
 
 mv $TMPDIR/motd /etc/motd
 
+./makecert.sh
+
 echo
 echo
 echo Done. 
