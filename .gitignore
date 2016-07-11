@@ -5,3 +5,4 @@
 .crt
 .key
 .keypin
+/etc/CA/
