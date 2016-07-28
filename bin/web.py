@@ -144,6 +144,9 @@ class myHandler(BaseHTTPRequestHandler):
                 self.end_headers() #iterates through DB - need to make sure vuln pages and this are synced.
             else:
                 print("Useragent: '"+UserAgentString+"' needs a custom response.")  #get RefID if there is one - should be set in Backend
+        except:
+            self.send_response(200)
+            self.end_headers()
         finally:
             conn.commit()
 
@@ -152,14 +155,19 @@ class myHandler(BaseHTTPRequestHandler):
         conn = sqlite3.connect(config)
         c = conn.cursor() #connect sqlite DB
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
-        for i in os.listdir(webpath):
+        webdirlst = os.listdir(webpath)
+        for i in webdirlst:
             site = i
             file_path = os.path.join(webpath, i)
         dte = self.date_time_string() # date for logs
         cladd = '%s' % self.address_string() # still trying to resolve - maybe internal DNS in services
         cmd = '%s' % self.command # same as ubelow
         path = '%s' % self.path # see below comment
-        UserAgentString = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
+        try:
+            UserAgentString = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
+        except:
+            UserAgentString = "NULL"
+
         rvers = '%s' % self.request_version
         c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
 
@@ -183,12 +191,16 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
+        except:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
         #going to use xml or DB for this - may even steal some glastopf stuff https://github.com/mushorg/glastopf/tree/master/glastopf
         if path == "/etc/shadow*": #or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
             print("trying to grab hashes.") #display vuln page - probably need to write some matching code
         elif path == "/binexecshell": #maybe both?
             print("shellshock") #display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
-        elif os.path.isfile(file_path):
+        elif webdirlst: #os.path.isfile(file_path):
             RefID = c.execute("SELECT ID FROM sites WHERE site='" + site + "'").fetchone()
             siteheaders = c.execute("SELECT * FROM headers WHERE RID=" + str(RefID[0]) + "").fetchall()
             for i in siteheaders:
