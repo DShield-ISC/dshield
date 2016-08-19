@@ -305,13 +305,16 @@ x=`mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.
 if [ $x -eq 1 ]; then
     echo "cowrie mysql database already exists. not touching it."
 else
+    # we create the database and call the creation script
     mysql -uroot -p$mysqlpassword -e 'create schema cowrie'
+    mysql -uroot -p$mysqlpassword -e 'source /srv/cowrie/doc/sql/mysql.sql' cowrie
 fi
 if [ "$cowriepassword" = "" ]; then
     cowriepassword=`head -c10 /dev/random | xxd -p`
 fi
 echo cowriepassword=$cowriepassword >> /etc/dshield.conf
-mysql -uroot -p$mysqlpassword -e "grant all on \`*\`.\`cowrie\` to \`cowrie\`@\`localhost\` identified by '$cowriepassword'"
+mysql -uroot -p$mysqlpassword -e "create user \`cowrie\`.\`*\` identified by '$cowriepassword'"
+mysql -uroot -p$mysqlpassword -e "grant all on cowrie.* to \`cowrie\`@\`localhost\`"
 
 
 
