@@ -5,6 +5,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 import os
 import sqlite3
 import time
+import sys
 import cgi
 #import xml
 # Dev Libraries:
@@ -15,7 +16,7 @@ import cgi
 #import argparse
 #import mimetypes
 #import posixpath
-#import magic
+import magic
 #from datetime import datetime
 
 try:
@@ -34,7 +35,7 @@ config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite' # got a we
 
 # check if config database exists
 #code removed - will code default page unless sitecopy has not been run.
-def build_DB():
+def build_db():
     db_is_new = not os.path.exists(config)
     if db_is_new:
             print 'configuration database is not initialized'
@@ -50,8 +51,8 @@ def build_DB():
     #logfile = logdir+os.path.sep+'access.log.'+str(time.time())
     # not using above using dB for logging now.
 
-    conn = sqlite3.connect(config)
-    c = conn.cursor()
+    sqlconn = sqlite3.connect(config)
+    c = sqlconn.cursor()
 
     #Create's table for request logging.
     c.execute('''CREATE TABLE IF NOT EXISTS requests
@@ -114,12 +115,12 @@ def build_DB():
 
 #This class will handles any incoming request from
 #the browser
-class myHandler(BaseHTTPRequestHandler):
+class MyHandler(BaseHTTPRequestHandler):
 
-    def do_HEAD(self):
-        conn = sqlite3.connect(config)
+    def do_head(self):
+        sqlconn = sqlite3.connect(config)
         # this will be where response will be figured out based on database query
-        c = conn.cursor()
+        c = sqlconn.cursor()
         # vars
         dte = self.date_time_string()
         cladd = '%s' % self.address_string()
@@ -151,9 +152,9 @@ class myHandler(BaseHTTPRequestHandler):
             conn.commit()
 
 
-    def do_GET(self):
-        conn = sqlite3.connect(config)
-        c = conn.cursor() #connect sqlite DB
+    def do_get(self):
+        sqlconn = sqlite3.connect(config)
+        c = sqlconn.cursor() #connect sqlite DB
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
         webdirlst = os.listdir(webpath)
         for i in webdirlst:
@@ -164,20 +165,20 @@ class myHandler(BaseHTTPRequestHandler):
         cmd = '%s' % self.command # same as ubelow
         path = '%s' % self.path # see below comment
         try:
-            UserAgentString = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
+            useragentstring = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
         except:
-            UserAgentString = "NULL"
+            useragentstring = "NULL"
 
         rvers = '%s' % self.request_version
-        c.execute("""INSERT INTO requests (date,address,cmd,path,useragent, vers) VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers))
+        c.execute("""INSERT INTO requests (date,address,cmd,path,useragent, vers) VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,useragentstring,rvers))
 
         try:
-            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString))
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(useragentstring))
         except sqlite3.IntegrityError:
-            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone()
+            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(useragentstring)).fetchone()
             #print(str(RefID[0]))
             if str(RefID[0]) != "None":
-                Resp = c.execute("""SELECT * FROM responses WHERE RID=?,(str(RefID[0]))).fetchall()
+                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(str(refid[0]))).fetchall()
                 #self.send_response(200)
                 #print(Resp[1][3])
                 for i in Resp:
@@ -201,8 +202,8 @@ class myHandler(BaseHTTPRequestHandler):
         elif path == "/binexecshell": #maybe both?
             print("shellshock") #display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
         elif webdirlst: #os.path.isfile(file_path):
-                RefID = c.execute("""SELECT ID FROM sites WHERE site=?""",(site)).fetchone()
-                siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""",(str(RefID[0]))).fetchall()
+            RefID = c.execute("""SELECT ID FROM sites WHERE site=?""",(site)).fetchone()
+            siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""",(str(refid[0]))).fetchall()
             for i in siteheaders:
                 self.send_header(i[1], i[2])
             f = open(file_path)
@@ -230,7 +231,7 @@ class myHandler(BaseHTTPRequestHandler):
         conn.commit()
         return
 
-    def do_POST(self):
+    def do_post(self):
         conn = sqlite3.connect(config)
         # Parse the form data posted
         '''
@@ -369,7 +370,7 @@ try:
     #Create a web server and define the handler to manage the
     #incoming request
     conn = sqlite3.connect(config)
-    build_DB()
+    build_db()
     server = HTTPServer(('', PORT_NUMBER), myHandler)
     #server.sys_version = 'test'
 
