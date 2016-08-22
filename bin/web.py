@@ -127,14 +127,14 @@ class myHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')") # logging
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES (?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers)) # logging
         try:
-            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')") # trying to find all the new useragentstrings
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString)) # trying to find all the new useragentstrings
         except sqlite3.IntegrityError:
-            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone() #get RefID if there is one - should be set in Backend
+            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone() #get RefID if there is one - should be set in Backend
             #print(str(RefID[0]))
             if str(RefID[0]) != "None":
-                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(RefID[0])).fetchall()
                 #self.send_response(200)
                 #print(Resp[1][3])
                 for i in Resp:
@@ -169,15 +169,15 @@ class myHandler(BaseHTTPRequestHandler):
             UserAgentString = "NULL"
 
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO requests VALUES('"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"')")
+        c.execute("""INSERT INTO requests (date,address,cmd,path,useragent, vers) VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers))
 
         try:
-            c.execute("INSERT INTO useragents VALUES(NULL,NULL,'"+UserAgentString+"')")
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString))
         except sqlite3.IntegrityError:
-            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone()
             #print(str(RefID[0]))
             if str(RefID[0]) != "None":
-                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                Resp = c.execute("""SELECT * FROM responses WHERE RID=?,(str(RefID[0]))).fetchall()
                 #self.send_response(200)
                 #print(Resp[1][3])
                 for i in Resp:
@@ -201,8 +201,8 @@ class myHandler(BaseHTTPRequestHandler):
         elif path == "/binexecshell": #maybe both?
             print("shellshock") #display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
         elif webdirlst: #os.path.isfile(file_path):
-            RefID = c.execute("SELECT ID FROM sites WHERE site='" + site + "'").fetchone()
-            siteheaders = c.execute("SELECT * FROM headers WHERE RID=" + str(RefID[0]) + "").fetchall()
+                RefID = c.execute("""SELECT ID FROM sites WHERE site=?""",(site)).fetchone()
+                siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""",(str(RefID[0]))).fetchall()
             for i in siteheaders:
                 self.send_header(i[1], i[2])
             f = open(file_path)
@@ -245,20 +245,14 @@ class myHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         UserAgentString = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("INSERT INTO posts VALUES("
-                  "NULL,'"+dte+"','"+cladd+"','"+cmd+"','"+path+"','"+UserAgentString+"','"+rvers+"',NULL,NULL)"
-                  )
-
+            c.execute("""INSERT INTO (date,address,cmd,path,useragent,vers) posts VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers))
         try:
-            c.execute(
-                "INSERT INTO useragents VALUES"
-                    "(NULL,NULL,'"+UserAgentString+"')"
-            )
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString))
         except sqlite3.IntegrityError:
-            RefID = c.execute("SELECT RefID FROM useragents WHERE useragent='"+UserAgentString+"'").fetchone()
+            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone()
             #print(str(RefID[0]))
             if str(RefID[0]) != "None":
-                Resp = c.execute("SELECT * FROM responses WHERE RID="+str(RefID[0])+"").fetchall()
+                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(str(RefID[0]))).fetchall()
                 #self.send_response(200)
                 #print(Resp[1][3])
                 for i in Resp:
@@ -309,25 +303,12 @@ class myHandler(BaseHTTPRequestHandler):
                                       "WHERE ID=(SELECT MAX(ID)  "
                                       "FROM posts);").fetchone()
                     try:
-                        c.execute(
-                        "INSERT INTO files VALUES(NULL,'" +
-                            str(RefID[0]) + "','" +
-                            key + "','" +
-                            val[0] + "')"
-                        )
+                        c.execute("""INSERT INTO files (rid,filename,data) VALUES(?,?,?)""",(str(RefID[0]),key,val[0]))
                     except:
                         print("Need to handle binaries.")
                 else:
-                    c.execute("INSERT INTO posts VALUES(NULL,'" +
-                              dte + "','" +
-                              cladd + "','" +
-                              cmd + "','" +
-                              path + "','" +
-                              UserAgentString + "','" +
-                              rvers + "','" +
-                              key + "','" +
-                              val[0] +"')"
-                              )
+                        c.execute("""INSERT INTO posts (date, address,cmd, path, useragent, rvers, formkey formvalue) VALUES (?,?,?,?,?,?,?,?)""",
+                                  (dte,cladd,cmd,path,UserAgentString,rvers,key,val[0]))
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % (i))
                 self.wfile.write('          <td align="right">%s</td>' % key)
