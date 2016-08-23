@@ -7,17 +7,18 @@ import sqlite3
 import time
 import sys
 import cgi
-#import xml
-# Dev Libraries:
-#import sys
-#import urlparse
-#import ssl
-#import logging
-#import argparse
-#import mimetypes
-#import posixpath
+import re
+# import xml
+#   Dev Libraries:
+# import sys
+import urlparse
+# import ssl
+# import logging
+# import argparse
+# import mimetypes
+# import posixpath
 import magic
-#from datetime import datetime
+# from datetime import datetime
 
 try:
     from cStringIO import StringIO
@@ -28,13 +29,15 @@ PORT_NUMBER = 8080
 
 # Global Variables - bummer need to fix :(
 # configure config SQLLite DB and log directory
-#hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-logdir = '..' + os.path.sep + 'log' #not using at this time - but will
-config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite' # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
-#webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+# hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
+logdir = '..' + os.path.sep + 'log'  # not using at this time - but will
+# got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
+config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
+# webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+
 
 # check if config database exists
-#code removed - will code default page unless sitecopy has not been run.
+# code removed - will code default page unless sitecopy has not been run.
 def build_db():
     db_is_new = not os.path.exists(config)
     if db_is_new:
@@ -43,18 +46,15 @@ def build_db():
 
     # check if log directory exists
 
-    #if not os.path.isdir(logdir):
+    # if not os.path.isdir(logdir):
     #        print 'log directory does not exist. '+logdir
     #        sys.exit(0)
 
     # each time we start, we start a new log file by appending to timestamp to access.log
-    #logfile = logdir+os.path.sep+'access.log.'+str(time.time())
+    # logfile = logdir+os.path.sep+'access.log.'+str(time.time())
     # not using above using dB for logging now.
 
-    sqlconn = sqlite3.connect(config)
-    c = sqlconn.cursor()
-
-    #Create's table for request logging.
+    # Create's table for request logging.
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                 (
                     date text,
@@ -66,17 +66,17 @@ def build_db():
                 )
             ''')
 
-    #Creates table for useragent unique values - RefID will be response RefID
+    # Creates table for useragent unique values - refid will be response refid
     c.execute('''CREATE TABLE IF NOT EXISTS useragents
                 (
                     ID integer primary key,
-                    RefID integer,
+                    refid integer,
                     useragent text,
                     CONSTRAINT useragent_unique UNIQUE (useragent)
                 )
             ''')
 
-    #Creates table for responses based on useragents.RefID will be IndexID
+    # Creates table for responses based on useragents.refid will be IndexID
     c.execute('''CREATE TABLE IF NOT EXISTS responses
                 (
                     ID integer primary key,
@@ -86,7 +86,7 @@ def build_db():
                 )
             ''')
 
-    #post logging database
+    # post logging database
     c.execute('''CREATE TABLE IF NOT EXISTS posts
                 (
                     ID integer primary key,
@@ -108,87 +108,79 @@ def build_db():
                     DATA blob
                 )
             ''')
-
-
     conn.commit()
     conn.close()
 
-#This class will handles any incoming request from
-#the browser
+
+# This class will handles any incoming request from
+# the browser
 class MyHandler(BaseHTTPRequestHandler):
 
     def do_head(self):
-        sqlconn = sqlite3.connect(config)
-        # this will be where response will be figured out based on database query
-        c = sqlconn.cursor()
         # vars
         dte = self.date_time_string()
         cladd = '%s' % self.address_string()
         cmd = '%s' % self.command
         path = '%s' % self.path
-        UserAgentString = '%s' % str(self.headers['user-agent'])
+        useragentstring = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES (?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers)) # logging
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES (?,?,?,?,?,?)""",
+                  (dte, cladd, cmd, path, useragentstring, rvers))  # logging
         try:
-            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString)) # trying to find all the new useragentstrings
+            # trying to find all the new useragentstrings
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
         except sqlite3.IntegrityError:
-            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone() #get RefID if there is one - should be set in Backend
-            #print(str(RefID[0]))
-            if str(RefID[0]) != "None":
-                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(RefID[0])).fetchall()
-                #self.send_response(200)
-                #print(Resp[1][3])
-                for i in Resp:
+            # get refid if there is one - should be set in Backend
+            refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", useragentstring).fetchone()
+            if str(refid[0]) != "None":
+                resp = c.execute("""SELECT * FROM responses WHERE RID=?""", (refid[0])).fetchall()
+                for i in resp:
                     self.send_header(i[2], i[3])
-                #self.send_header(Resp[1][2], Resp[1][3])
-                self.send_header('Date', self.date_time_string(time.time())) # can potentially have multiple if not careful
-                self.end_headers() #iterates through DB - need to make sure vuln pages and this are synced.
+                # can potentially have multiple if not careful
+                self.send_header('Date', self.date_time_string(time.time()))
+                self.end_headers()  # iterates through DB - need to make sure vuln pages and this are synced.
             else:
-                print("Useragent: '"+UserAgentString+"' needs a custom response.")  #get RefID if there is one - should be set in Backend
+                # get refid if there is one - should be set in Backend
+                print("Useragent: '"+useragentstring+"' needs a custom response.")
         except:
             self.send_response(200)
             self.end_headers()
         finally:
             conn.commit()
 
-
     def do_get(self):
-        sqlconn = sqlite3.connect(config)
-        c = sqlconn.cursor() #connect sqlite DB
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
         webdirlst = os.listdir(webpath)
+        file_path = ''
         for i in webdirlst:
             site = i
             file_path = os.path.join(webpath, i)
-        dte = self.date_time_string() # date for logs
-        cladd = '%s' % self.address_string() # still trying to resolve - maybe internal DNS in services
-        cmd = '%s' % self.command # same as ubelow
-        path = '%s' % self.path # see below comment
+        dte = self.date_time_string()   # date for logs
+        cladd = '%s' % self.address_string()  # still trying to resolve - maybe internal DNS in services
+        cmd = '%s' % self.command  # same as ubelow
+        path = '%s' % self.path  # see below comment
         try:
-            useragentstring = '%s' % str(self.headers['user-agent']) #maybe define other source? such as path like below - /etc/shadow needs apache headers
+            # maybe define other source? such as path like below - /etc/shadow needs apache headers
+            useragentstring = '%s' % str(self.headers['user-agent'])
         except:
             useragentstring = "NULL"
-
         rvers = '%s' % self.request_version
-        c.execute("""INSERT INTO requests (date,address,cmd,path,useragent, vers) VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,useragentstring,rvers))
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES(?, ?, ?, ?, ?, ?)""",
+                  (dte, cladd, cmd, path, useragentstring, rvers))
 
         try:
-            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(useragentstring))
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
         except sqlite3.IntegrityError:
-            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(useragentstring)).fetchone()
-            #print(str(RefID[0]))
-            if str(RefID[0]) != "None":
-                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(str(refid[0]))).fetchall()
-                #self.send_response(200)
-                #print(Resp[1][3])
-                for i in Resp:
+            refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", useragentstring).fetchone()
+            if str(refid[0]) != "None":
+                resp = c.execute("""SELECT * FROM responses WHERE RID=?""", (str(refid[0]))).fetchall()
+                for i in resp:
                     self.send_header(i[2], i[3])
-                #self.send_header(Resp[1][2], Resp[1][3])
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
                 print(self.headers)
             else:
-                print("Useragent: '"+UserAgentString+"' needs a custom response.")
+                print("Useragent: '"+useragentstring+"' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -196,20 +188,24 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-        #going to use xml or DB for this - may even steal some glastopf stuff https://github.com/mushorg/glastopf/tree/master/glastopf
-        if path == "/etc/shadow*": #or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
-            print("trying to grab hashes.") #display vuln page - probably need to write some matching code
-        elif path == "/binexecshell": #maybe both?
-            print("shellshock") #display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
-        elif webdirlst: #os.path.isfile(file_path):
-            RefID = c.execute("""SELECT ID FROM sites WHERE site=?""",(site)).fetchone()
-            siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""",(str(refid[0]))).fetchall()
+        # going to use xml or DB for this -
+        # may even steal some glastopf stuff https://github.com/mushorg/glastopf/tree/master/glastopf
+
+        # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
+        if path == "/etc/shadow*":
+            print("trying to grab hashes.")  # display vuln page - probably need to write some matching code
+        elif path == "/binexecshell":  # maybe both?
+            # display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
+            print("shellshock")
+        elif webdirlst:  # os.path.isfile(file_path):
+            refid = c.execute("""SELECT ID FROM sites WHERE site=?""", (site)).fetchone()
+            siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""", (str(refid[0]))).fetchall()
             for i in siteheaders:
                 self.send_header(i[1], i[2])
             f = open(file_path)
             self.wfile.write(f.read())
             f.close()
-        else: #default
+        else:  # default
             message_parts = [
                 '<title>Upload</title>\
                 <form action=/ method=POST ENCTYPE=multipart/form-data>\
@@ -232,42 +228,32 @@ class MyHandler(BaseHTTPRequestHandler):
         return
 
     def do_post(self):
-        conn = sqlite3.connect(config)
         # Parse the form data posted
-        '''
-        Handle POST requests.
-        '''
-        #logging.debug('POST %s' % (self.path))
-        c = conn.cursor()
-        #try:
-        dte = self.date_time_string()
+        # try:
+        date = self.date_time_string()
         cladd = '%s' % self.address_string()
         cmd = '%s' % self.command
         path = '%s' % self.path
-        UserAgentString = '%s' % str(self.headers['user-agent'])
+        useragentstring = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-            c.execute("""INSERT INTO (date,address,cmd,path,useragent,vers) posts VALUES(?,?,?,?,?,?)""",(dte,cladd,cmd,path,UserAgentString,rvers))
+        c.execute('''INSERT INTO posts (date, address, cmd, path, useragent, vers) VALUES(?, ?, ?, ?, ?, ?)''',
+                  (date, cladd, cmd, path, useragentstring, rvers))
         try:
-            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""",(UserAgentString))
+            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
         except sqlite3.IntegrityError:
-            RefID = c.execute("""SELECT RefID FROM useragents WHERE useragent=?""",(UserAgentString)).fetchone()
-            #print(str(RefID[0]))
-            if str(RefID[0]) != "None":
-                Resp = c.execute("""SELECT * FROM responses WHERE RID=?""",(str(RefID[0]))).fetchall()
-                #self.send_response(200)
-                #print(Resp[1][3])
-                for i in Resp:
+            refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", useragentstring).fetchone()
+            if str(refid[0]) != "None":
+                resp = c.execute("""SELECT * FROM responses WHERE RID=?""", (str(refid[0]))).fetchall()
+                for i in resp:
                     self.send_header(i[2], i[3])
-                #self.send_header(Resp[1][2], Resp[1][3])
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
                 print(self.headers)
             else:
-                print("Useragent: '"+UserAgentString+"' needs a custom response.")
+                print("Useragent: '"+useragentstring+"' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-
 
         # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
@@ -275,7 +261,7 @@ class MyHandler(BaseHTTPRequestHandler):
             postvars = cgi.parse_multipart(self.rfile, pdict)
         elif ctype == 'application/x-www-form-urlencoded':
             length = int(self.headers['content-length'])
-            postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+            postvars = urlparse.parse_qs(self.rfile.read(length), keep_blank_values=1)
         else:
             postvars = {}
 
@@ -299,19 +285,18 @@ class MyHandler(BaseHTTPRequestHandler):
                 i += 1
                 val = postvars[key]
                 if key == "upfile":
-                    RefID = c.execute(""
-                                      "SELECT ID FROM posts "
-                                      "WHERE ID=(SELECT MAX(ID)  "
-                                      "FROM posts);").fetchone()
+                    refid = c.execute("""SELECT ID FROM posts WHERE ID=(SELECT MAX(ID) FROM posts)""").fetchone()
                     try:
-                        c.execute("""INSERT INTO files (rid,filename,data) VALUES(?,?,?)""",(str(RefID[0]),key,val[0]))
+                        c.execute("""INSERT INTO files (rid, filename, data) VALUES(?, ?, ?)""",
+                                  (str(refid[0]), key, val[0]))
                     except:
                         print("Need to handle binaries.")
                 else:
-                        c.execute("""INSERT INTO posts (date, address,cmd, path, useragent, rvers, formkey formvalue) VALUES (?,?,?,?,?,?,?,?)""",
-                                  (dte,cladd,cmd,path,UserAgentString,rvers,key,val[0]))
+                    c.execute("""INSERT INTO posts (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
+                              """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                              (date, cladd, cmd, path, useragentstring, rvers, key, val[0]))
                 self.wfile.write('        <tr>')
-                self.wfile.write('          <td align="right">%d</td>' % (i))
+                self.wfile.write('          <td align="right">%d</td>' % i)
                 self.wfile.write('          <td align="right">%s</td>' % key)
                 self.wfile.write('          <td align="left">%s</td>' % val[0])
                 self.wfile.write('        </tr>')
@@ -319,7 +304,7 @@ class MyHandler(BaseHTTPRequestHandler):
             self.wfile.write('      </tbody>')
             self.wfile.write('    </table>')
 
-        self.wfile.write('    <p><a href="%s">Back</a></p>' % (back))
+        self.wfile.write('    <p><a href="%s">Back</a></p>' % back)
         self.wfile.write('  </body>')
         self.wfile.write('</html>')
         return
@@ -329,14 +314,15 @@ class MyHandler(BaseHTTPRequestHandler):
         remainbytes = int(self.headers['content-length'])
         line = self.rfile.readline()
         remainbytes -= len(line)
-        if not boundary in line:
-            return (False, "Content NOT begin with boundary")
+        if boundary not in line:
+            return False, "Content NOT begin with boundary"
         line = self.rfile.readline()
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line)
         dir(fn)
         if not fn:
-            return (False, "Can't find out file name...")
+            return False, "Can't find out file name..."
+        # TODO: is translate path ever defined?
         path = self.translate_path(self.path)
         fn = os.path.join(path, fn[0])
         line = self.rfile.readline()
@@ -347,7 +333,7 @@ class MyHandler(BaseHTTPRequestHandler):
             out = open(fn, 'wb')
             magic.from_file(out)
         except IOError:
-            return (False, "Can't create file to write, do you have permission to write?")
+            return False, "Can't create file to write, do you have permission to write?"
 
         preline = self.rfile.readline()
         remainbytes -= len(preline)
@@ -360,26 +346,25 @@ class MyHandler(BaseHTTPRequestHandler):
                     preline = preline[0:-1]
                 out.write(preline)
                 out.close()
-                return (True, "File '%s' upload success!" % fn)
+                return True, "File '%s' upload success!" % fn
             else:
                 out.write(preline)
                 preline = line
-        return (False, "Unexpect Ends of data.")
+        return False, "Unexpected End of data."
 
 try:
-    #Create a web server and define the handler to manage the
-    #incoming request
+    # Create a web server and define the handler to manage the
+    # incoming request
     conn = sqlite3.connect(config)
+    c = conn.cursor()
     build_db()
-    server = HTTPServer(('', PORT_NUMBER), myHandler)
-    #server.sys_version = 'test'
+    server = HTTPServer(('', PORT_NUMBER), MyHandler)
+    # server.sys_version = 'test'
 
-    print 'Started httpserver on port ' , PORT_NUMBER
+    print 'Started httpserver on port ', PORT_NUMBER
 
-    #Wait forever for incoming http requests
+    # Wait forever for incoming http requests
     server.serve_forever()
 
 except KeyboardInterrupt:
     print '^C received, shutting down the web server'
-    server.socket.close()
-    conn.close()
