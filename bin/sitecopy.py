@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # this script will connect to a web server and it is able to emulate different browsers.
 # It will retrieve and save the response for later replay as part of a honeypot.
@@ -72,6 +72,10 @@ re = conn.getresponse()
 header = re.getheaders()
 body = re.read()
 webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+webpath_not_exists = not os.path.exists(webpath)
+if webpath_exists:
+    print 'www directory not found creating directory.'
+    os.makedirs('..' + os.path.sep + 'srv' + os.path.sep + 'www')
 #print body
 
 
@@ -147,6 +151,7 @@ finally:
         print "written successfully"
     except Exception as e:
         print("Write failed - do you have permissions?")
+
 
 
 

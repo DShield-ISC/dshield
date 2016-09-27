@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/env python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 #from urlparse import urlparse
@@ -17,7 +17,7 @@ import urlparse
 # import argparse
 # import mimetypes
 # import posixpath
-import magic
+#import magic
 # from datetime import datetime
 
 try:
@@ -41,9 +41,10 @@ config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 def build_db():
     db_is_new = not os.path.exists(config)
     if db_is_new:
-            print 'configuration database is not initialized'
-            sys.exit(0)
-
+    #        print 'configuration database is not initialized'
+    #        sys.exit(0)
+        print 'DB directory not found creating directory.'
+        os.makedirs('..' + os.path.sep + 'DB')
     # check if log directory exists
 
     # if not os.path.isdir(logdir):
@@ -55,6 +56,9 @@ def build_db():
     # not using above using dB for logging now.
 
     # Create's table for request logging.
+    conn = sqlite3.connect(config)
+    c = conn.cursor()
+
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                 (
                     date text,
@@ -115,7 +119,6 @@ def build_db():
 # This class will handles any incoming request from
 # the browser
 class MyHandler(BaseHTTPRequestHandler):
-
     def do_head(self):
         # vars
         dte = self.date_time_string()
@@ -148,13 +151,15 @@ class MyHandler(BaseHTTPRequestHandler):
         finally:
             conn.commit()
 
-    def do_get(self):
+    def do_GET(self):
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
-        webdirlst = os.listdir(webpath)
-        file_path = ''
-        for i in webdirlst:
-            site = i
-            file_path = os.path.join(webpath, i)
+        webpath_exists = os.path.exists(webpath)
+        if webpath_exists:
+            webdirlst = os.listdir(webpath)
+            file_path = ''
+            for i in webdirlst:
+                site = i
+                file_path = os.path.join(webpath, i)
         dte = self.date_time_string()   # date for logs
         cladd = '%s' % self.address_string()  # still trying to resolve - maybe internal DNS in services
         cmd = '%s' % self.command  # same as ubelow
@@ -197,7 +202,7 @@ class MyHandler(BaseHTTPRequestHandler):
         elif path == "/binexecshell":  # maybe both?
             # display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
             print("shellshock")
-        elif webdirlst:  # os.path.isfile(file_path):
+        elif webpath_exists:  # os.path.isfile(file_path):
             refid = c.execute("""SELECT ID FROM sites WHERE site=?""", (site)).fetchone()
             siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""", (str(refid[0]))).fetchall()
             for i in siteheaders:
@@ -227,7 +232,7 @@ class MyHandler(BaseHTTPRequestHandler):
         conn.commit()
         return
 
-    def do_post(self):
+    def do_POST(self):
         # Parse the form data posted
         # try:
         date = self.date_time_string()
@@ -239,9 +244,10 @@ class MyHandler(BaseHTTPRequestHandler):
         c.execute('''INSERT INTO posts (date, address, cmd, path, useragent, vers) VALUES(?, ?, ?, ?, ?, ?)''',
                   (date, cladd, cmd, path, useragentstring, rvers))
         try:
-            c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
+            print useragentstring
+            c.execute('''INSERT INTO useragents (useragent) VALUES (?)''', [useragentstring])
         except sqlite3.IntegrityError:
-            refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", useragentstring).fetchone()
+            refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", [useragentstring]).fetchone()
             if str(refid[0]) != "None":
                 resp = c.execute("""SELECT * FROM responses WHERE RID=?""", (str(refid[0]))).fetchall()
                 for i in resp:
@@ -331,7 +337,7 @@ class MyHandler(BaseHTTPRequestHandler):
         remainbytes -= len(line)
         try:
             out = open(fn, 'wb')
-            magic.from_file(out)
+            #magic.from_file(out)
         except IOError:
             return False, "Can't create file to write, do you have permission to write?"
 
@@ -355,9 +361,9 @@ class MyHandler(BaseHTTPRequestHandler):
 try:
     # Create a web server and define the handler to manage the
     # incoming request
+    build_db()
     conn = sqlite3.connect(config)
     c = conn.cursor()
-    build_db()
     server = HTTPServer(('', PORT_NUMBER), MyHandler)
     # server.sys_version = 'test'
 
@@ -368,3 +374,4 @@ try:
 
 except KeyboardInterrupt:
     print '^C received, shutting down the web server'
+
