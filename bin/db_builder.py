@@ -6,9 +6,10 @@ import os
 import sqlite3
 
 requests = '..' + os.path.sep + "signatures.xml"
-config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver-DEV.sqlite'
+config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 
 def build_DB():
+    # type: () -> object
     # This is not necessary by connecting to the db it creates the file.
     #db_is_new = not os.path.exists(config)
     #if db_is_new:
@@ -114,7 +115,7 @@ def build_DB():
     ''')
 
     #post logging database
-    c.execute('''CREATE TABLE IF NOT EXISTS postslogs
+    c.execute('''CREATE TABLE IF NOT EXISTS postlogs
                 (
                     ID integer primary key,
                     date text,
@@ -124,10 +125,12 @@ def build_DB():
                     useragent text,
                     vers text,
                     formkey text,
-                    formvalue text
+                    formvalue text,
+                    summary text
                 )
             ''')
-    c.execute('''CREATE TABLE IF NOT EXISTS logfilesuploaded
+    #where the files go when someone uploads something
+    c.execute('''CREATE TABLE IF NOT EXISTS files
                 (
                     ID integer primary key,
                     RID integer,
@@ -135,6 +138,39 @@ def build_DB():
                     DATA blob
                 )
             ''')
+    # gotta log the request somewhere.
+    c.execute('''CREATE TABLE IF NOT EXISTS requests
+                (
+                    date text,
+                    address text,
+                    cmd text,
+                    path text,
+                    useragent text,
+                    vers text,
+                    summary text
+                )
+            ''')
+    # Creates table for useragent unique values - refid will be response refid
+    c.execute('''CREATE TABLE IF NOT EXISTS useragents
+                (
+                    ID integer primary key,
+                    refid integer,
+                    useragent text,
+                    CONSTRAINT useragent_unique UNIQUE (useragent)
+                )
+            ''')
+
+    # Creates table for responses based on useragents.refid will be IndexID
+    c.execute('''CREATE TABLE IF NOT EXISTS responses
+                (
+                    ID integer primary key,
+                    RID integer,
+                    HeaderField text,
+                    dataField text
+                )
+            ''')
+
+
 
     # Create some standard header data for vulnerable servers
     try:
@@ -171,7 +207,6 @@ def build_DB():
                     Signature = [
                         (id,desc,str,mod)
                     ]
-                    print node.tag, node.text
                     c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?)""", Signature)
                     id = 'null'
                     desc = 'null'
@@ -189,11 +224,8 @@ def build_DB():
     #close out the DB
     conn.close()
 
-try:
+if __name__ == '__main__':
     #Create a web server and define the handler to manage the
     #incoming request
     build_DB()
 
-except KeyboardInterrupt:
-    print '^C received, shutting down the web server'
-    #conn.close()

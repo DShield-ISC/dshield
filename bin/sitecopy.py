@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # this script will connect to a web server and it is able to emulate different browsers.
 # It will retrieve and save the response for later replay as part of a honeypot.
@@ -151,7 +151,6 @@ finally:
         print "written successfully"
     except Exception as e:
         print("Write failed - do you have permissions?")
-
 
 
 

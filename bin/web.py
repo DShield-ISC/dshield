@@ -1,23 +1,22 @@
 #!/usr/env python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
-#from urlparse import urlparse
+import urlparse
+import db_builder
 import os
 import sqlite3
 import time
-import sys
 import cgi
 import re
 # import xml
-#   Dev Libraries:
+# Dev Libraries:
 # import sys
-import urlparse
 # import ssl
 # import logging
 # import argparse
 # import mimetypes
 # import posixpath
-#import magic
+# import magic
 # from datetime import datetime
 
 try:
@@ -43,8 +42,11 @@ def build_db():
     if db_is_new:
     #        print 'configuration database is not initialized'
     #        sys.exit(0)
-        print 'DB directory not found creating directory.'
-        os.makedirs('..' + os.path.sep + 'DB')
+        DBPath = '..' + os.path.sep + 'DB'
+        if not os.path.exists(DBPath):
+            print 'DB directory not found creating directory.'
+            os.makedirs(DBPath)
+    db_builder.build_DB()
     # check if log directory exists
 
     # if not os.path.isdir(logdir):
@@ -54,67 +56,6 @@ def build_db():
     # each time we start, we start a new log file by appending to timestamp to access.log
     # logfile = logdir+os.path.sep+'access.log.'+str(time.time())
     # not using above using dB for logging now.
-
-    # Create's table for request logging.
-    conn = sqlite3.connect(config)
-    c = conn.cursor()
-
-    c.execute('''CREATE TABLE IF NOT EXISTS requests
-                (
-                    date text,
-                    address text,
-                    cmd text,
-                    path text,
-                    useragent text,
-                    vers text
-                )
-            ''')
-
-    # Creates table for useragent unique values - refid will be response refid
-    c.execute('''CREATE TABLE IF NOT EXISTS useragents
-                (
-                    ID integer primary key,
-                    refid integer,
-                    useragent text,
-                    CONSTRAINT useragent_unique UNIQUE (useragent)
-                )
-            ''')
-
-    # Creates table for responses based on useragents.refid will be IndexID
-    c.execute('''CREATE TABLE IF NOT EXISTS responses
-                (
-                    ID integer primary key,
-                    RID integer,
-                    HeaderField text,
-                    dataField text
-                )
-            ''')
-
-    # post logging database
-    c.execute('''CREATE TABLE IF NOT EXISTS posts
-                (
-                    ID integer primary key,
-                    date text,
-                    address text,
-                    cmd text,
-                    path text,
-                    useragent text,
-                    vers text,
-                    formkey text,
-                    formvalue text
-                )
-            ''')
-    c.execute('''CREATE TABLE IF NOT EXISTS files
-                (
-                    ID integer primary key,
-                    RID integer,
-                    filename text,
-                    DATA blob
-                )
-            ''')
-    conn.commit()
-    conn.close()
-
 
 # This class will handles any incoming request from
 # the browser
@@ -127,8 +68,8 @@ class MyHandler(BaseHTTPRequestHandler):
         path = '%s' % self.path
         useragentstring = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES (?,?,?,?,?,?)""",
-                  (dte, cladd, cmd, path, useragentstring, rvers))  # logging
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES (?,?,?,?,?,?,?)""",
+                  (dte, cladd, cmd, path, useragentstring, rvers, "Header info - not firing"))  # logging
         try:
             # trying to find all the new useragentstrings
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
@@ -161,7 +102,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = self.date_time_string()   # date for logs
-        cladd = '%s' % self.address_string()  # still trying to resolve - maybe internal DNS in services
+        cladd = '%s' % self.client_address[0]  #
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
         try:
@@ -170,8 +111,8 @@ class MyHandler(BaseHTTPRequestHandler):
         except:
             useragentstring = "NULL"
         rvers = '%s' % self.request_version
-        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers) VALUES(?, ?, ?, ?, ?, ?)""",
-                  (dte, cladd, cmd, path, useragentstring, rvers))
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
+                  (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.'))
 
         try:
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
@@ -194,21 +135,27 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
         # going to use xml or DB for this -
-        # may even steal some glastopf stuff https://github.com/mushorg/glastopf/tree/master/glastopf
+        # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
 
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
-        if path == "/etc/shadow*":
-            print("trying to grab hashes.")  # display vuln page - probably need to write some matching code
-        elif path == "/binexecshell":  # maybe both?
-            # display vuln page - would love to just pipe out cowrie shell, may be a little too ambitious
-            print("shellshock")
-        elif webpath_exists:  # os.path.isfile(file_path):
+        pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
+        for i in pathmatch:
+            if re.match(i[0], path)is not None:
+                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]).fetchone()
+                print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + path
+                c.execute(
+                    """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
+                    (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern" + str(sigDescription)))
+
+                # display vuln page based on sigdescription - and set headers based on OSTarget
+
+        if webpath_exists:  # os.path.isfile(file_path):
             refid = c.execute("""SELECT ID FROM sites WHERE site=?""", (site)).fetchone()
-            siteheaders = c.execute("""SELECT * FROM headers WHERE RID=?""", (str(refid[0]))).fetchall()
+            siteheaders = c.execute("""SELECT paternDescription FROM Sigs WHERE RID=?""", (str(refid[0]))).fetchall()
             for i in siteheaders:
                 self.send_header(i[1], i[2])
             f = open(file_path)
-            self.wfile.write(f.read())
+            self.e.write(f.read())
             f.close()
         else:  # default
             message_parts = [
@@ -235,14 +182,14 @@ class MyHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         # Parse the form data posted
         # try:
-        date = self.date_time_string()
-        cladd = '%s' % self.address_string()
+        dte = self.date_time_string()
+        cladd = '%s' % self.client_address[0]
         cmd = '%s' % self.command
         path = '%s' % self.path
         useragentstring = '%s' % str(self.headers['user-agent'])
         rvers = '%s' % self.request_version
-        c.execute('''INSERT INTO posts (date, address, cmd, path, useragent, vers) VALUES(?, ?, ?, ?, ?, ?)''',
-                  (date, cladd, cmd, path, useragentstring, rvers))
+        c.execute('''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
+                  (dte, cladd, cmd, path, useragentstring, rvers, "- standard post"))
         try:
             print useragentstring
             c.execute('''INSERT INTO useragents (useragent) VALUES (?)''', [useragentstring])
@@ -261,6 +208,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
 
+        # Manage post variables code set
         # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
         if ctype == 'multipart/form-data':
@@ -270,6 +218,30 @@ class MyHandler(BaseHTTPRequestHandler):
             postvars = urlparse.parse_qs(self.rfile.read(length), keep_blank_values=1)
         else:
             postvars = {}
+
+        # Signatures identification section - will eventually
+        # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
+        pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
+        for i in pathmatch:
+            if re.match(i[0], path)is not None:
+                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]).fetchone()
+                print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + path
+                c.execute(
+                    '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
+                    (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
+
+        #Signatures for  description code - set to detect and log at this time
+        argsigs = c.execute("""SELECT patternString FROM Sigs WHERE module='xss'""").fetchall()
+        for i in argsigs:
+            for key in sorted(postvars):
+                val = postvars[key]
+                if re.match(i[0], val[0]) is not None:
+                    sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
+                                               [str(i[0])]).fetchone()
+                    print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + val[0]
+                    c.execute(
+                        '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
+                        (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
 
         # Get the "Back" link.
         back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
@@ -284,6 +256,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
         if len(postvars):
             # Write out the POST variables in 3 columns.
+
             self.wfile.write('    <table>')
             self.wfile.write('      <tbody>')
             i = 0
@@ -291,16 +264,16 @@ class MyHandler(BaseHTTPRequestHandler):
                 i += 1
                 val = postvars[key]
                 if key == "upfile":
-                    refid = c.execute("""SELECT ID FROM posts WHERE ID=(SELECT MAX(ID) FROM posts)""").fetchone()
+                    refid = c.execute("""SELECT ID FROM postlogs WHERE ID=(SELECT MAX(ID) FROM postlogs)""").fetchone()
                     try:
                         c.execute("""INSERT INTO files (rid, filename, data) VALUES(?, ?, ?)""",
-                                  (str(refid[0]), key, val[0]))
+                                                    (str(refid[0]), key, val[0]))
                     except:
                         print("Need to handle binaries.")
                 else:
-                    c.execute("""INSERT INTO posts (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
+                    c.execute("""INSERT INTO postlogs (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
                               """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                              (date, cladd, cmd, path, useragentstring, rvers, key, val[0]))
+                              (dte, cladd, cmd, path, useragentstring, rvers, key, val[0]))
                 self.wfile.write('        <tr>')
                 self.wfile.write('          <td align="right">%d</td>' % i)
                 self.wfile.write('          <td align="right">%s</td>' % key)
@@ -374,4 +347,3 @@ try:
 
 except KeyboardInterrupt:
     print '^C received, shutting down the web server'
-
