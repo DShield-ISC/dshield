@@ -73,7 +73,7 @@
   <request>
     <id>13</id>
     <patternDescription>favicon.ico</patternDescription>
-    <patternString><![CDATA[.*(favicon.ico).*]]></patternString>
+    <patternString><![CDATA[.*(faviscon.ico).*]]></patternString>
     <module>unknown</module>
   </request>
   <request>
