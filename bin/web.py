@@ -1,6 +1,8 @@
 #!/usr/env python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+import ssl
+import socket
 import urlparse
 import db_builder
 import os
@@ -8,22 +10,8 @@ import sqlite3
 import time
 import cgi
 import re
-# import xml
-# Dev Libraries:
-# import sys
-# import ssl
-# import logging
-# import argparse
-# import mimetypes
-# import posixpath
-# import magic
-# from datetime import datetime
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
+# Default port - feel free to change
 PORT_NUMBER = 8080
 
 # Global Variables - bummer need to fix :(
@@ -33,29 +21,29 @@ logdir = '..' + os.path.sep + 'log'  # not using at this time - but will
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 # webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
+# will be if user sets up SSL cert and key
+certpath = '..' + os.path.sep + 'domain.crt'
+keypath = '..' + os.path.sep + 'domain.key'
 
+# have to build Certificates to get this to work with https requests - recommend to do so, better data -
+# name them the same as the ../server.cert and ../server.key or change above.
+# openssl req \
+#       -newkey rsa:2048 -nodes -keyout domain.key \
+#       -x509 -days 365 -out domain.crt
+if not os.path.exists(certpath) and not os.path.exists(keypath):
+    _USE_SSL = False
+else:
+    _USE_SSL = True
 
 # check if config database exists
-# code removed - will code default page unless sitecopy has not been run.
 def build_db():
     db_is_new = not os.path.exists(config)
     if db_is_new:
-    #        print 'configuration database is not initialized'
-    #        sys.exit(0)
         DBPath = '..' + os.path.sep + 'DB'
         if not os.path.exists(DBPath):
             print 'DB directory not found creating directory.'
             os.makedirs(DBPath)
     db_builder.build_DB()
-    # check if log directory exists
-
-    # if not os.path.isdir(logdir):
-    #        print 'log directory does not exist. '+logdir
-    #        sys.exit(0)
-
-    # each time we start, we start a new log file by appending to timestamp to access.log
-    # logfile = logdir+os.path.sep+'access.log.'+str(time.time())
-    # not using above using dB for logging now.
 
 # This class will handles any incoming request from
 # the browser
@@ -331,19 +319,35 @@ class MyHandler(BaseHTTPRequestHandler):
                 preline = line
         return False, "Unexpected End of data."
 
-try:
-    # Create a web server and define the handler to manage the
-    # incoming request
-    build_db()
-    conn = sqlite3.connect(config)
-    c = conn.cursor()
-    server = HTTPServer(('', PORT_NUMBER), MyHandler)
-    # server.sys_version = 'test'
+class SecureHTTPServer(HTTPServer):
+    def __init__(self, server_address, HandlerClass):
+        HTTPServer.__init__(self, server_address, MyHandler)
+        ctx = ssl.Context(ssl.SSLv23_METHOD)
+        # server.pem's location (containing the server private key and
+        # the server certificate).
+        ctx.use_privatekey_file('server.key')
+        ctx.use_certificate_file('server.crt')
+        self.socket = ssl.Connection(ctx, socket.socket(self.address_family,
+                                                        self.socket_type))
+        self.server_bind()
+        self.server_activate()
 
-    print 'Started httpserver on port ', PORT_NUMBER
+if __name__ == "__main__":
+    try:
+        # Create a web server, DB and define the handler to manage the
+        # incoming request
+        build_db()
+        conn = sqlite3.connect(config)
+        c = conn.cursor()
+        server = HTTPServer(('', PORT_NUMBER), MyHandler)
+        if _USE_SSL:
+            server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
+                                            certfile=certpath, server_side=True)
+            print "using SSL"
 
-    # Wait forever for incoming http requests
-    server.serve_forever()
+        print 'Started httpserver on port ', PORT_NUMBER
+        # Wait forever for incoming http requests
+        server.serve_forever()
 
-except KeyboardInterrupt:
-    print '^C received, shutting down the web server'
+    except KeyboardInterrupt:
+        print '^C received, shutting down the web server'
