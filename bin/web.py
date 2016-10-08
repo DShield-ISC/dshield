@@ -134,8 +134,12 @@ class MyHandler(BaseHTTPRequestHandler):
                 c.execute(
                     """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                     (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern" + str(sigDescription)))
-
+                SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", sigDescription[0]).fetchone()
                 # display vuln page based on sigdescription - and set headers based on OSTarget
+                response = c.execute("""SELECT * FROM responses WHERE SigID=?""", SigID[0]).fetchall()
+                for r in response:
+                    hdrResponse = ("""SELECT * FROM HdrResponses WHERE ID=?""", response[2]).fetchall()
+                    pageID = ("""SELECT * FROM paths WHERE WHERE ID=?""", response[3]).fetchall()
 
         if webpath_exists:  # os.path.isfile(file_path):
             refid = c.execute("""SELECT ID FROM sites WHERE site=?""", (site)).fetchone()

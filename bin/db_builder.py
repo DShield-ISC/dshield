@@ -39,19 +39,19 @@ def build_DB():
                     module text
                 )
             ''')
-
     #Create's main table to reference all tables based on signatures.
-    c.execute('''CREATE TABLE IF NOT EXISTS responses
-                (
-                    ID integer primary key,
-                    SigID integer,
-                    HdrID integer,
-                    PageID integer,
-                    SQLID integer,
-                    XSS integer,
-                    FileInject integer
-                )
-            ''')
+    #c.execute('''CREATE TABLE IF NOT EXISTS responses
+    #            (
+    #                ID integer primary key,
+    #                SigID integer,
+    #                HdrID integer,
+    #                PageID integer,
+    #                SQLID integer,
+    #                XSS integer,
+    #                FileInject integer,
+    #                module text
+    #            )
+    #        ''')
 
 
 
@@ -59,43 +59,32 @@ def build_DB():
     c.execute('''CREATE TABLE IF NOT EXISTS HdrResponses
                 (
                     ID integer,
-                    HeaderField text ,
-                    dataField text primary key
+                    SigID integer,
+                    HeaderField text,
+                    dataField text
                 )
             ''')
-
     #Creates table for response pages, don't actually want to serve up pages based on www
     # hopefully all these requests don't get jacked with sql injection
     c.execute('''CREATE TABLE IF NOT EXISTS paths
         (
-            ID integer,
-            path text primary key,
+            SigID,
+            path text,
             OSPath text
         )
     ''')
-
     # hopefully all these requests don't get jacked with sql injection
     c.execute('''CREATE TABLE IF NOT EXISTS SQLResp
         (
-            ID integer,
-            SQLInput text primary key,
+            SigID integer,
+            SQLInput text,
             SQLOutput text
         )
     ''')
-
-    # Create table to respond to SQL Injection
-    c.execute('''CREATE TABLE IF NOT EXISTS SQLResp
-        (
-            ID integer,
-            SQLInput text primary key,
-            SQLOutput text
-        )
-    ''')
-
     # Create table to respond to XSS
     c.execute('''CREATE TABLE IF NOT EXISTS XSSResp
         (
-            ID integer,
+            SigID integer,
             ScriptReq text primary key,
             ScriptResp text,
             JSResp blob
@@ -105,6 +94,7 @@ def build_DB():
     c.execute('''CREATE TABLE IF NOT EXISTS FileResp
         (
             ID integer,
+            SigID,
             FileNamePost text,
             FileDataPost blob,
             FileTextPost text,
@@ -113,7 +103,6 @@ def build_DB():
             CowrieRef text
         )
     ''')
-
     #post logging database
     c.execute('''CREATE TABLE IF NOT EXISTS postlogs
                 (
@@ -159,7 +148,6 @@ def build_DB():
                     CONSTRAINT useragent_unique UNIQUE (useragent)
                 )
             ''')
-
     # Creates table for responses based on useragents.refid will be IndexID
     c.execute('''CREATE TABLE IF NOT EXISTS responses
                 (
@@ -170,16 +158,14 @@ def build_DB():
                 )
             ''')
 
-
-
     # Create some standard header data for vulnerable servers
     try:
         server_headers = [
-            ("1", "Server", "Apache/2.0.1"),
-            ("1", "Content-Type", "text/html"),
-            ("1", "Connection", "keep-alive")
+            ("1","1", "Server", "Apache/2.0.1"),
+            ("1","1", "Content-Type", "text/html"),
+            ("1","1", "Connection", "keep-alive")
         ]
-        c.executemany("""INSERT INTO HdrResponses VALUES (?,?,?)""", server_headers)
+        c.executemany("""INSERT INTO HdrResponses VALUES (?,?,?,?)""", server_headers)
     except sqlite3.IntegrityError:
         pass
     finally:
@@ -188,11 +174,15 @@ def build_DB():
     try:
         with open(requests, 'rt') as f:
             tree = ElementTree.parse(f)
-        Signature = ()
+        signature = ()
         id = 'null'
         desc = 'null'
         str = 'null'
         mod = 'null'
+        sigid = 'null'
+        table = 'null'
+        ptrnrqst = 'null'
+        rspnsetorqst = 'null'
         for node in tree.iter():
             if node.tag == 'id':
                 id = node.text
@@ -202,12 +192,34 @@ def build_DB():
                 str = node.text
             if node.tag == 'module':
                 mod = node.text
+            if node.tag == 'sigID':
+                sigid = node.text
+            if node.tag == 'table':
+                table = node.text
+            if node.tag == 'patternRequest':
+                ptrnrqst = node.text
+            if node.tag == 'responseToRequest':
+                rspnsetorqst = node.text
+            if sigid != 'null' and table != 'null' and ptrnrqst != 'null' and rspnsetorqst != 'null':
+                try:
+                    responses = [
+                        (table, sigid, ptrnrqst, rspnsetorqst)
+                    ]
+                    c.execute("""INSERT INTO """ + table + """ VALUES (?,?,?)""", [sigid, ptrnrqst, rspnsetorqst])
+                    table = 'null'
+                    sigid = 'null'
+                    ptrnrqst = 'null'
+                    rspnsetorqst = 'null'
+                except sqlite3.IntegrityError:
+                    pass
+                finally:
+                    conn.commit()
             if id != 'null' and desc != 'null' and str != 'null' and mod != 'null':
                 try:
-                    Signature = [
-                        (id,desc,str,mod)
+                    signature = [
+                        (id, desc, str, mod)
                     ]
-                    c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?)""", Signature)
+                    c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?)""", signature)
                     id = 'null'
                     desc = 'null'
                     str = 'null'
@@ -216,13 +228,15 @@ def build_DB():
                     pass
                 finally:
                     conn.commit()
+
+
     except sqlite3.IntegrityError:
         pass
     finally:
         conn.commit()
 
-    #close out the DB
     conn.close()
+
 
 if __name__ == '__main__':
     #Create a web server and define the handler to manage the

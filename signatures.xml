@@ -64,6 +64,12 @@
     <patternString><![CDATA[.+\?.*[a-zA-Z]:((([\\/]+(.{0,2}))|[\\/]+)[^\\/:*?"<>|,]+)+.*]]></patternString>
     <module>lfi</module>
   </request>
+    <response>
+		<sigID>10</sigID>
+		<table>paths</table>
+		<patternRequest>/etc/passwd</patternRequest>
+		<responseToRequest>../lfi/etc/passwd</responseToRequest>
+	</response>
   <request>
     <id>12</id>
     <patternDescription>XSS</patternDescription>
