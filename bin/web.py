@@ -142,7 +142,9 @@ class MyHandler(BaseHTTPRequestHandler):
                 #        self.send_header(i[2],i[3])
                 pathreq = c.execute("""SELECT path FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchone()
                 pathresp = c.execute("""SELECT OSPath FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchone()
-                responsepath = '..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'
+                #responsepath = '..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'
+                responsepath = eval(str(pathresp[0]))
+                print responsepath
                 if re.match(pathreq[0], path) is not None:
                     f = open(responsepath)
                     self.wfile.write(f.read())
