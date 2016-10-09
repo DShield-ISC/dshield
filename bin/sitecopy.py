@@ -73,7 +73,7 @@ header = re.getheaders()
 body = re.read()
 webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
 webpath_not_exists = not os.path.exists(webpath)
-if webpath_exists:
+if webpath_not_exists:
     print 'www directory not found creating directory.'
     os.makedirs('..' + os.path.sep + 'srv' + os.path.sep + 'www')
 #print body
