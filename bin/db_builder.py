@@ -70,7 +70,9 @@ def build_DB():
         (
             SigID,
             path text,
-            OSPath text
+            OSPath text,
+            PRIMARY KEY (path, SigID, OSPath),
+            CONSTRAINT sig_unique UNIQUE (path, SigID, OSPath)
         )
     ''')
     # hopefully all these requests don't get jacked with sql injection

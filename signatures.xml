@@ -64,6 +64,24 @@
 		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.passwd.*]]></patternRequest>
 		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'</responseToRequest>
 	</response>
+	  <response>
+		<sigID>10</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.passwd.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'</responseToRequest>
+	</response>
+	  <response>
+		<sigID>11</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.shadow.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'</responseToRequest>
+	</response>
+	  <response>
+		<sigID>10</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.shadow.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'</responseToRequest>
+	</response>
   <request>
     <id>11</id>
     <patternDescription>local file inclusion windows</patternDescription>

@@ -140,16 +140,16 @@ class MyHandler(BaseHTTPRequestHandler):
                 #if hdrResponse is not None:
                 #    for i in hdrResponse:
                 #        self.send_header(i[2],i[3])
-                pathreq = c.execute("""SELECT path FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchone()
-                pathresp = c.execute("""SELECT OSPath FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchone()
-                #responsepath = '..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'
-                responsepath = eval(str(pathresp[0]))
-                print responsepath
-                if re.match(pathreq[0], path) is not None:
-                    f = open(responsepath)
-                    self.wfile.write(f.read())
-                    f.close
-
+                #pathreq = c.execute("""SELECT path FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
+                #pathresp = c.execute("""SELECT OSPath FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
+                response = c.execute("""SELECT * FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
+                for i in response:
+                    if re.match(i[1], path) is not None:
+                            responsepath = eval(str(i[2]))
+                            f = open(responsepath)
+                            self.wfile.write(f.read())
+                            f.close
+                            break
 
         if webpath_exists:  # os.path.isfile(file_path):
             try:
