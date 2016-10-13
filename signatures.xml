@@ -27,9 +27,15 @@
   <request>
     <id>5</id>
     <patternDescription>SQL injection</patternDescription>
-    <patternString><![CDATA[.*(select|drop|update|union|insert|alter|declare|cast)( |\().*]]></patternString>
+    <patternString><![CDATA['.+]]></patternString>
     <module>sqli</module>
   </request>
+  <response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"' at line 5</p>]]></responseToRequest>
+	</response>
   <request>
     <id>6</id>
     <patternDescription>html injection</patternDescription>

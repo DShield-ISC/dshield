@@ -99,7 +99,6 @@ class MyHandler(BaseHTTPRequestHandler):
         rvers = '%s' % self.request_version
         c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                   (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.'))
-
         try:
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", useragentstring)
         except sqlite3.IntegrityError:
@@ -110,7 +109,6 @@ class MyHandler(BaseHTTPRequestHandler):
                     self.send_header(i[2], i[3])
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
-                print(self.headers)
             else:
                 print("Useragent: '"+useragentstring+"' needs a custom response.")
                 self.send_response(200)  # OK
@@ -122,7 +120,6 @@ class MyHandler(BaseHTTPRequestHandler):
             self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
-
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
         pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         for i in pathmatch:
@@ -134,14 +131,12 @@ class MyHandler(BaseHTTPRequestHandler):
                     (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern" + str(sigDescription)))
                 SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
                 # display vuln page based on sigdescription - and set headers based on OSTarget
-                #response = c.execute("""SELECT * FROM responses WHERE SigID=?""", SigID[0]).fetchall()
-                #for r in response:
-                #hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
-                #if hdrResponse is not None:
-                #    for i in hdrResponse:
-                #        self.send_header(i[2],i[3])
-                #pathreq = c.execute("""SELECT path FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
-                #pathresp = c.execute("""SELECT OSPath FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
+                response = c.execute("""SELECT * FROM responses WHERE SigID=?""", SigID[0]).fetchall()
+                for r in response:
+                    hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
+                    if hdrResponse is not None:
+                        for i in hdrResponse:
+                            self.send_header(i[2],i[3])
                 response = c.execute("""SELECT * FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
                 for i in response:
                     if re.match(i[1], path) is not None:
@@ -172,8 +167,8 @@ class MyHandler(BaseHTTPRequestHandler):
                 <fieldset>\
                 <legend>Form Using GET</legend>\
                 <form method="get">\
-                <p>Form: <input type="text" name="get_arg1"></p>\
-                <p>Enter data: <input type="text" name="get_arg2"></p>\
+                <p>Username: <input type="text" name="get_arg1"></p>\
+                <p>Password: <input type="text" name="get_arg2"></p>\
                 <input type="submit" value="GET Submit">\
                 </form>\
                 </fieldset>\
@@ -198,7 +193,6 @@ class MyHandler(BaseHTTPRequestHandler):
         c.execute('''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
                   (dte, cladd, cmd, path, useragentstring, rvers, "- standard post"))
         try:
-            print useragentstring
             c.execute('''INSERT INTO useragents (useragent) VALUES (?)''', [useragentstring])
         except sqlite3.IntegrityError:
             refid = c.execute("""SELECT refid FROM useragents WHERE useragent=?""", [useragentstring]).fetchone()
@@ -208,13 +202,11 @@ class MyHandler(BaseHTTPRequestHandler):
                     self.send_header(i[2], i[3])
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
-                print(self.headers)
             else:
                 print("Useragent: '"+useragentstring+"' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-
         # Manage post variables code set
         # CITATION: http://stackoverflow.com/questions/4233218/python-basehttprequesthandler-post-variables
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
@@ -225,74 +217,92 @@ class MyHandler(BaseHTTPRequestHandler):
             postvars = urlparse.parse_qs(self.rfile.read(length), keep_blank_values=1)
         else:
             postvars = {}
-
         # Signatures identification section - will eventually
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
+        match = 0
         pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         for i in pathmatch:
             if re.match(i[0], path)is not None:
-                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]).fetchone()
+                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]
+                                           ).fetchone()
                 print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + path
                 c.execute(
                     '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
                     (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
-
-        #Signatures for  description code - set to detect and log at this time
-        argsigs = c.execute("""SELECT patternString FROM Sigs WHERE module='xss'""").fetchall()
+                SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
+                response = c.execute("""SELECT * FROM paths WHERE SigID=?""", [str(SigID[0], )]).fetchall()
+                for i in response:
+                    if re.match(i[1], path) is not None:
+                        match = 1
+                        responsepath = eval(str(i[2]))
+                        f = open(responsepath)
+                        self.wfile.write(f.read())
+                        f.close
+                        break
+        argsigs = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         for i in argsigs:
             for key in sorted(postvars):
                 val = postvars[key]
                 if re.match(i[0], val[0]) is not None:
+                    match = 1
+                    SigID = c.execute("""SELECT id FROM Sigs WHERE patternString=?""",
+                                      [str(i[0])]).fetchone()
                     sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
                                                [str(i[0])]).fetchone()
                     print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + val[0]
                     c.execute(
                         '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
                         (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
+                    response = c.execute("""SELECT * FROM SQLResp WHERE SigID=?""", [str(SigID[0], )]).fetchall()
+                    for resp in response:
+                        if re.match(resp[1], val[0]) is not None:
+                            match = 1
+                            self.wfile.write(str(resp[2]))
+                            break
+        if match != 1:
+            # Get the "Back" link.
+            back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
 
-        # Get the "Back" link.
-        back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+            # Display the POST variables.
+            self.wfile.write('<html>')
+            self.wfile.write('  <head>')
+            self.wfile.write('    <title>Server POST Response</title>')
+            self.wfile.write('  </head>')
+            self.wfile.write('  <body>')
+            self.wfile.write('    <p>POST variables (%d).</p>' % (len(postvars)))
 
-        # Display the POST variables.
-        self.wfile.write('<html>')
-        self.wfile.write('  <head>')
-        self.wfile.write('    <title>Server POST Response</title>')
-        self.wfile.write('  </head>')
-        self.wfile.write('  <body>')
-        self.wfile.write('    <p>POST variables (%d).</p>' % (len(postvars)))
+            if len(postvars):
+                # Write out the POST variables in 3 columns.
 
-        if len(postvars):
-            # Write out the POST variables in 3 columns.
+                self.wfile.write('    <table>')
+                self.wfile.write('      <tbody>')
+                i = 0
+                for key in sorted(postvars):
+                    i += 1
+                    val = postvars[key]
+                    if key == "upfile":
+                        refid = c.execute("""SELECT ID FROM postlogs WHERE ID=(SELECT MAX(ID) FROM postlogs)""").fetchone()
+                        try:
+                            c.execute("""INSERT INTO files (rid, filename, data) VALUES(?, ?, ?)""",
+                                                        (str(refid[0]), key, val[0]))
+                        except:
+                            print("Need to handle binaries.")
+                    else:
+                        c.execute("""INSERT INTO postlogs (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
+                                  """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                                  (dte, cladd, cmd, path, useragentstring, rvers, key, val[0]))
+                    self.wfile.write('        <tr>')
+                    self.wfile.write('          <td align="right">%d</td>' % i)
+                    self.wfile.write('          <td align="right">%s</td>' % key)
+                    self.wfile.write('          <td align="left">%s</td>' % val[0])
+                    self.wfile.write('        </tr>')
+                self.wfile.write('      </tbody>')
+                self.wfile.write('    </table>')
 
-            self.wfile.write('    <table>')
-            self.wfile.write('      <tbody>')
-            i = 0
-            for key in sorted(postvars):
-                i += 1
-                val = postvars[key]
-                if key == "upfile":
-                    refid = c.execute("""SELECT ID FROM postlogs WHERE ID=(SELECT MAX(ID) FROM postlogs)""").fetchone()
-                    try:
-                        c.execute("""INSERT INTO files (rid, filename, data) VALUES(?, ?, ?)""",
-                                                    (str(refid[0]), key, val[0]))
-                    except:
-                        print("Need to handle binaries.")
-                else:
-                    c.execute("""INSERT INTO postlogs (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
-                              """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                              (dte, cladd, cmd, path, useragentstring, rvers, key, val[0]))
-                self.wfile.write('        <tr>')
-                self.wfile.write('          <td align="right">%d</td>' % i)
-                self.wfile.write('          <td align="right">%s</td>' % key)
-                self.wfile.write('          <td align="left">%s</td>' % val[0])
-                self.wfile.write('        </tr>')
-                conn.commit()
-            self.wfile.write('      </tbody>')
-            self.wfile.write('    </table>')
-
-        self.wfile.write('    <p><a href="%s">Back</a></p>' % back)
-        self.wfile.write('  </body>')
-        self.wfile.write('</html>')
+            self.wfile.write('    <p><a href="%s">Back</a></p>' % back)
+            self.wfile.write('  </body>')
+            self.wfile.write('</html>')
+        conn.commit()
         return
 
     def deal_post_data(self):
