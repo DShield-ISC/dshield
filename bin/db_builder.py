@@ -8,6 +8,9 @@ import sqlite3
 requests = '..' + os.path.sep + "signatures.xml"
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 
+# honeydb builder - can get database name - so be careful what you name it
+honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
+
 def build_DB():
     # type: () -> object
     # This is not necessary by connecting to the db it creates the file.
@@ -36,6 +39,7 @@ def build_DB():
                     ID integer primary key,
                     patternDescription text,
                     patternString text,
+                    db_ref text,
                     module text
                 )
             ''')
@@ -180,6 +184,7 @@ def build_DB():
         id = 'null'
         desc = 'null'
         str = 'null'
+        db_ref = 'null'
         mod = 'null'
         sigid = 'null'
         table = 'null'
@@ -192,6 +197,8 @@ def build_DB():
                 desc = node.text
             if node.tag == 'patternString':
                 str = node.text
+            if node.tag == 'db_ref':
+                db_ref = node.text
             if node.tag == 'module':
                 mod = node.text
             if node.tag == 'sigID':
@@ -216,26 +223,33 @@ def build_DB():
                     pass
                 finally:
                     conn.commit()
-            if id != 'null' and desc != 'null' and str != 'null' and mod != 'null':
+            if id != 'null' and desc != 'null' and str != 'null'  and db_ref != 'null' and mod != 'null':
                 try:
                     signature = [
-                        (id, desc, str, mod)
+                        (id, desc, str, db_ref, mod)
                     ]
-                    c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?)""", signature)
+                    c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?,?)""", signature)
                     id = 'null'
                     desc = 'null'
                     str = 'null'
+                    db_ref = 'null'
                     mod = 'null'
                 except sqlite3.IntegrityError:
                     pass
                 finally:
                     conn.commit()
-
-
     except sqlite3.IntegrityError:
         pass
     finally:
         conn.commit()
+
+    conn.close()
+
+    #build honeydb
+    conn = sqlite3.connect(honeydb)
+    c = conn.cursor()
+    #build DB
+
 
     conn.close()
 

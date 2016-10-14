@@ -35,13 +35,68 @@ if not os.path.exists(certpath) and not os.path.exists(keypath):
 else:
     _USE_SSL = True
 
-# check if config database exists
 def build_db():
     DBPath = '..' + os.path.sep + 'DB'
     if not os.path.exists(DBPath):
         print 'DB directory not found creating directory.'
         os.makedirs(DBPath)
     db_builder.build_DB()
+
+def sigmatch(self, pattern, module):
+    pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
+    for i in pathmatch:
+        if re.match(i[0], pattern) is not None:
+            sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
+                                       [str(i[0])]).fetchone()
+            print self.client_address[0]   + " - - " + self.date_time_string() + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + pattern
+            c.execute(
+                """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    self.date_time_string(),
+                    self.client_address[0],
+                    self.command, self.path,
+                    str(self.headers['user-agent']),
+                    self.request_version,
+                    "Malicious pattern" + str(sigDescription)
+                )
+            )
+            SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
+            # display vuln page based on sigdescription - and set headers based on OSTarget
+            response = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", SigID[0]).fetchall()
+            for r in response:
+                hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
+                if hdrResponse is not None:
+                    for i in hdrResponse:
+                       self.send_header(i[2], i[3])
+            db_ref = c.execute("""SELECT db_ref FROM Sigs WHERE ID=?""", [str(SigID[0])]).fetchone()
+            response = c.execute(
+                """SELECT * FROM """ + str(db_ref[0]) + """ WHERE SigID=?""", [str(SigID[0])]).fetchall()
+            if module == 'lfi':
+                for i in response:
+                    if re.match(i[1], pattern) is not None:
+                        responsepath = eval(str(i[2]))
+                        f = open(responsepath)
+                        self.wfile.write(f.read())
+                        f.close
+                        break
+            if module == 'sqli':
+                for i in response:
+                    if re.match(i[1], pattern) is not None:
+                        self.wfile.write(str(i[2]))
+                        break
+
+class SecureHTTPServer(HTTPServer):
+    def __init__(self, server_address, HandlerClass):
+        HTTPServer.__init__(self, server_address, MyHandler)
+        ctx = ssl.Context(ssl.SSLv23_METHOD)
+        # server.pem's location (containing the server private key and
+        # the server certificate).
+        ctx.use_privatekey_file('server.key')
+        ctx.use_certificate_file('server.crt')
+        self.socket = ssl.Connection(ctx, socket.socket(self.address_family,
+                                                        self.socket_type))
+        self.server_bind()
+        self.server_activate()
 
 # This class will handles any incoming request from
 # the browser
@@ -121,30 +176,8 @@ class MyHandler(BaseHTTPRequestHandler):
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
-        pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
-        for i in pathmatch:
-            if re.match(i[0], path)is not None:
-                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]).fetchone()
-                print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + path
-                c.execute(
-                    """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                    (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern" + str(sigDescription)))
-                SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
-                # display vuln page based on sigdescription - and set headers based on OSTarget
-                response = c.execute("""SELECT * FROM responses WHERE SigID=?""", SigID[0]).fetchall()
-                for r in response:
-                    hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
-                    if hdrResponse is not None:
-                        for i in hdrResponse:
-                            self.send_header(i[2],i[3])
-                response = c.execute("""SELECT * FROM paths WHERE SigID=?""", [str(SigID[0],)]).fetchall()
-                for i in response:
-                    if re.match(i[1], path) is not None:
-                            responsepath = eval(str(i[2]))
-                            f = open(responsepath)
-                            self.wfile.write(f.read())
-                            f.close
-                            break
+
+        sigmatch(self, path, 'lfi')
 
         if webpath_exists:  # os.path.isfile(file_path):
             try:
@@ -221,24 +254,14 @@ class MyHandler(BaseHTTPRequestHandler):
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
         match = 0
         pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
-        for i in pathmatch:
-            if re.match(i[0], path)is not None:
-                sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""", [str(i[0])]
-                                           ).fetchone()
-                print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + path
-                c.execute(
-                    '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
-                    (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
-                SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
-                response = c.execute("""SELECT * FROM paths WHERE SigID=?""", [str(SigID[0], )]).fetchall()
-                for i in response:
-                    if re.match(i[1], path) is not None:
-                        match = 1
-                        responsepath = eval(str(i[2]))
-                        f = open(responsepath)
-                        self.wfile.write(f.read())
-                        f.close
-                        break
+
+        sigmatch(self, path, 'lfi')
+
+        for key in sorted(postvars):
+            val = postvars[key]
+            sigmatch(self, val[0], 'sqli')
+
+        '''
         argsigs = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         for i in argsigs:
             for key in sorted(postvars):
@@ -251,7 +274,7 @@ class MyHandler(BaseHTTPRequestHandler):
                                                [str(i[0])]).fetchone()
                     print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + val[0]
                     c.execute(
-                        '''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
+                        INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?),
                         (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
                     response = c.execute("""SELECT * FROM SQLResp WHERE SigID=?""", [str(SigID[0], )]).fetchall()
                     for resp in response:
@@ -259,6 +282,8 @@ class MyHandler(BaseHTTPRequestHandler):
                             match = 1
                             self.wfile.write(str(resp[2]))
                             break
+        '''
+
         if match != 1:
             # Get the "Back" link.
             back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
@@ -347,19 +372,6 @@ class MyHandler(BaseHTTPRequestHandler):
                 out.write(preline)
                 preline = line
         return False, "Unexpected End of data."
-
-class SecureHTTPServer(HTTPServer):
-    def __init__(self, server_address, HandlerClass):
-        HTTPServer.__init__(self, server_address, MyHandler)
-        ctx = ssl.Context(ssl.SSLv23_METHOD)
-        # server.pem's location (containing the server private key and
-        # the server certificate).
-        ctx.use_privatekey_file('server.key')
-        ctx.use_certificate_file('server.crt')
-        self.socket = ssl.Connection(ctx, socket.socket(self.address_family,
-                                                        self.socket_type))
-        self.server_bind()
-        self.server_activate()
 
 if __name__ == "__main__":
     try:
