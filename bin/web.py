@@ -59,18 +59,27 @@ def sigmatch(self, pattern, module):
             sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
                                        [str(i[0])]).fetchone()
             print self.client_address[0]   + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + sigDescription[0] + " - - " + pattern
+            try:
+                if str(self.headers['user-agent']) is not None:
+                    useragentstring = '%s' & str(self.headers['user-agent'])
+            except:
+                useragentstring = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
             c.execute(
                 """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                 (
                     self.date_time_string(),
                     self.client_address[0],
                     self.command, self.path,
-                    str(self.headers['user-agent']),
+                    useragentstring,
                     self.request_version,
                     "Malicious pattern" + str(sigDescription)
                 )
             )
             SigID = c.execute("""SELECT id FROM Sigs WHERE module=?""", [str(module)]).fetchone()
+            self.send_header('Content-type', 'text/html')
+            self.send_header('Server', 'Apache/2.0.1')
+            self.send_response(200)  # OK
+            self.end_headers()
             # display vuln page based on sigdescription - and set headers based on OSTarget
             #response = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
             #for r in response:
@@ -99,7 +108,6 @@ def sigmatch(self, pattern, module):
                         ) + "response page."
                         break
             if module == 'rfi':
-                print 'hi'
                 for i in response:
                     if re.match(i[1], pattern) is not None:
                         uri = re.findall(i[2], pattern)
@@ -114,6 +122,7 @@ def sigmatch(self, pattern, module):
                             f = open(remote_file_path)
                             self.wfile.write(f.read())
                             f.close()
+                        break
             if module == 'sqli':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -196,11 +205,12 @@ class MyHandler(BaseHTTPRequestHandler):
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
         try:
-            # maybe define other source? such as path like below - /etc/shadow needs apache headers
-            useragentstring = '%s' % str(self.headers['user-agent'])
+            if str(self.headers['user-agent']) is not None:
+                useragentstring = '%s' & str(self.headers['user-agent'])
         except:
-            useragentstring = "NULL"
-        rvers = '%s' % self.request_version
+            useragentstring = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
+        rvers = "Server: Apache/2.0.1"
+        self.send_response(200)
         c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                   (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.'))
         try:
@@ -223,6 +233,7 @@ class MyHandler(BaseHTTPRequestHandler):
         except:
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
+            self.send_header('Server', 'Apache/2.0.1')
             self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
@@ -412,6 +423,7 @@ if __name__ == "__main__":
         conn = sqlite3.connect(config)
         c = conn.cursor()
         server = HTTPServer(('', PORT_NUMBER), MyHandler)
+        server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
                                             certfile=certpath, server_side=True)
