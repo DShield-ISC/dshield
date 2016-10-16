@@ -4,9 +4,15 @@
     <id>1</id>
     <patternDescription>remote file inclusion</patternDescription>
     <patternString><![CDATA[.*(=.*(http(s){0,1}|ftp(s){0,1}):).*]]></patternString>
-    <db_ref></db_ref>
+    <db_ref>RFIResp</db_ref>
 	<module>rfi</module>
   </request>
+  <response>
+		<sigID>1</sigID>
+		<table>RFIResp</table>
+		<patternRequest><![CDATA[.+http.+]]></patternRequest>
+		<responseToRequest><![CDATA[http.+]]></responseToRequest>
+	</response>
   <request>
     <id>2</id>
     <patternDescription>php code injection</patternDescription>
@@ -42,19 +48,18 @@
 		<responseToRequest><![CDATA[<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"' at line 5</p>]]></responseToRequest>
 	</response>
   <request>
-    <id>6</id>
-    <patternDescription>html injection</patternDescription>
-    <patternString><![CDATA[.*(<|%3c)(frame|applet|isindex|marquee|keygen|script|audio|video|input|button|textarea|style|base|body|meta|link|object|embed|param|plaintext|xml|image).*]]></patternString>
-    <db_ref></db_ref>
-	<module>unknown</module>
-  </request>
-  <request>
     <id>8</id>
     <patternDescription>basic XSS</patternDescription>
-    <patternString><![CDATA[.*(alert|eval|msgbox|showmodaldialog|prompt|write|confirm|dialog|open).*]]></patternString>
-    <db_ref></db_ref>
+    <patternString><![CDATA[.+\<script\>.+]]></patternString>
+    <db_ref>XSSResp</db_ref>
 	<module>xss</module>
   </request>
+  <response>
+		<sigID>8</sigID>
+		<table>XSSResp</table>
+		<patternRequest><![CDATA[.+alert.+]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'</responseToRequest>
+	</response>
   <request>
     <id>9</id>
     <patternDescription>JS properties and objects</patternDescription>
@@ -104,8 +109,14 @@
     <id>12</id>
     <patternDescription>XSS</patternDescription>
     <patternString><![CDATA[.*(script).*]]></patternString>
-    <db_ref></db_ref>
+    <db_ref>XSSResp</db_ref>
 	<module>xss</module>
+	  <response>
+		<sigID>12</sigID>
+		<table>XSSResp</table>
+		<patternRequest><![CDATA[.+alert.+]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'</responseToRequest>
+	</response>
   </request>
   <request>
     <id>13</id>

@@ -5,11 +5,13 @@ import ssl
 import socket
 import urlparse
 import db_builder
+import sitecopy
 import os
 import sqlite3
 import time
 import cgi
 import re
+#from sys import stderr
 
 # Default port - feel free to change
 PORT_NUMBER = 8080
@@ -17,9 +19,17 @@ PORT_NUMBER = 8080
 # Global Variables - bummer need to fix :(
 # configure config SQLLite DB and log directory
 # hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-logdir = '..' + os.path.sep + 'log'  # not using at this time - but will
+'''# not using at this time - but will
+logfile = '..' + os.path.sep + 'var' + os.path.sep + 'log'
+logdir = '..' + os.path.sep + 'var'
+if not os.path.exists(logdir):
+    print 'var directory not found creating directory.'
+    os.makedirs(logdir)
+stderr = open (logfile, 'w')
+'''
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
+honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
 # webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
 # will be if user sets up SSL cert and key
 certpath = '..' + os.path.sep + 'domain.crt'
@@ -48,7 +58,7 @@ def sigmatch(self, pattern, module):
         if re.match(i[0], pattern) is not None:
             sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
                                        [str(i[0])]).fetchone()
-            print self.client_address[0]   + " - - " + self.date_time_string() + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + pattern
+            print self.client_address[0]   + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + sigDescription[0] + " - - " + pattern
             c.execute(
                 """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                 (
@@ -60,29 +70,59 @@ def sigmatch(self, pattern, module):
                     "Malicious pattern" + str(sigDescription)
                 )
             )
-            SigID = c.execute("""SELECT id FROM Sigs WHERE patternDescription=?""", [sigDescription[0]]).fetchone()
+            SigID = c.execute("""SELECT id FROM Sigs WHERE module=?""", [str(module)]).fetchone()
             # display vuln page based on sigdescription - and set headers based on OSTarget
-            response = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", SigID[0]).fetchall()
-            for r in response:
-                hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
-                if hdrResponse is not None:
-                    for i in hdrResponse:
-                       self.send_header(i[2], i[3])
-            db_ref = c.execute("""SELECT db_ref FROM Sigs WHERE ID=?""", [str(SigID[0])]).fetchone()
-            response = c.execute(
-                """SELECT * FROM """ + str(db_ref[0]) + """ WHERE SigID=?""", [str(SigID[0])]).fetchall()
-            if module == 'lfi':
+            #response = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
+            #for r in response:
+            #    hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
+            #    if hdrResponse is not None:
+            #        for i in hdrResponse:
+            #           self.send_header(i[2], i[3])
+            try:
+                db_ref = c.execute("""SELECT db_ref FROM Sigs WHERE ID=?""", [str(SigID[0])]).fetchone()
+                response = c.execute(
+                    """SELECT * FROM """ + str(db_ref[0]) + """ WHERE SigID=?""", [str(SigID[0])]).fetchall()
+            except:
+                print SigID[0]
+                print db_ref[0]
+            if module == 'lfi' or module == 'xss':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
                         f.close
+                        print self.client_address[
+                                  0
+                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
+                            module
+                        ) + "response page."
                         break
+            if module == 'rfi':
+                print 'hi'
+                for i in response:
+                    if re.match(i[1], pattern) is not None:
+                        uri = re.findall(i[2], pattern)
+                        remotefiledir = '..' + os.path.sep + 'html' + os.path.sep + 'www'
+                        domain = sitecopy.sitecopy(uri[0], remotefiledir)
+                        webdirlst = os.listdir(remotefiledir)
+                        remote_file_path = ''
+                        for site in webdirlst:
+                            remote_file_path = os.path.join(remotefiledir, domain)
+                        if os.path.isfile(remote_file_path):  # os.path.isfile(file_path):
+                            # os.listdir(file_path)
+                            f = open(remote_file_path)
+                            self.wfile.write(f.read())
+                            f.close()
             if module == 'sqli':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
                         self.wfile.write(str(i[2]))
+                        print self.client_address[
+                                  0
+                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
+                            module
+                        ) + "response page."
                         break
 
 class SecureHTTPServer(HTTPServer):
@@ -126,12 +166,21 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.end_headers()  # iterates through DB - need to make sure vuln pages and this are synced.
             else:
                 # get refid if there is one - should be set in Backend
-                print("Useragent: '"+useragentstring+"' needs a custom response.")
+                print self.client_address[0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
         except:
             self.send_response(200)
             self.end_headers()
         finally:
             conn.commit()
+
+    ''' #not using this but will
+    log_file = open(logfile, 'w')
+    def log_message(self, format, *args):
+        self.log_file.write("%s - - [%s] %s\n" %
+                            (self.client_address[0],
+                             self.log_date_time_string(),
+                             format % args))
+    '''
 
     def do_GET(self):
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
@@ -165,7 +214,9 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
             else:
-                print("Useragent: '"+useragentstring+"' needs a custom response.")
+                print self.client_address[
+                          0
+                      ] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -178,6 +229,7 @@ class MyHandler(BaseHTTPRequestHandler):
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
 
         sigmatch(self, path, 'lfi')
+        sigmatch(self, path, 'rfi')
 
         if webpath_exists:  # os.path.isfile(file_path):
             try:
@@ -236,7 +288,8 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
             else:
-                print("Useragent: '"+useragentstring+"' needs a custom response.")
+                print self.client_address[
+                          0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -260,29 +313,7 @@ class MyHandler(BaseHTTPRequestHandler):
         for key in sorted(postvars):
             val = postvars[key]
             sigmatch(self, val[0], 'sqli')
-
-        '''
-        argsigs = c.execute("""SELECT patternString FROM Sigs""").fetchall()
-        for i in argsigs:
-            for key in sorted(postvars):
-                val = postvars[key]
-                if re.match(i[0], val[0]) is not None:
-                    match = 1
-                    SigID = c.execute("""SELECT id FROM Sigs WHERE patternString=?""",
-                                      [str(i[0])]).fetchone()
-                    sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
-                                               [str(i[0])]).fetchone()
-                    print cladd + " - - " + dte + " - - Malicious pattern detected: " + sigDescription[0] + " - - " + val[0]
-                    c.execute(
-                        INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?),
-                        (dte, cladd, cmd, path, useragentstring, rvers, "Malicious pattern - " + str(sigDescription)))
-                    response = c.execute("""SELECT * FROM SQLResp WHERE SigID=?""", [str(SigID[0], )]).fetchall()
-                    for resp in response:
-                        if re.match(resp[1], val[0]) is not None:
-                            match = 1
-                            self.wfile.write(str(resp[2]))
-                            break
-        '''
+            sigmatch(self, val[0], 'xss')
 
         if match != 1:
             # Get the "Back" link.

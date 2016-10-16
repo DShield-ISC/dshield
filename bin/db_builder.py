@@ -92,8 +92,15 @@ def build_DB():
         (
             SigID integer,
             ScriptReq text primary key,
-            ScriptResp text,
-            JSResp blob
+            ScriptResp text
+        )
+    ''')
+    # Create table to respond to rfi
+    c.execute('''CREATE TABLE IF NOT EXISTS RFIResp
+        (
+            SigID integer,
+            protocol text primary key,
+            remoteuri text
         )
     ''')
     # Create table to respond to file inclusion attack (metasploit and what not) - lofty but would be cool
