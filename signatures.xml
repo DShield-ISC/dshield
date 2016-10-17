@@ -10,7 +10,7 @@
   <response>
 		<sigID>1</sigID>
 		<table>RFIResp</table>
-		<patternRequest><![CDATA[.+http.+]]></patternRequest>
+		<patternRequest><![CDATA[.+http\:.+]]></patternRequest>
 		<responseToRequest><![CDATA[http.+]]></responseToRequest>
 	</response>
   <request>
@@ -111,13 +111,13 @@
     <patternString><![CDATA[.*(script).*]]></patternString>
     <db_ref>XSSResp</db_ref>
 	<module>xss</module>
-	  <response>
+  </request>
+  <response>
 		<sigID>12</sigID>
 		<table>XSSResp</table>
 		<patternRequest><![CDATA[.+alert.+]]></patternRequest>
 		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'</responseToRequest>
 	</response>
-  </request>
   <request>
     <id>13</id>
     <patternDescription>favicon.ico</patternDescription>
@@ -143,9 +143,15 @@
     <id>16</id>
     <patternDescription>PHPMyAdmin</patternDescription>
 	<patternString><![CDATA[(^/phpmyadmin|^/pma|^/phpmyadmin\-[\w\.]+)]]></patternString>
-    <db_ref></db_ref>
+    <db_ref>paths</db_ref>
 	<module>phpmyadmin</module>
   </request>
+  	  <response>
+		<sigID>16</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[(^/phpmyadmin|^/pma|^/phpmyadmin\-[\w\.]+)]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'phpMyAdmin.html'</responseToRequest>
+	</response>
   <request>
     <id>17</id>
     <patternDescription>comment spam</patternDescription>

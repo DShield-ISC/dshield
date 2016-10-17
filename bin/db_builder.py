@@ -74,9 +74,7 @@ def build_DB():
         (
             SigID,
             path text,
-            OSPath text,
-            PRIMARY KEY (path, SigID, OSPath),
-            CONSTRAINT sig_unique UNIQUE (path, SigID, OSPath)
+            OSPath text
         )
     ''')
     # hopefully all these requests don't get jacked with sql injection
@@ -226,6 +224,11 @@ def build_DB():
                     sigid = 'null'
                     ptrnrqst = 'null'
                     rspnsetorqst = 'null'
+                    id = 'null'
+                    desc = 'null'
+                    str = 'null'
+                    db_ref = 'null'
+                    mod = 'null'
                 except sqlite3.IntegrityError:
                     pass
                 finally:
@@ -236,6 +239,10 @@ def build_DB():
                         (id, desc, str, db_ref, mod)
                     ]
                     c.executemany("""INSERT INTO Sigs VALUES (?,?,?,?,?)""", signature)
+                    table = 'null'
+                    sigid = 'null'
+                    ptrnrqst = 'null'
+                    rspnsetorqst = 'null'
                     id = 'null'
                     desc = 'null'
                     str = 'null'
