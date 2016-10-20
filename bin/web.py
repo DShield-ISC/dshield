@@ -53,6 +53,7 @@ def build_db():
     db_builder.build_DB()
 
 def sigmatch(self, pattern, module):
+    match = 0
     pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
     for i in pathmatch:
         if re.match(i[0], pattern) is not None:
@@ -86,6 +87,7 @@ def sigmatch(self, pattern, module):
             if module == 'lfi':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
+                        match = 1
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
@@ -97,7 +99,7 @@ def sigmatch(self, pattern, module):
                                   0
                               ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
                             module
-                        ) + "response page."
+                        ) + " response page."
                         c.execute(
                             """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                             (
@@ -109,10 +111,12 @@ def sigmatch(self, pattern, module):
                                 "Malicious pattern" + str(sigDescription)
                             )
                         )
+                        return match
                         break
             if module == 'xss':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
+                        match = 1
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
@@ -124,7 +128,7 @@ def sigmatch(self, pattern, module):
                                   0
                               ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
                             module
-                        ) + "response page."
+                        ) + " response page."
                         c.execute(
                             """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                             (
@@ -136,10 +140,12 @@ def sigmatch(self, pattern, module):
                                 "Malicious pattern" + str(sigDescription)
                             )
                         )
+                        return match
                         break
             if module == 'phpmyadmin':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
+                        match = 1
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
@@ -151,7 +157,7 @@ def sigmatch(self, pattern, module):
                                   0
                               ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
                             module
-                        ) + "response page."
+                        ) + " response page."
                         c.execute(
                             """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                             (
@@ -163,10 +169,41 @@ def sigmatch(self, pattern, module):
                                 "Malicious pattern" + str(sigDescription)
                             )
                         )
+                        return match
+                        break
+            if module == 'robots':
+                for i in response:
+                    if re.match(i[1], pattern) is not None:
+                        match = 1
+                        responsepath = eval(str(i[2]))
+                        f = open(responsepath, 'rb')
+                        self.wfile.write(f.read())
+                        f.close
+                        print self.client_address[
+                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
+                              sigDescription[0] + " - - " + pattern
+                        print self.client_address[
+                                  0
+                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
+                            module
+                        ) + " response page."
+                        c.execute(
+                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
+                            (
+                                self.date_time_string(),
+                                self.client_address[0],
+                                self.command, self.path,
+                                useragentstring,
+                                self.request_version,
+                                "Malicious pattern" + str(sigDescription)
+                            )
+                        )
+                        return match
                         break
             if module == 'rfi':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
+                        match = 1
                         uri = re.findall(i[2], pattern)
                         remotefiledir = '..' + os.path.sep + 'html' + os.path.sep + 'www'
                         domain = sitecopy.sitecopy(uri[0], remotefiledir)
@@ -193,10 +230,12 @@ def sigmatch(self, pattern, module):
                                 "Malicious pattern" + str(sigDescription)
                             )
                         )
+                        return match
                         break
             if module == 'sqli':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
+                        match = 1
                         self.wfile.write(str(i[2]))
                         print self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
@@ -217,6 +256,7 @@ def sigmatch(self, pattern, module):
                                 "Malicious pattern" + str(sigDescription)
                             )
                         )
+                        return match
                         break
 
 class SecureHTTPServer(HTTPServer):
@@ -292,9 +332,8 @@ class MyHandler(BaseHTTPRequestHandler):
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
-        sigmatch(self, path, 'lfi')
-        sigmatch(self, path, 'rfi')
-        sigmatch(self, path, 'phpmyadmin')
+        #match = 0
+        #sigmatch(self, path, 'robots')
         if webpath_exists:  # os.path.isfile(file_path):
             try:
                 refid = c.execute("""SELECT ID FROM sites WHERE site=?""", (site,)).fetchone()
@@ -303,11 +342,18 @@ class MyHandler(BaseHTTPRequestHandler):
                     self.send_header(i[1], i[2])
             except:
                 pass
-
             #os.listdir(file_path)
             f = open(file_path)
             self.wfile.write(f.read())
             f.close()
+        elif sigmatch(self, path, 'robots') == 1:
+            pass
+        elif sigmatch(self, path, 'lfi') == 1:
+            pass
+        elif sigmatch(self, path, 'rfi') == 1:
+            pass
+        elif sigmatch(self, path, 'phpmyadmin') == 1:
+            pass
         else:  # default
             message_parts = [
                 '<title>Upload</title>\
@@ -373,6 +419,8 @@ class MyHandler(BaseHTTPRequestHandler):
         pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
 
         sigmatch(self, path, 'lfi')
+        sigmatch(self, path, 'robots')
+        sigmatch(self, path, 'rfi')
 
         for key in sorted(postvars):
             val = postvars[key]

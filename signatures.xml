@@ -136,9 +136,15 @@
     <id>15</id>
     <patternDescription>robots.txt</patternDescription>
     <patternString><![CDATA[^/robots\.txt$]]></patternString>
-    <db_ref></db_ref>
+    <db_ref>paths</db_ref>
 	<module>robots</module>
   </request>
+	<response>
+		<sigID>15</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[^/robots\.txt$]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'robots.txt'</responseToRequest>
+	</response>
   <request>
     <id>16</id>
     <patternDescription>PHPMyAdmin</patternDescription>
