@@ -212,12 +212,14 @@ def sigmatch(self, pattern, module):
                         print self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern
+                        # Only downloads domain from site - to prevent being an open proxy - also has sleep to prevent DDOS.
                         for site in webdirlst:
                             remote_file_path = os.path.join(remotefiledir, domain)
                         if os.path.isfile(remote_file_path):  # os.path.isfile(file_path):
                             # os.listdir(file_path)
                             f = open(remote_file_path)
                             self.wfile.write(f.read())
+                            time.sleep(1)
                             f.close()
                         c.execute(
                             """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
@@ -326,9 +328,15 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.end_headers()
         except:
             self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin','*')
             self.send_header('Content-type', 'text/html')
             self.send_header('Server', 'Apache/2.0.1')
             self.end_headers()
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-type', 'text/html')
+        self.send_header('Server', 'Apache/2.0.1')
+        self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
@@ -375,6 +383,25 @@ class MyHandler(BaseHTTPRequestHandler):
 
         conn.commit()
         return
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-type', 'text/html')
+        self.send_header('Server', 'Apache/2.0.1')
+        self.end_headers()
+        print self.client_address[
+                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy."
+
+    def do_CONNECT(self):
+        if not _USE_SSL:
+            self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-type', 'text/html')
+            self.send_header('Server', 'Apache/2.0.1')
+            self.end_headers()
+            print self.client_address[
+                      0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy."
 
     def do_POST(self):
         # Parse the form data posted
