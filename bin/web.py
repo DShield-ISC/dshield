@@ -1,4 +1,4 @@
-#!/usr/env python
+#!/usr/bin/env python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 import ssl
@@ -6,6 +6,7 @@ import socket
 import urlparse
 import db_builder
 import sitecopy
+import sigmatch
 import os
 import sqlite3
 import time
@@ -51,215 +52,6 @@ def build_db():
         print 'DB directory not found creating directory.'
         os.makedirs(DBPath)
     db_builder.build_DB()
-
-def sigmatch(self, pattern, module):
-    match = 0
-    pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
-    for i in pathmatch:
-        if re.match(i[0], pattern) is not None:
-            sigDescription = c.execute("""SELECT patternDescription FROM Sigs WHERE patternString=?""",
-                                       [str(i[0])]).fetchone()
-            try:
-                if str(self.headers['user-agent']) is not None:
-                    useragentstring = '%s' & str(self.headers['user-agent'])
-            except:
-                useragentstring = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
-            SigID = c.execute("""SELECT id FROM Sigs WHERE module=?""", [str(module)]).fetchone()
-            #self.send_header('Content-type', 'text/html')
-            #self.send_header('Server', 'Apache/2.0.1')
-            #self.send_response(200)  # OK
-            #self.end_headers()
-            # display vuln page based on sigdescription - and set headers based on OSTarget
-            #response = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
-            #for r in response:
-            #    hdrResponse = c.execute("""SELECT * FROM HdrResponses WHERE SigID=?""", (str(SigID[0]))).fetchall()
-            #    if hdrResponse is not None:
-            #        for i in hdrResponse:
-            #           self.send_header(i[2], i[3])
-            try:
-                db_ref = c.execute("""SELECT db_ref FROM Sigs WHERE ID=?""", [str(SigID[0])]).fetchone()
-                response = c.execute(
-                    """SELECT * FROM """ + str(db_ref[0]) + """ WHERE SigID=?""", [str(SigID[0])]).fetchall()
-            except:
-                print 'Error detecting response DB.'
-                print SigID[0]
-                print db_ref[0]
-            if module == 'lfi':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        responsepath = eval(str(i[2]))
-                        f = open(responsepath)
-                        self.wfile.write(f.read())
-                        f.close
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        print self.client_address[
-                                  0
-                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
-                            module
-                        ) + " response page."
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
-            if module == 'xss':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        responsepath = eval(str(i[2]))
-                        f = open(responsepath)
-                        self.wfile.write(f.read())
-                        f.close
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        print self.client_address[
-                                  0
-                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
-                            module
-                        ) + " response page."
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
-            if module == 'phpmyadmin':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        responsepath = eval(str(i[2]))
-                        f = open(responsepath)
-                        self.wfile.write(f.read())
-                        f.close
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        print self.client_address[
-                                  0
-                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
-                            module
-                        ) + " response page."
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
-            if module == 'robots':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        responsepath = eval(str(i[2]))
-                        f = open(responsepath, 'rb')
-                        self.wfile.write(f.read())
-                        f.close
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        print self.client_address[
-                                  0
-                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
-                            module
-                        ) + " response page."
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
-            if module == 'rfi':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        uri = re.findall(i[2], pattern)
-                        remotefiledir = '..' + os.path.sep + 'html' + os.path.sep + 'www'
-                        domain = sitecopy.sitecopy(uri[0], remotefiledir)
-                        webdirlst = os.listdir(remotefiledir)
-                        remote_file_path = ''
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        # Only downloads domain from site - to prevent being an open proxy - also has sleep to prevent DDOS.
-                        for site in webdirlst:
-                            remote_file_path = os.path.join(remotefiledir, domain)
-                        if os.path.isfile(remote_file_path):  # os.path.isfile(file_path):
-                            # os.listdir(file_path)
-                            f = open(remote_file_path)
-                            self.wfile.write(f.read())
-                            time.sleep(1)
-                            f.close()
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
-            if module == 'sqli':
-                for i in response:
-                    if re.match(i[1], pattern) is not None:
-                        match = 1
-                        self.wfile.write(str(i[2]))
-                        print self.client_address[
-                                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
-                              sigDescription[0] + " - - " + pattern
-                        print self.client_address[
-                                  0
-                              ] + " - - [" + self.date_time_string() + "] - - Responded with " + str(
-                            module
-                        ) + "response page."
-                        c.execute(
-                            """INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                            (
-                                self.date_time_string(),
-                                self.client_address[0],
-                                self.command, self.path,
-                                useragentstring,
-                                self.request_version,
-                                "Malicious pattern" + str(sigDescription)
-                            )
-                        )
-                        return match
-                        break
 
 class SecureHTTPServer(HTTPServer):
     def __init__(self, server_address, HandlerClass):
@@ -354,13 +146,14 @@ class MyHandler(BaseHTTPRequestHandler):
             f = open(file_path)
             self.wfile.write(f.read())
             f.close()
-        elif sigmatch(self, path, 'robots') == 1:
+        conn.commit()
+        if sigmatch.sigmatch(self, path, 'robots') == 1:
             pass
-        elif sigmatch(self, path, 'lfi') == 1:
+        elif sigmatch.sigmatch(self, path, 'lfi') == 1:
             pass
-        elif sigmatch(self, path, 'rfi') == 1:
+        elif sigmatch.sigmatch(self, path, 'rfi') == 1:
             pass
-        elif sigmatch(self, path, 'phpmyadmin') == 1:
+        elif sigmatch.sigmatch(self, path, 'phpmyadmin') == 1:
             pass
         else:  # default
             message_parts = [
@@ -444,15 +237,16 @@ class MyHandler(BaseHTTPRequestHandler):
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
         match = 0
         pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
-
-        sigmatch(self, path, 'lfi')
-        sigmatch(self, path, 'robots')
-        sigmatch(self, path, 'rfi')
+        conn.commit()
+        sigmatch.sigmatch(self, path, 'lfi')
+        sigmatch.sigmatch(self, path, 'robots')
+        sigmatch.sigmatch(self, path, 'rfi')
 
         for key in sorted(postvars):
             val = postvars[key]
-            sigmatch(self, val[0], 'sqli')
-            sigmatch(self, val[0], 'xss')
+            conn.commit()
+            sigmatch.sigmatch(self, val[0], 'sqli')
+            sigmatch.sigmatch(self, val[0], 'xss')
 
         if match != 1:
             # Get the "Back" link.

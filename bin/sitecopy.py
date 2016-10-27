@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # this script will connect to a web server and it is able to emulate different browsers.
 # It will retrieve and save the response for later replay as part of a honeypot.

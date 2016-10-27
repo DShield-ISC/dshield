@@ -1,5 +1,5 @@
-#!/usr/bin/evn python
-# not linked to schema for web.py at this time - future schema builder
+#!/usr/bin/env python
+# linked to schema for web.py
 
 from xml.etree import ElementTree
 import os
