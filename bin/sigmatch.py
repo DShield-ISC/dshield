@@ -76,9 +76,11 @@ def sigmatch(self, pattern, module):
                 for i in response:
                     if re.match(i[1], pattern) is not None:
                         match = 1
+                        script = re.sub(r'\<|\/|\>|script', r'', pattern)
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
-                        self.wfile.write(f.read())
+                        message = f.read().replace('Hello world', script,1)
+                        self.wfile.write(message)
                         f.close
                         print self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
