@@ -41,7 +41,25 @@
     <db_ref>SQLResp</db_ref>
 	<module>sqli</module>
   </request>
+  	  <response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+insert.+/*.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>replace</p>]]></responseToRequest>
+	</response> 
   <response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+select.+/*.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>id=1,username=admin,password=admin123</p><p>id=2,username=webuser,password=password123</p>]]></responseToRequest>
+	</response>
+	<response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"' at line 5</p>]]></responseToRequest>
+	</response>  
+	<response>
 		<sigID>5</sigID>
 		<table>SQLResp</table>
 		<patternRequest><![CDATA['.+]]></patternRequest>

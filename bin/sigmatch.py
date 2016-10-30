@@ -203,7 +203,12 @@ def sigmatch(self, pattern, module):
                 for i in response:
                     if re.match(i[1], pattern) is not None:
                         match = 1
-                        self.wfile.write(str(i[2]))
+                        if "insert" in pattern:
+                            script = re.sub(r'^.+insert', r'', pattern)
+                            message = (i[2]).replace('replace', script, 1)
+                            self.wfile.write(message)
+                        else:
+                            self.wfile.write(str(i[2]))
                         print self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern
