@@ -61,7 +61,7 @@ def sitecopy(urlstring, webpath):
     if webpath_not_exists:
         os.makedirs(webpath)
     #print body
-    config = config = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
+    config = config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
     con = sqlite3.connect(config)
     c = con.cursor()
     #Creates table for SITES unique values - RefID will be  RefID

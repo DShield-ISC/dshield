@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
-import SimpleHTTPServer
 import ssl
 import socket
-import smtp
-import proxy
 import urlparse
 import db_builder
 import sigmatch
@@ -189,8 +186,6 @@ class MyHandler(BaseHTTPRequestHandler):
                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy."
 
     def do_CONNECT(self):
-        snmp.mailserv(2525)
-        proxy(self)
         if not _USE_SSL:
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
