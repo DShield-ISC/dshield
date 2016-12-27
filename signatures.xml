@@ -1,147 +1,228 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <requests>
   <request>
-    <id>0</id>
-    <patternDescription>unknown</patternDescription>
-    <patternString></patternString>
-    <module>unknown</module>
-  </request>
-  <request>
     <id>1</id>
     <patternDescription>remote file inclusion</patternDescription>
     <patternString><![CDATA[.*(=.*(http(s){0,1}|ftp(s){0,1}):).*]]></patternString>
-    <module>rfi</module>
+    <db_ref>RFIResp</db_ref>
+	<module>rfi</module>
   </request>
+  <response>
+		<sigID>1</sigID>
+		<table>RFIResp</table>
+		<patternRequest><![CDATA[.+http\:.+]]></patternRequest>
+		<responseToRequest><![CDATA[http.+]]></responseToRequest>
+	</response>
   <request>
     <id>2</id>
     <patternDescription>php code injection</patternDescription>
     <patternString><![CDATA[.*(define|eval|file_get_contents|include|require|require_once|set|shell_exec|phpinfo|system|passthru|preg_|execute|echo|print|print_r|var_dump|[fp]open)\(.*]]></patternString>
-    <module>unknown</module>
+    <db_ref></db_ref>
+	<module>unknown</module>
   </request>
   <request>
     <id>3</id>
     <patternDescription>basic php code execution</patternDescription>
     <patternString><![CDATA[.*(<\?php).*]]></patternString>
-    <module>unknown</module>
+    <db_ref></db_ref>
+	<module>unknown</module>
   </request>
   <request>
     <id>4</id>
     <patternDescription>SQL benchmark and sleep</patternDescription>
     <patternString><![CDATA[.*((select|;)\s+(benchmark|if|sleep)).*]]></patternString>
-    <module>unknown</module>
+    <db_ref></db_ref>
+	<module>unknown</module>
   </request>
   <request>
     <id>5</id>
     <patternDescription>SQL injection</patternDescription>
-    <patternString><![CDATA[.*(select|drop|update|union|insert|alter|declare|cast)( |\().*]]></patternString>
-    <module>sqli</module>
+    <patternString><![CDATA['.+]]></patternString>
+    <db_ref>SQLResp</db_ref>
+	<module>sqli</module>
   </request>
-  <request>
-    <id>6</id>
-    <patternDescription>html injection</patternDescription>
-    <patternString><![CDATA[.*(<|%3c)(frame|applet|isindex|marquee|keygen|script|audio|video|input|button|textarea|style|base|body|meta|link|object|embed|param|plaintext|xml|image).*]]></patternString>
-    <module>unknown</module>
-  </request>
-  <request>
-    <id>7</id>
-    <patternDescription>xml entity injection</patternDescription>
-    <patternString><![CDATA[.*(element|entity|\[CDATA).*]]></patternString>
-    <module>unknown</module>
-  </request>
+  	  <response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+insert.+/*.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>replace</p>]]></responseToRequest>
+	</response> 
+  <response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+select.+/*.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>id=1,username=admin,password=admin123</p><p>id=2,username=webuser,password=password123</p>]]></responseToRequest>
+	</response>
+	<response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"' at line 5</p>]]></responseToRequest>
+	</response>  
+	<response>
+		<sigID>5</sigID>
+		<table>SQLResp</table>
+		<patternRequest><![CDATA['.+]]></patternRequest>
+		<responseToRequest><![CDATA[<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"' at line 5</p>]]></responseToRequest>
+	</response>
   <request>
     <id>8</id>
     <patternDescription>basic XSS</patternDescription>
-    <patternString><![CDATA[.*(alert|eval|msgbox|showmodaldialog|prompt|write|confirm|dialog|open).*]]></patternString>
-    <module>unknown</module>
+    <patternString><![CDATA[.+\<script\>.+]]></patternString>
+    <db_ref>XSSResp</db_ref>
+	<module>xss</module>
   </request>
+  <response>
+		<sigID>8</sigID>
+		<table>XSSResp</table>
+		<patternRequest><![CDATA[.+alert.+]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'</responseToRequest>
+	</response>
   <request>
     <id>9</id>
     <patternDescription>JS properties and objects</patternDescription>
     <patternString><![CDATA[.*(hash|href|navigateandfind|source|pathname|close|constructor|port|protocol|assign|replace|back|forward|document|ownerdocument|window|self|parent|frames|cookie|innerhtml|innertext|resizeto|createstylesheet)\(.*]]></patternString>
-    <module>unknown</module>
+    <db_ref></db_ref>
+	<module>unknown</module>
   </request>
   <request>
     <id>10</id>
     <patternDescription>local file inclusion linux</patternDescription>
-    <patternString><![CDATA[\?.*(/\.\.)*(home|conf|usr|etc|proc|opt|s?bin|local|dev|tmp|kern|root|sys|system|windows|winnt|program|inetpub/boot\.ini)/.*]]></patternString>
-    <module>lfi</module>
+    <patternString><![CDATA[.+\?.*(/\.\.)*(home|conf|usr|etc|proc|opt|s?bin|local|dev|tmp|kern|root|sys|system|windows|winnt|program|inetpub/boot\.ini)/.*]]></patternString>
+    <db_ref>paths</db_ref>
+	<module>lfi</module>
   </request>
+  <response>
+		<sigID>11</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.passwd.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'</responseToRequest>
+	</response>
+	  <response>
+		<sigID>10</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.passwd.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'</responseToRequest>
+	</response>
+	  <response>
+		<sigID>11</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.shadow.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'</responseToRequest>
+	</response>
+	  <response>
+		<sigID>10</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[.+\?.*(/\.\.)*etc.shadow.*]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'</responseToRequest>
+	</response>
   <request>
     <id>11</id>
     <patternDescription>local file inclusion windows</patternDescription>
-    <patternString><![CDATA[\?.*[a-zA-Z]:((([\\/]+(.{0,2}))|[\\/]+)[^\\/:*?"<>|,]+)+.*]]></patternString>
-    <module>lfi</module>
+    <patternString><![CDATA[.+\?.*[a-zA-Z]:((([\\/]+(.{0,2}))|[\\/]+)[^\\/:*?"<>|,]+)+.*]]></patternString>
+    <db_ref>paths</db_ref>
+	<module>lfi</module>
   </request>
   <request>
     <id>12</id>
     <patternDescription>XSS</patternDescription>
     <patternString><![CDATA[.*(script).*]]></patternString>
-    <module>unknown</module>
+    <db_ref>XSSResp</db_ref>
+	<module>xss</module>
   </request>
+  <response>
+		<sigID>12</sigID>
+		<table>XSSResp</table>
+		<patternRequest><![CDATA[.+alert.+]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'</responseToRequest>
+	</response>
   <request>
     <id>13</id>
     <patternDescription>favicon.ico</patternDescription>
-    <patternString><![CDATA[.*(favicon.ico).*]]></patternString>
-    <module>unknown</module>
+    <patternString><![CDATA[.*(faviscon.ico).*]]></patternString>
+    <db_ref></db_ref>
+	<module>unknown</module>
   </request>
   <request>
     <id>14</id>
     <patternDescription>style.css</patternDescription>
     <patternString><![CDATA[.*/style\.css$]]></patternString>
-    <module>style_css</module>
+    <db_ref></db_ref>
+	<module>style_css</module>
   </request>
   <request>
     <id>15</id>
     <patternDescription>robots.txt</patternDescription>
     <patternString><![CDATA[^/robots\.txt$]]></patternString>
-    <module>robots</module>
+    <db_ref>paths</db_ref>
+	<module>robots</module>
   </request>
+	<response>
+		<sigID>15</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[^/robots\.txt$]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'robots.txt'</responseToRequest>
+	</response>
   <request>
     <id>16</id>
     <patternDescription>PHPMyAdmin</patternDescription>
-    <patternString><![CDATA[(^/phpmyadmin|^/pma|^/phpmyadmin\-[\w\.]+)]]></patternString>
-    <module>phpmyadmin</module>
+	<patternString><![CDATA[(^/phpmyadmin|^/pma|^/phpmyadmin\-[\w\.]+)]]></patternString>
+    <db_ref>paths</db_ref>
+	<module>phpmyadmin</module>
   </request>
+  	  <response>
+		<sigID>16</sigID>
+		<table>paths</table>
+		<patternRequest><![CDATA[(^/phpmyadmin|^/pma|^/phpmyadmin\-[\w\.]+)]]></patternRequest>
+		<responseToRequest>'..'+ os.path.sep + 'html' + os.path.sep + 'phpMyAdmin.html'</responseToRequest>
+	</response>
   <request>
     <id>17</id>
     <patternDescription>comment spam</patternDescription>
     <patternString><![CDATA[.*/comments]]></patternString>
-    <module>comments</module>
+    <db_ref></db_ref>
+	<module>comments</module>
   </request>
   <request>
     <id>18</id>
     <patternDescription>login brute force</patternDescription>
     <patternString><![CDATA[^/login]]></patternString>
-    <module>login</module>
+    <db_ref></db_ref>
+	<module>login</module>
   </request>
   <request>
     <id>19</id>
     <patternDescription>tomcat manager</patternDescription>
     <patternString><![CDATA[^/manager/html]]></patternString>
-    <module>tomcat_manager</module>
+    <db_ref></db_ref>
+	<module>tomcat_manager</module>
   </request>
   <request>
     <id>20</id>
     <patternDescription>tomcat manager status</patternDescription>
     <patternString><![CDATA[^/manager/status]]></patternString>
-    <module>tomcat_status</module>
+    <db_ref></db_ref>
+	<module>tomcat_status</module>
   </request>
   <request>
     <id>21</id>
     <patternDescription>PHP CGI Source code disclosure CVE-2012-1823</patternDescription>
     <patternString><![CDATA[\?\-[s|w](\s\%3d)?$]]></patternString>
-    <module>php_cgi_rce</module>
+    <db_ref></db_ref>
+	<module>php_cgi_rce</module>
   </request>
   <request>
     <id>22</id>
     <patternDescription>PHP CGI Remote command execution CVE-2012-1823</patternDescription>
     <patternString><![CDATA[\-d\sauto_prepend_file=php://input]]></patternString>
-    <module>php_cgi_rce</module>
+    <db_ref></db_ref>
+	<module>php_cgi_rce</module>
   </request>
   <request>
     <id>23</id>
     <patternDescription>Common PHPInfo test/debug resources</patternDescription>
     <patternString><![CDATA[^/info.php|^/phpinfo.php|^/phpinfo.html]]></patternString>
-    <module>phpinfo</module>
+    <db_ref></db_ref>
+	<module>phpinfo</module>
   </request>
 </requests>

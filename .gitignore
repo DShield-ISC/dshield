@@ -6,3 +6,9 @@
 .key
 .keypin
 /etc/CA/
+DB/*
+DB/webserver.sqlite
+server.crt
+server.key
+bin/sitecopy.pyc
+bin/db_builder.pyc

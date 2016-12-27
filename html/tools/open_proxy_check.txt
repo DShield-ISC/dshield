@@ -1,0 +1,7 @@
+If you are seeing this while running the open proxy text, your server is an open proxy.
+
+You can test to see if your naked IP is serving an unauthenticated proxy with the following:
+
+http_proxy=http://X.X.X.X:8080/ curl -4 -s http://nyc2.mirrors.digitalocean.com/tools/open_proxy_check.txt
+
+where X.X.X.X is your server's IP4 address.
