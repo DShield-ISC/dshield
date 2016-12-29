@@ -34,7 +34,7 @@ class DshieldSubmit:
         self.readconfig(filename)
 
     def testurl(self,string):
-        urlre=re.compile('(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:[a-z]{2,13})/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:[a-z]{2,13})\b/?(?!@)))')
+        urlre=re.compile('(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:[a-z]{2,13})/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'".,<>?])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:[a-z]{2,13})\b/?(?!@)))')
         if urlre.match(string):
             return 1
         return 0
@@ -66,7 +66,15 @@ class DshieldSubmit:
     def readconfig(self,filename):
         home=os.getenv("HOME")
         if filename == '':
-            filename=home+'/etc/dshield.ini'
+            if os.path.isfile(home+'/etc/dshield.ini'):
+                filename=home+'/etc/dshield.ini'
+            elif os.path.isfile('/etc/dshield.ini'):
+                filename='/etc/dshield.ini'
+            elif os.path.isfile('/etc/dshield/dshield.ini'):
+                filename='/etc/dshield/dshield.ini'
+            else:
+                filename=home+'/.dshield.ini'
+
         if  os.path.isfile(filename):
             config=ConfigParser.ConfigParser()
             config.read(filename)
@@ -82,7 +90,7 @@ class DshieldSubmit:
                 print "no api key configured"
                 sys.exit()
         else:
-            print "file %s not found" % filename
+            print "config file %s not found" % filename
             sys.exit()
 
         return 1
