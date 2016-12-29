@@ -12,3 +12,4 @@ server.crt
 server.key
 bin/sitecopy.pyc
 bin/db_builder.pyc
+.lastufw
