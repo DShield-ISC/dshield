@@ -13,8 +13,12 @@ sudo apt install openssh-server
 sudo reboot
 ```
 
-After the reboot, clone this git repository:
+After the reboot, clone this git repository, and run the install script:
 
 ```
+git clone https://github.com/DShield-ISC/dshield.git
+sudo dshield/bin/install.sh
+```
+
 
 
