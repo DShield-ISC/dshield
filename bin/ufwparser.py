@@ -17,7 +17,7 @@ startdate=0
 now = datetime.utcnow()
 fieldmap={'SRC': 'sip', 'DST': 'dip', 'PROTO': 'proto', 'TYPE': 'sport', 'CODE': 'dport', 'SPT': 'sport', 'DPT': 'dport'}
 protomap={'UDP': 17, 'TCP': 6, 'ICMP': 1, 'ICMPv6': 58}
-
+tcpflagmap={'CWR':'1', 'ECE':'2', 'URG':'U', 'ACK':'A', 'PSH':'P','RST':'R', 'SYN':'S', 'FIN':'F'}
 
 def parse(line):
     linere=re.compile('^([A-Z][a-z]{2}) ([0-9 ]{2}) ([0-9:]{8}) \S+ kernel: \[[^\]]+\] \[([^\]]+)\] (.*)')
@@ -36,6 +36,7 @@ def parse(line):
         data['time']=logtime
         if mktime(logtime.timetuple()) > startdate :
             parts=m.group(5).split()
+            data['flags']=''
             for part in parts:
                 keyval=part.split('=')
                 if keyval[0] in fieldmap:
@@ -46,6 +47,10 @@ def parse(line):
                 data['version']=4
             if data['proto'] in protomap:
                 data['proto']=protomap[data['proto']]
+            if data['proto']==6:
+                for f in tcpflagmap:
+                    if f in parts:
+                        data['flags']=data['flags']+tcpflagmap[f]
             if isinstance(data['proto'], int):
                 return data
                 

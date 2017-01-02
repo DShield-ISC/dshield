@@ -55,10 +55,9 @@ class DshieldSubmit:
             print 'no valid type defined in post'
 
     def makeauthheader(self):
-        nonce = os.urandom(8)
-        myhash = hmac.new(nonce + str(self.id), msg=self.key.decode('base-64'), digestmod=hashlib.sha256).digest()
-        hash64 = base64.b64encode(myhash).decode()
-        nonce = base64.b64encode(nonce).decode()
+        nonce = base64.b64encode(os.urandom(8))
+        myhash = hmac.new(nonce + str(self.id), msg=self.key, digestmod=hashlib.sha256).digest()
+        hash64 = base64.b64encode(myhash)
         header = 'ISC-HMAC-SHA256 Credentials=%s Userid=%s Nonce=%s' % (hash64, self.id, nonce.rstrip())
         return header
 
