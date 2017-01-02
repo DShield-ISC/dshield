@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 ####
 #
@@ -6,7 +6,7 @@
 #
 ####
 
-version=0.2
+readonly version=0.3
 
 echo "Checking Pre-Requisits"
 progname=$0;
@@ -28,12 +28,20 @@ fi
 
 . /etc/os-release
 
-if [ "$ID" != "raspbian" ] ; then
-  echo "You are not running Raspbian. Your operating system identifies itself as $ID. Please ask info@dshield.org for help."
+
+dist=invalid
+
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
+   dist='apt';
 fi
 
-if [ "$VERSION_ID" != "8" ] ; then
-  echo "Your version of Raspbian is currently not supported. Please ask info@dshield.org for help (include the content of /etc/os-release)"
+if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
+   dist='yum';
+fi
+
+if [ "$dist" == "invalid" ] ; then
+  echo "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI. Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
+  exit
 fi
 
 # creating a temporary directory
@@ -45,7 +53,7 @@ echo "Basic security checks"
 
 # making sure default password was changed
 
-
+if [ "$ID" == "raspian" ]; then
 if $progdir/passwordtest.pl | grep -q 1; then
   echo "You have not yet changed the default password for the 'pi' user"
   echo "Change it NOW ..."
@@ -60,6 +68,15 @@ echo "Installing additional packages"
 
 
 apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb > /dev/null
+pip install python-dateutil > /dev/null
+fi
+
+if [ "$ID" == "amzn" ]; then
+    echo "Updateing your Operating System"
+    yum -q update -y
+    echo "Installing additional packages"
+    yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil > /dev/null    
+fi
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
@@ -67,7 +84,7 @@ apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twist
 
 echo HRNGDEVICE=/dev/urandom > /etc/default/rnd-tools
 
-pip install python-dateutil > /dev/null
+
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}
