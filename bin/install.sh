@@ -69,7 +69,7 @@ fi
 echo "Updating your Installation (this can take a LOOONG time)"
 
 apt-get update > /dev/null
-apt-get upgrade > /dev/null
+apt-get -y upgrade > /dev/null
 
 echo "Installing additional packages"
 apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb unzip > /dev/null
@@ -141,6 +141,9 @@ password=$mysqlpassword
 EOF
 fi
 
+if ! [ -d $TMPDIR ]; then
+ exit
+fi
 
 # dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
 # return_value=$?
@@ -170,6 +173,12 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 
 	    user=`echo $email | sed 's/@/%40/'`
 	    curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
+
+if ! [ -f "$TMPDIR" ]; then
+  echo "can not find TMPDIR $TMPDIR"
+  exit
+fi
+
 	    if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
 		apikeyok=1;
 		uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
