@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 ####
 #
@@ -31,6 +31,11 @@ fi
 
 dist=invalid
 
+
+if [ "$ID" == "ubuntu" ] ; then
+   dist='apt';
+fi
+
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
    dist='apt';
 fi
@@ -43,6 +48,8 @@ if [ "$dist" == "invalid" ] ; then
   echo "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI. Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
   exit
 fi
+
+echo "using apt to install packages"
 
 # creating a temporary directory
 
