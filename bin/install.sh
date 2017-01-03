@@ -60,20 +60,18 @@ echo "Basic security checks"
 
 # making sure default password was changed
 
-if [ "$ID" == "raspian" ]; then
+if [ "$dist" == "apt" ]; then
 if $progdir/passwordtest.pl | grep -q 1; then
   echo "You have not yet changed the default password for the 'pi' user"
   echo "Change it NOW ..."
   exit
 fi
-echo "Updating your Raspbian Installation (this can take a LOOONG time)"
+echo "Updating your Installation (this can take a LOOONG time)"
 
-# apt-get update > /dev/null
-# apt-get upgrade > /dev/null
+apt-get update > /dev/null
+apt-get upgrade > /dev/null
 
 echo "Installing additional packages"
-
-
 apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb unzip > /dev/null
 pip install python-dateutil > /dev/null
 fi
