@@ -74,7 +74,7 @@ echo "Updating your Raspbian Installation (this can take a LOOONG time)"
 echo "Installing additional packages"
 
 
-apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb > /dev/null
+apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb unzip > /dev/null
 pip install python-dateutil > /dev/null
 fi
 
