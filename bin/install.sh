@@ -8,20 +8,20 @@
 
 version=0.2
 
-echo "Checking Pre-Requisits"
+echo "Checking Pre-Requisites"
 progname=$0;
 progdir=`dirname $0`;
 progdir=$PWD/$progdir;
 cd $progdir
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
-   echo "you have to run this script as root. eg."
+   echo "You have to run this script as root. eg."
    echo "  sudo install.sh"
    exit
 fi
 
 if [ ! -f /etc/os-release ] ; then
-  echo "I can not fine the /etc/os-release file. You are likely not running a supported operating systems"
+  echo "I can not find the /etc/os-release file. You are likely not running a supported operating systems"
   echo "please email info@dshield.org for help."
   exit
 fi
