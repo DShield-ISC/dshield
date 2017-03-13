@@ -165,7 +165,7 @@ Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI V
 	}
     }
     else {
-	syslog('error','dshield log submission http error'.$result->status_line);
+	syslog('LOG_ERR','dshield log submission http error'.$result->status_line);
 	die $result->status_line;
     }
     print "---\n";
