@@ -369,10 +369,16 @@ fi
 echo cowriepassword=$cowriepassword >> /etc/dshield.conf
 
 echo "Adding / updating cowrie user in MySQL."
-mysql -uroot -p$mysqlpassword -e "drop user 'cowrie'@'*'"
-mysql -uroot -p$mysqlpassword -e "flush privileges"
-mysql -uroot -p$mysqlpassword -e "create user 'cowrie'@'*' identified by '${cowriepassword}'"
-mysql -uroot -p$mysqlpassword -e "grant all on cowrie.* to 'cowrie'@'localhost'"
+cat <<EOF | mysql -uroot -p$mysqlpassword
+   GRANT USAGE ON *.* TO 'cowrie'@'%' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
+   GRANT USAGE ON *.* TO 'cowrie'@'localhost' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
+   DROP USER 'cowrie'@'%';
+   DROP USER 'cowrie'@'localhost';
+   FLUSH PRIVILEGES;
+   CREATE USER 'cowrie'@'localhost' IDENTIFIED BY '${cowriepassword}';
+   GRANT ALL ON cowrie.* TO 'cowrie'@'localhost';
+EOF
+
 
 
 cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
