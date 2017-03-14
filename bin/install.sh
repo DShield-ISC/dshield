@@ -111,7 +111,10 @@ if [ -f /etc/dshield.conf ] ; then
     if grep -q 'uid=<authkey>' /etc/dshield.conf; then
 	sed -i.bak 's/<.*>//' /etc/dshield.conf
     fi
+    # source old config but don't overwrite progdir ...
+    progdirold=$progdir
     . /etc/dshield.conf
+    progdir=$progdirold
 fi
 nomysql=0
 
@@ -418,6 +421,8 @@ lscpu > /srv/cowrie/txtcmds/usr/bin/lscpu
 echo '-bash: emacs: command not found' > /srv/cowrie/txtcmds/usr/bin/emacs
 echo '-bash: locate: command not found' > /srv/cowrie/txtcmds/usr/bin/locate
 chown -R cowrie:cowrie /srv/cowrie
+
+# echo "###########  $progdir  ###########"
 
 cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
 cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
