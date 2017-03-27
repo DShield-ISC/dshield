@@ -324,6 +324,12 @@ chmod 1777 /var/log/mini-httpd
 
 wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
 unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip 
+
+if [ ${?} -ne 0 ] ; then
+   echo "Something went wrong downloading cowrie, ZIP corrupt."
+   exit
+fi
+
 if [ -d /srv/cowrie ]; then
     rm -rf /srv/cowrie
 fi
