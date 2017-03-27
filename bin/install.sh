@@ -277,6 +277,16 @@ cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d
 chmod 700 /etc/network/if-pre-up.d/dshield
 sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
+if [ `grep "^Port 12222\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
+   dialog --title 'sshd port' --ok-label 'Yep, understood.' --cr-wrap --msgbox 'Congrats, you had already changed your sshd port to something other than 22.
+
+Please clean up the mess and either
+  - change the port manually to 12222
+     in /etc/ssh/sshd_config OR
+  - clean up the firewall rules and
+     other stuff reflecting YOUR PORT (tm)' 13 50
+fi
+
 sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
 
 #
