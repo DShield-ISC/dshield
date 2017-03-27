@@ -174,7 +174,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	    user=`echo $email | sed 's/@/%40/'`
 	    curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
 
-if ! [ -f "$TMPDIR" ]; then
+if ! [ -d "$TMPDIR" ]; then
   echo "can not find TMPDIR $TMPDIR"
   exit
 fi
