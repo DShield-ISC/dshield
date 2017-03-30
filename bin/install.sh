@@ -72,7 +72,7 @@ apt-get update > /dev/null
 apt-get -y upgrade > /dev/null
 
 echo "Installing additional packages"
-apt-get -y -qq install mini-httpd dialog libswitch-perl libwww-perl python-twisted python-crypto python-pyasn1 python-gmpy2 python-zope.interface python-pip python-gmpy python-gmpy2 mysql-client randomsound rng-tools python-mysqldb unzip > /dev/null
+apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip > /dev/null
 pip install python-dateutil > /dev/null
 fi
 
