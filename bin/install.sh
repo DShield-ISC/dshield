@@ -334,6 +334,12 @@ chmod 1777 /var/log/mini-httpd
 
 wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
 unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip 
+
+if [ ${?} -ne 0 ] ; then
+   echo "Something went wrong downloading cowrie, ZIP corrupt."
+   exit
+fi
+
 if [ -d /srv/cowrie ]; then
     rm -rf /srv/cowrie
 fi
@@ -345,7 +351,7 @@ if ! grep '^cowrie:' -q /etc/passwd; then
     adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie
     echo Added user 'cowrie'
 else
-    echo User 'cowrie' already exists. Making no changes
+    echo User 'cowrie' already exists in OS. Making no changes
 fi    
 
 # check if cowrie db schema exists
@@ -361,9 +367,12 @@ if [ "$cowriepassword" = "" ]; then
     cowriepassword=`head -c10 /dev/random | xxd -p`
 fi
 echo cowriepassword=$cowriepassword >> /etc/dshield.conf
-mysql -uroot -p$mysqlpassword -e "create user \`cowrie\`.\`*\` identified by '$cowriepassword'"
-mysql -uroot -p$mysqlpassword -e "grant all on cowrie.* to \`cowrie\`@\`localhost\`"
 
+echo "Adding / updating cowrie user in MySQL."
+mysql -uroot -p$mysqlpassword -e "drop user 'cowrie'@'*'"
+mysql -uroot -p$mysqlpassword -e "flush privileges"
+mysql -uroot -p$mysqlpassword -e "create user 'cowrie'@'*' identified by '${cowriepassword}'"
+mysql -uroot -p$mysqlpassword -e "grant all on cowrie.* to 'cowrie'@'localhost'"
 
 
 cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
