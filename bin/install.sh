@@ -72,7 +72,7 @@ apt-get update > /dev/null
 apt-get -y upgrade > /dev/null
 
 echo "Installing additional packages"
-apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip > /dev/null
+apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 pip install python-dateutil > /dev/null
 fi
 
@@ -410,6 +410,96 @@ cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly
 cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
 cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
+#
+# Checking cowrie Dependencies
+# see: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt
+#
+
+# format: <PKGNAME1>,<MINVERSION1>  <PKGNAME2>,<MINVERSION2>  <PKGNAMEn>,<MINVERSIONn>
+#         meaning: <PGKNAME> must be installes in version >=<MINVERSION>
+# if no MINVERSION: 0
+# replace _ with -
+
+# twisted v15.2.1 isn't working (problems with SSH key), neither is 17.1.0, so we use the latest version of 16 (16.6.0)
+
+for PKGVER in twisted,16.5.9 cryptography,0 configparser,0 pyopenssl,0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0 attrs,0 service-identity,0 pycrypto,0 python-dateutil,0 tftpy,0 ; do
+
+   # echo "PKGVER: ${PKGVER}"
+
+   PKG=`echo "${PKGVER}" | cut -d "," -f 1`
+   VERREQ=`echo "${PKGVER}" | cut -d "," -f 2`
+   VERREQLIST=`echo "${VERREQ}" | tr "." " "`
+
+   VERINST=`pip show ${PKG} | grep "^Version: " | cut -d " " -f 2`
+
+   if [ "${VERINST}" == "" ] ; then
+      VERINST="0"
+   fi
+
+   VERINSTLIST=`echo "${VERINST}" | tr "." " "`
+
+   # echo "PKG: ${PKG}"
+   # echo "VERREQ: ${VERREQ}"
+   # echo "VERREQLIST: ${VERREQLIST}"
+   # echo "VERINST: ${VERINST}"
+   # echo "VERINSTLIST: ${VERINSTLIST}"
+
+   MUSTINST=0
+
+   echo "+ checking cowrie dependency: module '${PKG}' ..."
+
+   if [ "${VERINST}" == "0" ] ; then
+      echo "  ERR: not found at all, will be installed"
+      MUSTINST=1
+      pip install ${PKG}
+      if [ ${?} -ne 0 ] ; then
+         echo "Error installing '${PKG}'. Aborting."
+         exit 1
+      fi
+   else
+      FIELD=1
+      # check if version number of installed module is sufficient
+      for VERNO in ${VERREQLIST} ; do
+         # echo "FIELD: ${FIELD}"
+         FIELDINST=`echo "${VERINSTLIST}" | cut -d " " -f "${FIELD}" `
+         if [ "${FIELDINST}" == "" ] ; then
+            FIELDINST=0
+         fi
+         FIELDREQ=`echo "${VERREQLIST}" | cut -d " " -f "${FIELD}" `
+         if [ "${FIELDREQ}" == "" ] ; then
+            FIELDREQ=0
+         fi
+         if [ ${FIELDINST} -lt ${FIELDREQ} ] ; then
+            # first version string from left with lower number installed -> update
+            MUSTINST=1
+            break
+         elif [ ${FIELDINST} -gt ${FIELDREQ} ] ; then
+            # first version string from left with hight number installed -> done
+            break
+         fi
+         FIELD=`echo "$((${FIELD} + 1))"`
+      done
+      if [ ${MUSTINST} -eq 1 ] ; then
+         echo "  ERR: is installed in v${VERINST} but must at least be v${VERREQ}, will be updated"
+         pip install ${PKG}==${VERREQ}
+         if [ ${?} -ne 0 ] ; then
+            echo "Error upgrading '${PKG}'. Aborting."
+            exit 1
+         fi
+      fi
+   fi
+
+   # echo "MUSTINST: ${MUSTINST}"
+
+   if [ ${MUSTINST} -eq 0 ] ; then
+      echo "  OK: is installed in a sufficient version, nothing to do"
+   fi
+
+
+done
+
+
+# setting up services
 update-rc.d cowrie defaults
 update-rc.d mini-httpd defaults
 
@@ -446,7 +536,33 @@ EOF
 
 mv $TMPDIR/motd /etc/motd
 
-./makecert.sh
+# checking certs
+# if already there: ask if generate new
+
+GENCERT=1
+
+if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
+   dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
+   response=$?
+   case $response in
+      ${DIALOG_OK}) 
+         # cleaning up old certs
+         rm ../etc/CA/certs/*
+         rm ../etc/CA/keys/*
+         rm ../etc/CA/requests/*
+         rm ../etc/CA/index.*
+         GENCERT=1
+         ;;
+      ${DIALOG_CANCEL}) 
+         GENCERT=0
+         ;;
+      ${DIALOG_ESC}) exit;;
+   esac
+fi
+
+if [ ${GENCERT} -eq 1 ] ; then
+   ./makecert.sh
+fi
 
 echo
 echo
