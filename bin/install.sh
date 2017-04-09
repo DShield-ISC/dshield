@@ -8,6 +8,11 @@
 
 readonly version=0.3
 
+# target directory for server components
+TARGETDIR="/srv"
+DSHIELDDIR="${TARGETDIR}/dshield"
+# COWRIEDIR="${TARGETDIR}/cowrie"
+
 echo "Checking Pre-Requisits"
 progname=$0;
 progdir=`dirname $0`;
@@ -289,6 +294,12 @@ fi
 
 sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
 
+# moving dshield stuff to target directory
+# (don't like to have root run scripty which are not owned by root)
+mkdir -p ${DSHIELDDIR}
+cp $progdir/dshield.pl ${DSHIELDDIR}
+chmod 700 ${DSHIELDDIR}/dshield.pl
+
 #
 # "random" offset for cron job so not everybody is reporting at once
 #
@@ -296,9 +307,8 @@ sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /et
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * root $progdir/dshield.pl
+$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
 EOF
-chmod 700 $progdir/dshield.pl
 
 
 #
@@ -318,7 +328,7 @@ echo "localnet=$localnet" >> /etc/dshield.conf
 echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
 echo "version=$version" >> /etc/dshield.conf
-echo "progdir=$progdir" >> /etc/dshield.conf
+echo "progdir=${DSHIELDDIR}" >> /etc/dshield.conf
 
 #
 # creating srv directories
@@ -419,6 +429,7 @@ cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 #
 # Checking cowrie Dependencies
 # see: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt
+# ... and twisted dependencies: https://twistedmatrix.com/documents/current/installation/howto/optional.html
 #
 
 # format: <PKGNAME1>,<MINVERSION1>  <PKGNAME2>,<MINVERSION2>  <PKGNAMEn>,<MINVERSIONn>
@@ -428,7 +439,7 @@ cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 # twisted v15.2.1 isn't working (problems with SSH key), neither is 17.1.0, so we use the latest version of 16 (16.6.0)
 
-for PKGVER in twisted,16.5.9 cryptography,0 configparser,0 pyopenssl,0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0 attrs,0 service-identity,0 pycrypto,0 python-dateutil,0 tftpy,0 ; do
+for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 ; do
 
    # echo "PKGVER: ${PKGVER}"
 
