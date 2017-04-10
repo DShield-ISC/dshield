@@ -6,35 +6,119 @@
 #
 ####
 
-readonly version=0.3
+###########################################################
+## CONFIG SECTION
+###########################################################
+
+
+readonly version=0.4
 
 # target directory for server components
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 # COWRIEDIR="${TARGETDIR}/cowrie"
+LOGDIR="${TARGETDIR}/log"
+LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
 
 # which ports will be handled e.g. by cowrie (separated by blanks)
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 HONEYPORTS="2222"
 
-echo "Checking Pre-Requisits"
+# Debug Flag
+DEBUG=1
+
+
+###########################################################
+## FUNCTION SECTION
+###########################################################
+
+# echo and log
+outlog () {
+   echo ${*}
+   do_log ${*}
+}
+
+# write log
+do_log () {
+   if [ ! -d ${LOGDIR} ] ; then
+       mkdir -p ${LOGDIR}
+       chmod 700 ${LOGDIR}
+   fi
+   if [ ! -f ${LOGFILE} ] ; then
+       touch ${LOGFILE}
+       chmod 600 ${LOGFILE}
+       outlog "Log ${LOGFILE} started."
+       do_log "ATTENTION: the log file contains sensitive information (e.g. passwords, API keys, ...)"
+       do_log "           Handle with care. Sanitize before submitting."
+   fi
+   echo "`date +'%Y-%m-%d_%H%M%S'` ### ${*}" >> ${LOGFILE}
+}
+
+# execute and log
+run () {
+   do_log "Running: ${*}"
+   ${*} >> ${LOGFILE} 2>&1
+   return ${?}
+}
+
+# run if debug is set
+drun () {
+   if [ ${DEBUG} -eq 1 ] ; then
+      do_log "DEBUG COMMAND FOLLOWS:"
+      run ${*}
+   fi
+}
+
+# log if debug is set
+dlog () {
+   if [ ${DEBUG} -eq 1 ] ; then
+      do_log "DEBUG OUTPUT: ${*}"
+   fi
+}
+
+###########################################################
+## MAIN
+###########################################################
+
+userid=`id -u`
+if [ ! "$userid" = "0" ]; then
+   echo "You have to run this script as root. eg."
+   echo "  sudo bin/install.sh"
+   echo "Exiting."
+   exit 9
+else
+   do_log "Check OK: User-ID is ${userid}."
+fi
+
+if [ ${DEBUG} -eq 1 ] ; then
+   do_log "DEBUG flag is set."
+else
+   do_log "DEBUG flag NOT set."
+fi
+
+drun env
+
+
+outlog "Checking Pre-Requisits"
+
 progname=$0;
 progdir=`dirname $0`;
 progdir=$PWD/$progdir;
+
+dlog "progname: ${progname}"
+dlog "progdir: ${progdir}"
+
 cd $progdir
-userid=`id -u`
-if [ ! "$userid" = "0" ]; then
-   echo "you have to run this script as root. eg."
-   echo "  sudo install.sh"
-   exit
-fi
 
 if [ ! -f /etc/os-release ] ; then
-  echo "I can not fine the /etc/os-release file. You are likely not running a supported operating systems"
-  echo "please email info@dshield.org for help."
-  exit
+  outlog "I can not fine the /etc/os-release file. You are likely not running a supported operating systems"
+  outlog "please email info@dshield.org for help."
+  exit 9
 fi
+
+drun "cat /etc/os-release"
+drun "uname -a"
 
 . /etc/os-release
 
@@ -54,44 +138,54 @@ if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then
    dist='yum';
 fi
 
+dlog "dist: ${dist}"
+
 if [ "$dist" == "invalid" ] ; then
-  echo "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI. Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
-  exit
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI."
+   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
+   exit 9
 fi
 
-echo "using apt to install packages"
+outlog "using apt to install packages"
 
-# creating a temporary directory
+dlog "creating a temporary directory"
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
-trap "rm -r $TMPDIR" 0 1 2 5 15
+dlog "TMPDIR: ${TMPDIR}"
+dlog "seeting trap"
+run 'trap \"rm -r $TMPDIR\" 0 1 2 5 15'
 
-echo "Basic security checks"
+outlog "Basic security checks"
 
-# making sure default password was changed
+dlog "making sure default password was changed"
 
 if [ "$dist" == "apt" ]; then
-if $progdir/passwordtest.pl | grep -q 1; then
-  echo "You have not yet changed the default password for the 'pi' user"
-  echo "Change it NOW ..."
-  exit
-fi
-echo "Updating your Installation (this can take a LOOONG time)"
+   if $progdir/passwordtest.pl | grep -q 1; then
+      outlog "You have not yet changed the default password for the 'pi' user"
+      outlog "Change it NOW ..."
+      exit 9
+   fi
+   outlog "Updating your Installation (this can take a LOOONG time)"
 
-apt-get update > /dev/null
-apt-get -y upgrade > /dev/null
+   run apt-get update 
+   run apt-get -y -q upgrade 
 
-echo "Installing additional packages"
-apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
-pip install python-dateutil > /dev/null
+   outlog "Installing additional packages"
+   # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
+
+   # OS packages: no python modules
+   run apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-pip randomsound rng-tools unzip libssl-dev 
+   # pip install python-dateutil > /dev/null
 fi
 
 if [ "$ID" == "amzn" ]; then
-    echo "Updateing your Operating System"
-    yum -q update -y
-    echo "Installing additional packages"
-    yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil > /dev/null    
+   outlog "Updateing your Operating System"
+   run yum -q update -y
+   outlog "Installing additional packages"
+   run yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil > /dev/null    
 fi
+
+exit 99
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
