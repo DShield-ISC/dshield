@@ -303,7 +303,15 @@ if [ ${?} -gt 0 ] ; then
    dlog "no pip found, Installing pip"
 
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error downloading get-pip, aborting."
+      exit 9
+   fi
    run 'python $TMPDIR/get-pip.py'
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error running get-pip, aborting."
+      exit 9
+   fi
 
 else
    # hmmmm ...
