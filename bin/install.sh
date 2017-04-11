@@ -252,6 +252,23 @@ while [ $localnetok -eq  0 ] ; do
 	dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
     fi
 done
+
+# further IPs to ignore
+
+exec 3>&1
+IGNORE=$(dialog --title 'Further IPs to ignore'  --cr-wrap --form "WARNING - NOT FOR N00BS!
+Further IPs and nets to ignore in reporting (in notation iptables likes, separated by spaces). If unsure don't enter anything here!
+You have been warned.
+ 
+ 
+" \
+15 70 0 "Ignore:" 1 1 "${ignorelist}" 1 25 40 100 2>&1 1>&3)
+exec 3>&-
+
+# for saving in dshield.conf
+ignorelist="'${IGNORE}'"
+
+
 cat > /etc/network/iptables <<EOF
 
 #
@@ -267,6 +284,20 @@ cat > /etc/network/iptables <<EOF
 -A INPUT -i $interface -s $localnet -j ACCEPT
 -A INPUT -i $interface -p tcp --dport 12222 -s 10.0.0.0/8 -j ACCEPT
 -A INPUT -i $interface -p tcp --dport 12222 -s 192.168.0.0/8 -j ACCEPT
+EOF
+
+# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
+if [ "${IGNORE}" != "" -a "${IGNORE}" != " " ] ; then
+   # echo "###${IGNORE}###"
+   for IGN in ${IGNORE} ; do
+      echo "-A INPUT -i $interface -s ${IGN} -j RETURN" >> /etc/network/iptables
+   done
+# else
+   # echo "n00b"
+fi
+
+
+cat >> /etc/network/iptables <<EOF
 -A INPUT -i $interface -j LOG --log-prefix " INPUT "
 -A INPUT -i $interface -p tcp --dport 12222 -j DROP
 COMMIT
@@ -332,6 +363,7 @@ echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
 echo "version=$version" >> /etc/dshield.conf
 echo "progdir=${DSHIELDDIR}" >> /etc/dshield.conf
+echo "ignorelist=$ignorelist" >> /etc/dshield.conf
 
 #
 # creating srv directories
