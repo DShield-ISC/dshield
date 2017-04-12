@@ -257,9 +257,9 @@ done
 
 exec 3>&1
 IGNORE=$(dialog --title 'Further IPs to ignore'  --cr-wrap --form "WARNING - NOT FOR N00BS!
-Further IPs and nets to ignore in reporting (in notation iptables likes, separated by spaces). If unsure don't enter anything here!
-You have been warned.
- 
+Further IPs and nets to ignore in reporting (in notation iptables likes, separated by spaces). 
+Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and sshd will be exposed.
+If unsure don't enter anything here! You have been warned.
  
 " \
 15 70 0 "Ignore:" 1 1 "${ignorelist}" 1 25 40 100 2>&1 1>&3)
