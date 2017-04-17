@@ -13,6 +13,11 @@ TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 # COWRIEDIR="${TARGETDIR}/cowrie"
 
+# which ports will be handled e.g. by cowrie (separated by blanks)
+# used e.g. for setting up block rules for trusted nets
+# use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
+HONEYPORTS="2222"
+
 echo "Checking Pre-Requisits"
 progname=$0;
 progdir=`dirname $0`;
@@ -253,22 +258,86 @@ while [ $localnetok -eq  0 ] ; do
     fi
 done
 
-# further IPs to ignore
+# further IPs: no iptables logging
+
+if [ "${nofwlogging}" == "" ] ; then
+   # default: local net
+   nofwlogging="${localnet}"
+fi
 
 exec 3>&1
-IGNORE=$(dialog --title 'Further IPs to ignore'  --cr-wrap --form "WARNING - NOT FOR N00BS!
-Further IPs and nets to ignore in reporting (in notation iptables likes, separated by spaces). 
-Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and sshd will be exposed.
-If unsure don't enter anything here! You have been warned.
- 
+NOFWLOGGING=$(dialog --title 'IPs to ignore in FW Log'  --cr-wrap --form "WARNING - USE WITH CARE!
+IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
+Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and the 'real' sshd will be exposed.
+If unsure don't change anything here! Trusted IPs only. You have been warned.
+
 " \
-15 70 0 "Ignore:" 1 1 "${ignorelist}" 1 25 40 100 2>&1 1>&3)
+18 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 25 40 100 2>&1 1>&3)
 exec 3>&-
 
 # for saving in dshield.conf
-ignorelist="'${IGNORE}'"
+nofwlogging="'${NOFWLOGGING}'"
+
+if [ "${NOFWLOGGING}" == "" ] ; then
+   # echo "No firewall log exceptions will be done."
+   dialog --title 'No Firewall Log Exceptions' --msgbox 'No firewall logging exceptions will be installed.' 10 40
+else
+   dialog --title 'Firewall Logging Exceptions' --cr-wrap --msgbox "The firewall logging exceptions will be installed for IPs
+${NOFWLOGGING}." 20 60
+fi
 
 
+# further IPs: no honeypot
+
+if [ "${nohoneyips}" == "" ] ; then
+   # default: local net
+   nohoneyips="${localnet}"
+fi
+
+if [ "${nohoneyports}" == "" ] ; then
+   # default: cowrie ports
+    nohoneyports="${HONEYPORTS}"
+fi
+
+exec 3>&1
+NOHONEY=$(dialog --title 'IPs to disable Honeypot for'  --cr-wrap --form "WARNING - USE WITH CARE!
+IPs and nets to disable honeypot for to prevent reporting internal legitimate failed access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING) separated by spaces).
+Attention: entries will be added to reject access to honeypot ports.
+If unsure don't change anything here! Trusted IPs only. You have been warned.
+
+" \
+18 70 0 \
+"IPs / Nets:" 1 1 "${nohoneyips}" 1 25 40 100  \
+"Ports:" 2 1 "${nohoneyports}" 2 25 40 100 2>&1 1>&3)
+exec 3>&-
+
+# echo "###${NOHONEY}###"
+
+NOHONEYIPS=`echo "${NOHONEY}"  | cut -d "
+" -f 1`
+NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
+" -f 2`
+
+# echo "###${NOHONEYIPS}###"
+# echo "###${NOHONEYPORTS}###"
+
+if [ "${NOHONEYIPS}" == "" -o "${NOHONEYPORTS}" == "" ] ; then
+   NOHONEYIPS=""
+   NOHONEYPORTS=""
+   # echo "No honeyport exceptions will be done."
+   dialog --title 'No Honeypot Exceptions' --msgbox 'No honeypot exceptions will be installed.' 10 40
+else
+   dialog --title 'Honeypot Exceptions' --cr-wrap --msgbox "The honeypot exceptions will be installed for IPs
+${NOHONEYIPS}
+for ports ${NOHONEYPORTS}." 20 60
+fi
+
+# for saving in dshield.conf
+nohoneyips="'${NOHONEYIPS}'"
+nohoneyports="'${NOHONEYPORTS}'"
+
+
+# create default firewall rule set
 cat > /etc/network/iptables <<EOF
 
 #
@@ -281,17 +350,38 @@ cat > /etc/network/iptables <<EOF
 :OUTPUT ACCEPT [0:0]
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
+EOF
+
+# insert IPs and ports for which honeypot has to be disabled
+# as soon as possible
+if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
+   echo "# START: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
+   # echo "###${NOFWLOGGING}###"
+   for NOHONEYIP in ${NOHONEYIPS} ; do
+      for NOHONEYPORT in ${NOHONEYPORTS} ; do
+         echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >> /etc/network/iptables
+      done
+   done
+   echo "# END: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
+# else
+   # echo "n00b"
+fi
+
+
+cat >> /etc/network/iptables <<EOF
 -A INPUT -i $interface -s $localnet -j ACCEPT
 -A INPUT -i $interface -p tcp --dport 12222 -s 10.0.0.0/8 -j ACCEPT
 -A INPUT -i $interface -p tcp --dport 12222 -s 192.168.0.0/8 -j ACCEPT
 EOF
 
 # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
-if [ "${IGNORE}" != "" -a "${IGNORE}" != " " ] ; then
-   # echo "###${IGNORE}###"
-   for IGN in ${IGNORE} ; do
-      echo "-A INPUT -i $interface -s ${IGN} -j RETURN" >> /etc/network/iptables
+if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
+   echo "# START: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+   # echo "###${NOFWLOGGING}###"
+   for NOFWLOG in ${NOFWLOGGING} ; do
+      echo "-A INPUT -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
    done
+   echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
 # else
    # echo "n00b"
 fi
@@ -363,7 +453,9 @@ echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf
 echo "mysqluser=root" >> /etc/dshield.conf
 echo "version=$version" >> /etc/dshield.conf
 echo "progdir=${DSHIELDDIR}" >> /etc/dshield.conf
-echo "ignorelist=$ignorelist" >> /etc/dshield.conf
+echo "nofwlogging=$nofwlogging" >> /etc/dshield.conf
+echo "nohoneyips=$nohoneyips" >> /etc/dshield.conf
+echo "nohoneyports=$nohoneyports" >> /etc/dshield.conf
 
 #
 # creating srv directories
