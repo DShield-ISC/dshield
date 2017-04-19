@@ -13,7 +13,7 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 ```bash
 sudo apt-get update
 sudo apt-get upgrade
-reboot
+sudo reboot
 ```
 
 only on "Jessie Lite": 
