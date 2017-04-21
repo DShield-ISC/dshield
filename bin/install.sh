@@ -153,7 +153,15 @@ dlog "creating a temporary directory"
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
 dlog "TMPDIR: ${TMPDIR}"
 dlog "seeting trap"
-run 'trap \"rm -r $TMPDIR\" 0 1 2 5 15'
+run trap "\'rm -r ${TMPDIR}\'" 0 1 2 5 15
+
+
+if [ ${?} -ne 0 ] ; then
+   echo "lala"
+   exit 100
+fi
+
+exit 99 
 
 outlog "Basic security checks"
 
