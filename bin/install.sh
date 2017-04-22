@@ -32,7 +32,7 @@ HONEYPORTS="2222"
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logginf, no extra commands
-DEBUG=0
+DEBUG=1
 
 # delimiter
 LINE="##########################################################################################################"
@@ -1154,7 +1154,7 @@ echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selec
 echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
 echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
 
-outlog "package configuration for postfix:"
+outlog "package configuration for postfix"
 run 'debconf-get-selections | grep postfix'
 dlog "installing postfix"
 run 'apt-get -y -q install postfix'
@@ -1234,7 +1234,6 @@ fi
 
 if [ ${GENCERT} -eq 1 ] ; then
    dlog "generating new CERTs using ./makecert.sh"
-   # TODO: obey progdir ... and not assume we're in dhiled/bin
    ./makecert.sh
 fi
 
