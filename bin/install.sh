@@ -52,8 +52,8 @@ export NCURSES_NO_UTF8_ACS=1
 
 # echo and log
 outlog () {
-   echo ${*}
-   do_log ${*}
+   echo "${*}"
+   do_log "${*}"
 }
 
 # write log
@@ -66,8 +66,8 @@ do_log () {
        touch ${LOGFILE}
        chmod 600 ${LOGFILE}
        outlog "Log ${LOGFILE} started."
-       do_log "ATTENTION: the log file contains sensitive information (e.g. passwords, API keys, ...)"
-       do_log "           Handle with care. Sanitize before submitting."
+       outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, API keys, ...)"
+       outlog "           Handle with care. Sanitize before submitting."
    fi
    echo "`date +'%Y-%m-%d_%H%M%S'` ### ${*}" >> ${LOGFILE}
 }
@@ -100,6 +100,10 @@ dlog () {
 
 ###########################################################
 ## MAIN
+###########################################################
+
+###########################################################
+## basic checks
 ###########################################################
 
 echo ${LINE}
@@ -171,21 +175,29 @@ if [ "$dist" == "invalid" ] ; then
    exit 9
 fi
 
+if [ "$ID" != "raspbian" ] ; then
+   outlog "ATTENTION: the latest version of this script have been tested on Raspbian only."
+   outlog "It may or may not work with your distro. Feel free to test and contribute."
+fi
+
 outlog "using apt to install packages"
 
 dlog "creating a temporary directory"
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
 dlog "TMPDIR: ${TMPDIR}"
+
 dlog "setting trap"
 # trap "rm -r $TMPDIR" 0 1 2 5 15
-run 'trap "rm -r $TMPDIR" 0 1 2 5 15'
+run 'trap "echo Log: $(LOGFILE] && rm -r $TMPDIR" 0 1 2 5 15'
 
 outlog "Basic security checks"
 
 dlog "making sure default password was changed"
 
 if [ "$dist" == "apt" ]; then
+
+   dlog "we are on pi and should check if password for user pi has been changed"
    if $progdir/passwordtest.pl | grep -q 1; then
       outlog "You have not yet changed the default password for the 'pi' user"
       outlog "Change it NOW ..."
@@ -216,9 +228,12 @@ if [ "$ID" == "amzn" ]; then
 fi
 
 
-# last chance to escape before hurting the system ...
+###########################################################
+## last chance to escape before hurting the system ...
+###########################################################
 
-dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is DEDICATED to this task. There is no simple uninstall. Do you want to proceed?" 10 50
+
+dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is DEDICATED to this task. There is no simple uninstall. If something breakes you may need to reinstall from scratch. Do you want to proceed?" 10 50
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
@@ -228,6 +243,9 @@ case $response in
       ;;
 esac
 
+###########################################################
+## PIP
+###########################################################
 
 outlog "check if pip is already installed"
 
@@ -244,7 +262,7 @@ if [ ${?} -gt 0 ] ; then
 else
    # hmmmm ...
    # todo: automatic check if pip is OS managed or not
-   # let's assume local is pip, non local is distro
+   # check ... already done :)
 
    outlog "pip found .... Checking which pip is installed...."
 
@@ -258,7 +276,7 @@ else
 
       outlog "Potential distro pip found"
 
-      dialog --title 'NOTE (pip)' --yesno "pip is already installed on the system... and it looks like as being installed as a distro package. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules. Proceed nevertheless?" 12 50
+      dialog --title 'NOTE (pip)' --yesno "pip is already installed on the system... and it looks like as being installed as a distro package. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules (something like python-*). Proceed nevertheless?" 12 50
       response=$?
       case $response in
          ${DIALOG_CANCEL}) 
@@ -275,26 +293,33 @@ fi
 
 drun 'pip list'
 
-exit 99
 
+###########################################################
+## Random number generator
+###########################################################
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
 #
 
-dlog "echo HRNGDEVICE=/dev/urandom > /etc/default/rnd-tools"
+dlog "Changing random number generator settings."
+run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
 
-echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools
 
+###########################################################
+## Handling existing config
+###########################################################
 
 if [ -f /etc/dshield.conf ] ; then
    dlog "dshield.conf found, content follows"
-   drun cat /etc/dshield.conf
+   drun 'cat /etc/dshield.conf'
+   dlog "securing dshield.conf"
    chmod 600 /etc/dshield.conf
-   outlog reading old configuration
+   chown root:root /etc/dshield.conf
+   outlog "reading old configuration"
    if grep -q 'uid=<authkey>' /etc/dshield.conf; then
       dlog "erasing <.*> pattern from dshield.conf"
-      run sed -i.bak 's/<.*>//' /etc/dshield.conf
+      run "sed -i.bak 's/<.*>//' /etc/dshield.conf"
       dlog "modified content of dshield.conf follows"
       drun cat /etc/dshield.conf
    fi
@@ -302,42 +327,62 @@ if [ -f /etc/dshield.conf ] ; then
    progdirold=$progdir
    . /etc/dshield.conf
    progdir=$progdirold
+   dlog "hanlding of dshield.conf finished"
 fi
 
-exit 99
+###########################################################
+## MySQL
+###########################################################
 
 nomysql=0
 
-dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is dedicated to this task. There is no simple uninstall. Do you want to proceed?" 10 50
-response=$?
-case $response in
-    ${DIALOG_CANCEL}) exit;;
-esac
-
-
 if [ -d /var/lib/mysql ]; then
-  dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
-  response=$?
-  case $response in 
-      ${DIALOG_OK}) apt-get -y -qq purge mysql-server mysql-server-5.5 mysql-server-core-5.5;;
-      ${DIALOG_CANCEL}) nomysql=1;;
-      ${DIALOG_ESC}) exit;;
-  esac
+   dlog "MySQL dir found (/var/lib/mysql), asking what to do"
+   dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
+   response=$?
+   case $response in 
+      ${DIALOG_OK}) 
+         dlog "removing MySQL packages"
+         run 'apt-get -y -q purge mysql-server mysql-server-5.5 mysql-server-core-5.5'
+         ;;
+      ${DIALOG_CANCEL}) 
+         dlog "being told by user not to touch MySQL"
+         nomysql=1
+         ;;
+      ${DIALOG_ESC}) 
+         outlog "Exiting at your request, no MySQL stuff done."
+         exit 5
+         ;;
+   esac
 fi
 
-if [ "$nomysql" -eq "0" ] ; then
-mysqlpassword=`head -c10 /dev/random | xxd -p`
-echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
-echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-echo "mysql-server mysql-server/root_password password $mysqlpassword" | debconf-set-selections
-echo "mysql-server mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-apt-get -qq -y install mysql-server
-cat > ~/.my.cnf <<EOF
+if [ $nomysql -eq 0 ] ; then
+   # we are allowed to play with MySQL
+   outlog "Installing and configuring MySQL"
+
+   # MySQL root pw
+   mysqlpassword=`head -c10 /dev/random | xxd -p`
+   dlog "MySQL root password: ${mysqlpassword}"
+
+   dlog "setting MySQL server parameters"
+   echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
+   echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
+   echo "mysql-server mysql-server/root_password password $mysqlpassword" | debconf-set-selections
+   echo "mysql-server mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
+
+   outlog "Installing MySQL server package"
+   run 'apt-get -q -y install mysql-server'
+
+   outlog "Creating  ~/.my.cnf"
+   cat > ~/.my.cnf <<EOF
 [mysql]
 user=root
 password=$mysqlpassword
 EOF
+   drun 'cat  ~/.my.cnf'
 fi
+
+exit 99
 
 if ! [ -d $TMPDIR ]; then
  exit
