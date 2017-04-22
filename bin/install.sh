@@ -127,7 +127,7 @@ else
 fi
 
 drun env
-
+drun 'df -h'
 
 outlog "Checking Pre-Requisits"
 
@@ -189,7 +189,7 @@ dlog "TMPDIR: ${TMPDIR}"
 
 dlog "setting trap"
 # trap "rm -r $TMPDIR" 0 1 2 5 15
-run 'trap "echo Log: $(LOGFILE] && rm -r $TMPDIR" 0 1 2 5 15'
+run 'trap "echo Log: ${LOGFILE} && rm -r $TMPDIR" 0 1 2 5 15'
 
 outlog "Basic security checks"
 
@@ -342,7 +342,7 @@ if [ -d /var/lib/mysql ]; then
    response=$?
    case $response in 
       ${DIALOG_OK}) 
-         dlog "removing MySQL packages"
+         outlog "removing MySQL packages"
          run 'apt-get -y -q purge mysql-server mysql-server-5.5 mysql-server-core-5.5'
          ;;
       ${DIALOG_CANCEL}) 
@@ -358,7 +358,7 @@ fi
 
 if [ $nomysql -eq 0 ] ; then
    # we are allowed to play with MySQL
-   outlog "Installing and configuring MySQL"
+   outlog "Installing and configuring MySQL (this will take LOOOONG)"
 
    # MySQL root pw
    mysqlpassword=`head -c10 /dev/random | xxd -p`
@@ -382,11 +382,18 @@ EOF
    drun 'cat  ~/.my.cnf'
 fi
 
-exit 99
 
+# hmmm
 if ! [ -d $TMPDIR ]; then
- exit
+   outlog "${TMPDIR} not found, aborting."
+   exit 9
 fi
+
+
+###########################################################
+## DShield Account
+###########################################################
+
 
 # dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
 # return_value=$?
@@ -396,110 +403,169 @@ return_value=$DIALOG_OK
 return=1
 
 if [ $return_value -eq  $DIALOG_OK ]; then
-    if [ $return = "1" ] ; then
-	apikeyok=0
-	while [ "$apikeyok" = 0 ] ; do
-	    exec 3>&1
-	    VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information. Copy/Past from dshield.org/myaccount.html. Use CTRL-V to paste." 12 60 0 \
-		       "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
-		       "       API Key:" 2 2 "$apikey" 2 17 35 100 \
-		       2>&1 1>&3)
+   if [ $return = "1" ] ; then
+      dlog "use existing dhield account"
+      apikeyok=0
+      while [ "$apikeyok" = 0 ] ; do
+         dlog "Asking user for dshield account information"
+         exec 3>&1
+         VALUES=$(dialog --ok-label "Verify" --title "DShield Account Information" --form "Authentication Information. Copy/Past from dshield.org/myaccount.html. Use CTRL-V / SHIFT + INS to paste." 12 60 0 \
+            "E-Mail Address:" 1 2 "$email"   1 17 35 100 \
+            "       API Key:" 2 2 "$apikey" 2 17 35 100 \
+            2>&1 1>&3)
 
-	      response=$?
-	    exec 3>&-
+         response=$?
+         exec 3>&-
 
-	    case $response in 
-		${DIALOG_OK}) 	    email=`echo $VALUES | cut -f1 -d' '`
-	    apikey=`echo $VALUES | cut -f2 -d' '`
-	    nonce=`openssl rand -hex 10`
-	    hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
+         case $response in 
+            ${DIALOG_OK})
+               email=`echo $VALUES | cut -f1 -d' '`
+               apikey=`echo $VALUES | cut -f2 -d' '`
+               dlog "Got email ${email} and apikey ${apikey}"
+               dlog "Calculating nonce."
+               nonce=`openssl rand -hex 10`
+               dlog "Calculating hash."
+	       hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
+               dlog "Calculated nonce (${nonce}) and hash (${hash})."
+   
+	       user=`echo $email | sed 's/@/%40/'`
+               dlog "Checking API key ...."
+	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi'
+   
+               dlog "Curl return code is ${?}"
+   
+               if ! [ -d "$TMPDIR" ]; then
+                  outlog "Can not find TMPDIR ${TMPDIR}"
+                  exit 9
+               fi
+   
+               drun "cat ${TMPDIR}/checkapi"
+   
+               dlog "Excamining result of API key check ..."
+   
+               if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
+                  apikeyok=1;
+                  uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
+                  dlog "API key OK, uid is ${uid}"
+               else
+                  dlog "API key not OK, informing user"
+                  dialog --title 'API Key Failed' --msgbox 'Your API Key Verification Failed.' 7 40
+	       fi
+               ;;
+            ${DIALOG_CANCEL}) 
+               exit 
+               ;;
+            ${DIALOG_ESC}) 
+               exit
+               ;;
+         esac;
+      done
 
-	    user=`echo $email | sed 's/@/%40/'`
-	    curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi
-
-if ! [ -d "$TMPDIR" ]; then
-  echo "can not find TMPDIR $TMPDIR"
-  exit
+   fi
 fi
 
-	    if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
-		apikeyok=1;
-		uid=`grep  '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/'`
-            else
-		dialog --title 'API Key Failed' --msgbox 'Your API Key Verification Failed.' 7 40
-	    fi;;
-		${DIALOG_CANCEL}) exit;;
-		${DIALOG_ESC}) exit;;
-esac;
-	done
+# echo $uid
 
-    fi
-fi
-echo $uid
 dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next. ' 7 40
 
+
+###########################################################
+## Firewall Configuration
+###########################################################
 
 #
 # Default Interface
 #
 
 # if we don't have one configured, try to figure it out
+dlog "interface: ${interface}"
+drun 'ip link show'
 if [ "$interface" = "" ] ; then
-interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo`
+   dlog "Trying to figure out interface"
+   # we don't expect a honeypot connected by WLAN ... but the user can change this of course
+   drun 'ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan'
+   interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan`
 fi
 
 # list of valid interfaces
+drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'"
 validifs=`ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'`
+
+dlog "validifs: ${validifs}"
+
 localnetok=0
 
 while [ $localnetok -eq  0 ] ; do
-    exec 3>&1
-    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
-		       "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
-    exec 3>&-
-    for b in $validifs; do
-	if [ "$b" = "$interface" ] ; then
-	    localnetok=1
-	fi
-    done
-    if [ $localnetok -eq 0 ] ; then
-	dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
-    fi
+   exec 3>&1
+   interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
+      "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+   exec 3>&-
+   dlog "User input for interface: ${interface}"
+   dlog "check if input is valid"
+   for b in $validifs; do
+      if [ "$b" = "$interface" ] ; then
+         localnetok=1
+      fi
+   done
+   if [ $localnetok -eq 0 ] ; then
+      dlog "User provides interface ${interface} isn't valid"
+      dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
+   fi
 done
-echo "Interface: $interface"
 
+dlog "Interface: $interface"
+
+#
 # figuring out local network.
+#
 
+drun "ip addr show  eth0"
+drun "ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'"
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
+dlog "ipaddr: ${ipaddr}"
+
+drun "ip route show"
+drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
+dlog "localnet: ${localnet}"
+
+
 localnetok=0
 
+dlog "Getting local network from user ..."
 while [ $localnetok -eq  0 ] ; do
-    exec 3>&1
-    localnet=$(dialog --title 'Local Network' --form 'Admin access will be restricted to this network, and logs originating from this network will not be reported.' 10 50 0 \
-		      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
+   exec 3>&1
+   localnet=$(dialog --title 'Local Network' --form 'Admin access will be restricted to this network, and logs originating from this network will not be reported.' 10 50 0 \
+      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
 
-    exec 3>&-
-    if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
-	localnetok=1
-    fi
-    if [ $localnetok -eq 0 ] ; then
-	dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
-    fi
+   exec 3>&-
+   dlog "user input localnet: ${localnet}"
+   if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
+      localnetok=1
+   fi
+
+   if [ $localnetok -eq 0 ] ; then
+      dlog "user provided localnet ${localnet} is not ok"
+      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
+   fi
 done
 
+#
 # further IPs: no iptables logging
+#
 
 if [ "${nofwlogging}" == "" ] ; then
    # default: local net
    nofwlogging="${localnet}"
 fi
 
+dlog "nofwlogging: ${nofwlogging}"
+
 exec 3>&1
-NOFWLOGGING=$(dialog --title 'IPs to ignore in FW Log'  --cr-wrap --form "WARNING - USE WITH CARE!
+NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --cr-wrap --form "WARNING - USE WITH CARE!
 IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
 Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and the 'real' sshd will be exposed.
-If unsure don't change anything here! Trusted IPs only. You have been warned.
+If unsure don't change anything here or blank the input! Trusted IPs only. You have been warned.
 
 " \
 18 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 25 40 100 2>&1 1>&3)
@@ -507,6 +573,8 @@ exec 3>&-
 
 # for saving in dshield.conf
 nofwlogging="'${NOFWLOGGING}'"
+
+dlog "user provided nofwlogging: ${nofwlogging}"
 
 if [ "${NOFWLOGGING}" == "" ] ; then
    # echo "No firewall log exceptions will be done."
@@ -516,24 +584,27 @@ else
 ${NOFWLOGGING}." 20 60
 fi
 
-
-# further IPs: no honeypot
+#
+# further IPs and ports: disable honeypot
+#
 
 if [ "${nohoneyips}" == "" ] ; then
    # default: local net
    nohoneyips="${localnet}"
 fi
+dlog "nohoneyips: ${nohoneyips}"
 
 if [ "${nohoneyports}" == "" ] ; then
    # default: cowrie ports
-    nohoneyports="${HONEYPORTS}"
+   nohoneyports="${HONEYPORTS}"
 fi
+dlog "nohoneyports: ${nohoneyports}"
 
 exec 3>&1
-NOHONEY=$(dialog --title 'IPs to disable Honeypot for'  --cr-wrap --form "WARNING - USE WITH CARE!
+NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --cr-wrap --form "WARNING - USE WITH CARE!
 IPs and nets to disable honeypot for to prevent reporting internal legitimate failed access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING) separated by spaces).
 Attention: entries will be added to reject access to honeypot ports.
-If unsure don't change anything here! Trusted IPs only. You have been warned.
+If unsure don't change anything here! 
 
 " \
 18 70 0 \
@@ -541,7 +612,7 @@ If unsure don't change anything here! Trusted IPs only. You have been warned.
 "Ports:" 2 1 "${nohoneyports}" 2 25 40 100 2>&1 1>&3)
 exec 3>&-
 
-# echo "###${NOHONEY}###"
+dlog "user provided NOHONEY: ${NOHONEY}"
 
 NOHONEYIPS=`echo "${NOHONEY}"  | cut -d "
 " -f 1`
@@ -551,7 +622,11 @@ NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
 # echo "###${NOHONEYIPS}###"
 # echo "###${NOHONEYPORTS}###"
 
+dlog "NOHONEYIPS: ${NOHONEYIPS}"
+dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
+
 if [ "${NOHONEYIPS}" == "" -o "${NOHONEYPORTS}" == "" ] ; then
+   dlog "one of the lines were empty, so can't do anything with it and will ignore it"
    NOHONEYIPS=""
    NOHONEYPORTS=""
    # echo "No honeyport exceptions will be done."
@@ -566,8 +641,17 @@ fi
 nohoneyips="'${NOHONEYIPS}'"
 nohoneyports="'${NOHONEYPORTS}'"
 
+dlog "NOHONEYIPS: ${NOHONEYIPS}"
+dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
+dlog "nohoneyips: ${nohoneyips}"
+dlog "nohoneyports: ${nohoneyports}"
 
+#
 # create default firewall rule set
+#
+
+dlog "creating /etc/network/iptables"
+
 cat > /etc/network/iptables <<EOF
 
 #
@@ -593,8 +677,6 @@ if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
       done
    done
    echo "# END: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
-# else
-   # echo "n00b"
 fi
 
 
@@ -612,8 +694,6 @@ if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
       echo "-A INPUT -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
    done
    echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
-# else
-   # echo "n00b"
 fi
 
 
@@ -632,24 +712,56 @@ COMMIT
 
 COMMIT
 EOF
+
+chmod 700 /etc/network/iptables
+
+dlog "/etc/network/iptables follows"
+drun 'cat /etc/network/iptables'
+
+dlog "Copying /etc/network/if-pre-up.d"
+
 cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d
 chmod 700 /etc/network/if-pre-up.d/dshield
-sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config
 
+#
+# change port of sshd
+#
+
+dlog "changing port for sshd"
+
+run "sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config"
+
+dlog "checking if modification was successful"
 if [ `grep "^Port 12222\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
    dialog --title 'sshd port' --ok-label 'Yep, understood.' --cr-wrap --msgbox 'Congrats, you had already changed your sshd port to something other than 22.
 
-Please clean up the mess and either
+Please clean up and either
   - change the port manually to 12222
-     in /etc/ssh/sshd_config OR
+     in  /etc/ssh/sshd_config  OR
   - clean up the firewall rules and
-     other stuff reflecting YOUR PORT (tm)' 13 50
+     other stuff reflecting YOUR PORT' 13 50
+
+   dlog "check unsuccessful, port 12222 not found"
+   drun 'cat /etc/ssh/sshd_config'
+else
+   dlog "check successful"
 fi
 
-sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf
+#
+# SYSLOG conf
+#
 
+dlog "setting interface in syslog config"
+run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
+
+drun 'cat /etc/rsyslog.d/dshield.conf'
+
+#
 # moving dshield stuff to target directory
 # (don't like to have root run scripty which are not owned by root)
+#
+
+dlog "copying dshield.pl to ${DSHIELDDIR}"
 mkdir -p ${DSHIELDDIR}
 cp $progdir/dshield.pl ${DSHIELDDIR}
 chmod 700 ${DSHIELDDIR}/dshield.pl
@@ -658,18 +770,24 @@ chmod 700 ${DSHIELDDIR}/dshield.pl
 # "random" offset for cron job so not everybody is reporting at once
 #
 
+dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
 EOF
 
+drun 'cat /etc/cron.d/dshield'
+
 
 #
-# Update Configuration
+# Update dshield Configuration
 #
+dlog "creating new /etc/dshield.conf"
 if [ -f /etc/dshield.conf ]; then
-    rm /etc/dshield.conf
+   dlog "old dshield.conf follows"
+   drun 'cat /etc/dshield.conf'
+   rm /etc/dshield.conf
 fi
 
 touch /etc/dshield.conf
@@ -687,10 +805,14 @@ echo "nofwlogging=$nofwlogging" >> /etc/dshield.conf
 echo "nohoneyips=$nohoneyips" >> /etc/dshield.conf
 echo "nohoneyports=$nohoneyports" >> /etc/dshield.conf
 
+dlog "new /etc/dshield.conf follows"
+drun 'cat /etc/dshield.conf'
+
 #
 # creating srv directories
 #
 
+dlog "creating further srv directories"
 mkdir -p /srv/www/html
 mkdir -p /var/log/mini-httpd
 chmod 1777 /var/log/mini-httpd
@@ -699,43 +821,68 @@ chmod 1777 /var/log/mini-httpd
 # installing cowrie
 #
 
-wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip
-unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip 
+dlog "installing cowrie"
+dlog "downloading and unzipping cowrie"
+run 'wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip'
+run 'unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip '
 
 if [ ${?} -ne 0 ] ; then
-   echo "Something went wrong downloading cowrie, ZIP corrupt."
-   exit
+   outlog "Something went wrong downloading cowrie, ZIP corrupt."
+   exit 9
 fi
 
 if [ -d /srv/cowrie ]; then
-    rm -rf /srv/cowrie
+   dlog "old cowrie installatin found, removing"
+   # TODO: warn user, backup dl etc.
+   rm -rf /srv/cowrie
 fi
+dlog "moving extracted cowrie to /srv/cowrie"
 mv $TMPDIR/cowrie-master /srv/cowrie
 
-ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key > /dev/null
+dlog "generating cowrie SSH hostkey"
+run "ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key "
 
+dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
-    adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie
-    echo Added user 'cowrie'
+   dlog "... no, creating"
+   run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+   outlog "Added user 'cowrie'"
 else
-    echo User 'cowrie' already exists in OS. Making no changes
+   outlog "User 'cowrie' already exists in OS. Making no changes."
 fi    
 
 # check if cowrie db schema exists
+dlog "check if cowrie db schema exists"
+dlog running:  mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'
 x=`mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'`
 if [ $x -eq 1 ]; then
-    echo "cowrie mysql database already exists. not touching it."
+   outlog "cowrie mysql database already exists. not touching it."
 else
-    # we create the database and call the creation script
-    mysql -uroot -p$mysqlpassword -e 'create schema cowrie'
-    mysql -uroot -p$mysqlpassword -e 'source /srv/cowrie/doc/sql/mysql.sql' cowrie
+   outlog "we create the cowrie database and call the creation script"
+   run "mysql -uroot -p$mysqlpassword -e 'create schema cowrie'"
+   run "mysql -uroot -p$mysqlpassword -e 'source /srv/cowrie/doc/sql/mysql.sql' cowrie"
 fi
 if [ "$cowriepassword" = "" ]; then
-    cowriepassword=`head -c10 /dev/random | xxd -p`
+   dlog "no cowrie MySQL password yet, generating"
+   cowriepassword=`head -c10 /dev/random | xxd -p`
+   dlog "cowriepassword: ${cowriepassword}"
 fi
-echo cowriepassword=$cowriepassword >> /etc/dshield.conf
 
-echo "Adding / updating cowrie user in MySQL."
+dlog "saving cowriepassword in /etc/dshield.conf"
+run 'echo cowriepassword=$cowriepassword >> /etc/dshield.conf'
+
+outlog "Adding / updating cowrie user in MySQL."
+dlog "running MySQL commands: 
+   mysql -uroot -p$mysqlpassword
+   GRANT USAGE ON *.* TO 'cowrie'@'%' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
+   GRANT USAGE ON *.* TO 'cowrie'@'localhost' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
+   DROP USER 'cowrie'@'%';
+   DROP USER 'cowrie'@'localhost';
+   FLUSH PRIVILEGES;
+   CREATE USER 'cowrie'@'localhost' IDENTIFIED BY '${cowriepassword}';
+   GRANT ALL ON cowrie.* TO 'cowrie'@'localhost';
+"
+
 cat <<EOF | mysql -uroot -p$mysqlpassword
    GRANT USAGE ON *.* TO 'cowrie'@'%' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
    GRANT USAGE ON *.* TO 'cowrie'@'localhost' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
@@ -747,7 +894,7 @@ cat <<EOF | mysql -uroot -p$mysqlpassword
 EOF
 
 
-
+dlog "copying cowrie.cfg and adding entries"
 cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg
 cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
@@ -762,11 +909,17 @@ password=$cowriepassword
 port=3306
 EOF
 
-sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg
-sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg
+drun 'cat /srv/cowrie/cowrie.cfg'
+
+dlog "modyfing /srv/cowrie/cowrie.cfg"
+run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
+run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
+
+drun 'cat /srv/cowrie/cowrie.cfg'
 
 # make output of simple text commands more real
 
+dlog "creating output for text commands"
 df > /srv/cowrie/txtcmds/bin/df
 dmesg > /srv/cowrie/txtcmds/bin/dmesg
 mount > /srv/cowrie/txtcmds/bin/mount
@@ -774,16 +927,19 @@ ulimit > /srv/cowrie/txtcmds/bin/ulimit
 lscpu > /srv/cowrie/txtcmds/usr/bin/lscpu
 echo '-bash: emacs: command not found' > /srv/cowrie/txtcmds/usr/bin/emacs
 echo '-bash: locate: command not found' > /srv/cowrie/txtcmds/usr/bin/locate
-chown -R cowrie:cowrie /srv/cowrie
+
+run 'chown -R cowrie:cowrie /srv/cowrie'
 
 # echo "###########  $progdir  ###########"
 
-cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie
-cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d
-cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly
-cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly
-cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf
-cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
+dlog "copying system files"
+
+run "cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie"
+run "cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d"
+run "cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly"
+run "cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly"
+run "cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf"
+run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
 
 #
 # Checking cowrie Dependencies
@@ -798,6 +954,10 @@ cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd
 
 # twisted v15.2.1 isn't working (problems with SSH key), neither is 17.1.0, so we use the latest version of 16 (16.6.0)
 
+dlog "checking and installing Python packages for cowrie"
+dlog "current requirements can be found here:"
+dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt"
+dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
 for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 ; do
 
    # echo "PKGVER: ${PKGVER}"
@@ -819,18 +979,20 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
    # echo "VERREQLIST: ${VERREQLIST}"
    # echo "VERINST: ${VERINST}"
    # echo "VERINSTLIST: ${VERINSTLIST}"
+   dlog "checking package ${PKG}: installed: v${VERINST}, required: v${VERREQ}"
 
    MUSTINST=0
 
-   echo "+ checking cowrie dependency: module '${PKG}' ..."
+   outlog "+ checking cowrie dependency: module '${PKG}' ..."
 
    if [ "${VERINST}" == "0" ] ; then
-      echo "  ERR: not found at all, will be installed"
+      outlog "  ERR: not found at all, will be installed"
       MUSTINST=1
-      pip install ${PKG}
+      run "pip install ${PKG}"
       if [ ${?} -ne 0 ] ; then
-         echo "Error installing '${PKG}'. Aborting."
-         exit 1
+         # TODO: give the user a chance to continue w/o cowrie
+         outlog "Error installing '${PKG}'. Aborting."
+         exit 9
       fi
    else
       FIELD=1
@@ -856,11 +1018,12 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
          FIELD=`echo "$((${FIELD} + 1))"`
       done
       if [ ${MUSTINST} -eq 1 ] ; then
-         echo "  ERR: is installed in v${VERINST} but must at least be v${VERREQ}, will be updated"
-         pip install ${PKG}==${VERREQ}
+         outlog "  ERR: is installed in v${VERINST} but must at least be v${VERREQ}, will be updated"
+         run "pip install ${PKG}==${VERREQ}"
          if [ ${?} -ne 0 ] ; then
-            echo "Error upgrading '${PKG}'. Aborting."
-            exit 1
+            # TODO: give the user a chance to continue w/o cowrie
+            outlog "Error upgrading '${PKG}'. Aborting."
+            exit 9
          fi
       fi
    fi
@@ -868,7 +1031,7 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
    # echo "MUSTINST: ${MUSTINST}"
 
    if [ ${MUSTINST} -eq 0 ] ; then
-      echo "  OK: is installed in a sufficient version, nothing to do"
+      outlog "  OK: is installed in a sufficient version, nothing to do"
    fi
 
 
@@ -876,25 +1039,29 @@ done
 
 
 # setting up services
+dlog "setting up services: cowrie, mini-httpd"
 update-rc.d cowrie defaults
 update-rc.d mini-httpd defaults
 
 #
 # installing postfix as an MTA
 #
-
-apt-get -y -qq purge postfix
+dlog "uninstalling postfix"
+run 'apt-get -y -q purge postfix'
+dlog "preparing installation of postfix"
 echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
 echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
 echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
 echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
-debconf-get-selections | grep postfix
-apt-get -y -qq install postfix
+run 'debconf-get-selections | grep postfix'
+dlog "installing postfix"
+run 'apt-get -y -q install postfix'
 
 #
 # modifying motd
 #
 
+dlog "installing /etc/motd"
 cat > $TMPDIR/motd <<EOF
 
 The programs included with the Debian GNU/Linux system are free software;
@@ -912,21 +1079,31 @@ EOF
 
 mv $TMPDIR/motd /etc/motd
 
-# checking certs
+drun "cat /etc/motd"
+
+#
+# checking / generating certs
 # if already there: ask if generate new
+#
+
+dlog "checking / generating certs"
 
 GENCERT=1
 
+drun "ls ../etc/CA/certs/*.crt"
+
 if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
+   dlog "CERTs may already be there, asking user"
    dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
    response=$?
    case $response in
       ${DIALOG_OK}) 
+         dlog "user said OK, so removing old CERTs"
          # cleaning up old certs
-         rm ../etc/CA/certs/*
-         rm ../etc/CA/keys/*
-         rm ../etc/CA/requests/*
-         rm ../etc/CA/index.*
+         run 'rm ../etc/CA/certs/*'
+         run 'rm ../etc/CA/keys/*'
+         run 'rm ../etc/CA/requests/*'
+         run 'rm ../etc/CA/index.*'
          GENCERT=1
          ;;
       ${DIALOG_CANCEL}) 
@@ -937,20 +1114,21 @@ if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
 fi
 
 if [ ${GENCERT} -eq 1 ] ; then
+   dlog "generating new CERTs"
    ./makecert.sh
 fi
 
-echo
-echo
-echo Done. 
-echo
-echo "Please reboot your Pi now."
-echo
-echo "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
-echo "Please include a sanitized version of /etc/dshield.conf in bug reports."
-echo "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
-echo
-echo "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
-echo "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
+outlog
+outlog
+outlog Done. 
+outlog
+outlog "Please reboot your Pi now."
+outlog
+outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
+outlog "Please include a sanitized version of /etc/dshield.conf in bug reports."
+outlog "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
+outlog
+outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
+outlog "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
 
 
