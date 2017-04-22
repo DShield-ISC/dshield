@@ -16,7 +16,6 @@ In order to use the Raspberry Pi, you will need to first prepare it:
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. To update:
 
 ```
-bash
 sudo apt-get update
 sudo apt-get upgrade
 sudo reboot
@@ -25,7 +24,6 @@ sudo reboot
 only on "Jessie Lite":
 - install GIT: 
 ```
-bash
 sudo apt-get install git
 ```
 
@@ -33,7 +31,6 @@ on all versions of Raspbian (including Jessie Light):
 - get the dshield files from the GIT repo
 - run the installation script
 ```
-bash
 git clone https://github.com/DShield-ISC/dshield.git
 sudo dshield/bin/install.sh
 ```
@@ -50,7 +47,6 @@ sudo dshield/bin/install.sh
 inside your "dshield" directory (the directory created above when you run "git clone"), run
 
 ```
-bash
 git pull
 sudo bin/install.sh
 ```
