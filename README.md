@@ -2,9 +2,9 @@
 
 DShield Raspberry Pi Sensor
 
-  This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
+This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
-The current version is only tested on Raspbian, not on other distros, sorry. If other distros wanted, someone has to check and update the script.
+The current version is only tested on Raspbian, not on other distros, sorry. If other distros wanted, someone has to check and update the installation script.
 
 In order to use the Raspberry Pi, you will need to first prepare it:
 
@@ -35,10 +35,10 @@ sudo dshield/bin/install.sh
 
 - enable firewall logging and submitting of logs to DShield
 - change your ssh server to listen on port 12222
-- install the ssh honeypot cowrie (TODO)
+- install the ssh honeypot cowrie 
 - configure a default web server and submit logs to DShield (TODO)
 
-Updates:
+# Updates:
 
 inside your "dshield" directory (the directory created above when you run "git clone"), run
 
@@ -47,16 +47,16 @@ git pull
 sudo bin/install.sh
 ```
 
-Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf
+Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf.
 
 
 
-
-DEV Instance - web.py and sitecopy.py
+# DEV Instance - web.py and sitecopy.py
 
 sitecopy.py will copy any site serve up the site in using the web.py script just use:
 
-# python sitecopy.py http://www.yoursite.com
+```# python sitecopy.py http://www.yoursite.com
+```
 
 - It will not change the links at this time - to do
 - Any data posted or user request strings will be logged to DB\webserver.sqlite
