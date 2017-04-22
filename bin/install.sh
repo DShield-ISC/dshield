@@ -214,7 +214,7 @@ if [ "$dist" == "apt" ]; then
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev'
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev'
    # pip install python-dateutil > /dev/null
 
 fi
@@ -650,6 +650,8 @@ dlog "nohoneyports: ${nohoneyports}"
 # create default firewall rule set
 #
 
+outlog "Doing further configuration"
+
 dlog "creating /etc/network/iptables"
 
 cat > /etc/network/iptables <<EOF
@@ -909,13 +911,13 @@ password=$cowriepassword
 port=3306
 EOF
 
-drun 'cat /srv/cowrie/cowrie.cfg'
+drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
 
-drun 'cat /srv/cowrie/cowrie.cfg'
+drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real
 
@@ -944,6 +946,7 @@ run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
 #
 # Checking cowrie Dependencies
 # see: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt
+# ... and local requirements-output.txt
 # ... and twisted dependencies: https://twistedmatrix.com/documents/current/installation/howto/optional.html
 #
 
@@ -957,8 +960,9 @@ run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
 dlog "checking and installing Python packages for cowrie"
 dlog "current requirements can be found here:"
 dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt"
+dlog "        and requirements-output.txt"
 dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
-for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 ; do
+for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 ; do
 
    # echo "PKGVER: ${PKGVER}"
 
