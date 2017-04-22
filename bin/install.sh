@@ -4,6 +4,10 @@
 #
 #  Install Script. run to configure various components
 #
+#  exit codes:
+#  9 - install error
+#  5 - user cancel
+#
 ####
 
 ###########################################################
@@ -71,7 +75,7 @@ do_log () {
 # execute and log
 run () {
    do_log "Running: ${*}"
-   ${*} >> ${LOGFILE} 2>&1
+   eval ${*} >> ${LOGFILE} 2>&1
    return ${?}
 }
 
@@ -97,6 +101,8 @@ dlog () {
 ###########################################################
 ## MAIN
 ###########################################################
+
+echo ${LINE}
 
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
@@ -172,7 +178,8 @@ dlog "creating a temporary directory"
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
 dlog "TMPDIR: ${TMPDIR}"
 dlog "setting trap"
-trap "rm -r $TMPDIR" 0 1 2 5 15
+# trap "rm -r $TMPDIR" 0 1 2 5 15
+run 'trap "rm -r $TMPDIR" 0 1 2 5 15'
 
 outlog "Basic security checks"
 
@@ -188,62 +195,85 @@ if [ "$dist" == "apt" ]; then
 
    drun dpkg --list
 
-   run apt-get update 
-   run apt-get -y -q upgrade 
+   run 'apt-get update'
+   run 'apt-get -y -q upgrade'
 
    outlog "Installing additional packages"
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
-   run apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev 
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev'
    # pip install python-dateutil > /dev/null
 
 fi
 
 if [ "$ID" == "amzn" ]; then
    outlog "Updating your Operating System"
-   run yum -q update -y
+   run 'yum -q update -y'
    outlog "Installing additional packages"
    # run yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil 
-   run yum -q install -y dialog perl-libwww-perl perl-Switch mysql rng-tools boost-random MySQL-python27
+   run 'yum -q install -y dialog perl-libwww-perl perl-Switch mysql rng-tools boost-random MySQL-python27'
 fi
 
 
-# check if pip is already installed
+# last chance to escape before hurting the system ...
 
-run pip > /dev/null
+dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is DEDICATED to this task. There is no simple uninstall. Do you want to proceed?" 10 50
+response=$?
+case $response in
+   ${DIALOG_CANCEL}) 
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+esac
+
+
+outlog "check if pip is already installed"
+
+run 'pip > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
    # nice, no pip found
 
-   dlog "Installing pip"
+   dlog "no pip found, Installing pip"
 
-   run wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py
-   run python $TMPDIR/get-pip.py
-
-   drun pip list
+   run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   run 'python $TMPDIR/get-pip.py'
 
 else
    # hmmmm ...
    # todo: automatic check if pip is OS managed or not
    # let's assume local is pip, non local is distro
 
-   outlog "Checking which pip is installed...."
+   outlog "pip found .... Checking which pip is installed...."
 
-   drun pip  -V | cut -d " " -f 4 | cut -d "/" -f 3
+   drun 'pip -V'
+   drun 'pip  -V | cut -d " " -f 4 | cut -d "/" -f 3'
+   drun 'find /usr -name pip'
+   drun 'find /usr -name pip | grep -v local'
 
-   if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" ] ; then
+   if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip | grep -v local | wc -l` -gt 0 ] ; then
       # pip may be distro pip
 
-      do_log "Potential distro pip found"
+      outlog "Potential distro pip found"
 
-      dialog --title 'NOTE (pip)' --msgbox "pip is already installed on the system... and it looks like as being installed as a distro packaage. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules." 10 50
-response=$?
+      dialog --title 'NOTE (pip)' --yesno "pip is already installed on the system... and it looks like as being installed as a distro package. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules. Proceed nevertheless?" 12 50
+      response=$?
+      case $response in
+         ${DIALOG_CANCEL}) 
+            do_log "Terminated by user in pip dialogue."
+            exit 5
+            ;;
+      esac
+
    else
-      do_log "pip found which doesn't seem to be installed as a distro package."
+      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
    fi
 
 fi
+
+drun 'pip list'
 
 exit 99
 
