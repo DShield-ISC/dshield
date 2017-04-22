@@ -28,6 +28,19 @@ HONEYPORTS="2222"
 # Debug Flag
 DEBUG=1
 
+# delimiter
+LINE="##########################################################################################################"
+
+# dialog stuff
+: ${DIALOG_OK=0}
+: ${DIALOG_CANCEL=1}
+: ${DIALOG_HELP=2}
+: ${DIALOG_EXTRA=3}
+: ${DIALOG_ITEM_HELP=4}
+: ${DIALOG_ESC=255}
+
+export NCURSES_NO_UTF8_ACS=1
+
 
 ###########################################################
 ## FUNCTION SECTION
@@ -66,7 +79,11 @@ run () {
 drun () {
    if [ ${DEBUG} -eq 1 ] ; then
       do_log "DEBUG COMMAND FOLLOWS:"
+      do_log "${LINE}"
       run ${*}
+      RET=${?}
+      do_log "${LINE}"
+      return ${RET}
    fi
 }
 
@@ -90,6 +107,8 @@ if [ ! "$userid" = "0" ]; then
 else
    do_log "Check OK: User-ID is ${userid}."
 fi
+
+dlog "This is ${0} V${version}"
 
 if [ ${DEBUG} -eq 1 ] ; then
    do_log "DEBUG flag is set."
@@ -152,16 +171,8 @@ dlog "creating a temporary directory"
 
 TMPDIR=`mktemp -d -q /tmp/dshieldinstXXXXXXX`
 dlog "TMPDIR: ${TMPDIR}"
-dlog "seeting trap"
-run trap "\'rm -r ${TMPDIR}\'" 0 1 2 5 15
-
-
-if [ ${?} -ne 0 ] ; then
-   echo "lala"
-   exit 100
-fi
-
-exit 99 
+dlog "setting trap"
+trap "rm -r $TMPDIR" 0 1 2 5 15
 
 outlog "Basic security checks"
 
@@ -175,6 +186,8 @@ if [ "$dist" == "apt" ]; then
    fi
    outlog "Updating your Installation (this can take a LOOONG time)"
 
+   drun dpkg --list
+
    run apt-get update 
    run apt-get -y -q upgrade 
 
@@ -182,47 +195,87 @@ if [ "$dist" == "apt" ]; then
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
-   run apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-pip randomsound rng-tools unzip libssl-dev 
+   run apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev 
    # pip install python-dateutil > /dev/null
+
 fi
 
 if [ "$ID" == "amzn" ]; then
-   outlog "Updateing your Operating System"
+   outlog "Updating your Operating System"
    run yum -q update -y
    outlog "Installing additional packages"
-   run yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil > /dev/null    
+   # run yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil 
+   run yum -q install -y dialog perl-libwww-perl perl-Switch mysql rng-tools boost-random MySQL-python27
+fi
+
+
+# check if pip is already installed
+
+run pip > /dev/null
+
+if [ ${?} -gt 0 ] ; then
+   # nice, no pip found
+
+   dlog "Installing pip"
+
+   run wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py
+   run python $TMPDIR/get-pip.py
+
+   drun pip list
+
+else
+   # hmmmm ...
+   # todo: automatic check if pip is OS managed or not
+   # let's assume local is pip, non local is distro
+
+   outlog "Checking which pip is installed...."
+
+   drun pip  -V | cut -d " " -f 4 | cut -d "/" -f 3
+
+   if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" ] ; then
+      # pip may be distro pip
+
+      do_log "Potential distro pip found"
+
+      dialog --title 'NOTE (pip)' --msgbox "pip is already installed on the system... and it looks like as being installed as a distro packaage. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules." 10 50
+response=$?
+   else
+      do_log "pip found which doesn't seem to be installed as a distro package."
+   fi
+
 fi
 
 exit 99
+
 
 #
 # yes. this will make the random number generator less secure. but remember this is for a honeypot
 #
 
-echo HRNGDEVICE=/dev/urandom > /etc/default/rnd-tools
+dlog "echo HRNGDEVICE=/dev/urandom > /etc/default/rnd-tools"
 
+echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools
 
-
-: ${DIALOG_OK=0}
-: ${DIALOG_CANCEL=1}
-: ${DIALOG_HELP=2}
-: ${DIALOG_EXTRA=3}
-: ${DIALOG_ITEM_HELP=4}
-: ${DIALOG_ESC=255}
-
-export NCURSES_NO_UTF8_ACS=1
 
 if [ -f /etc/dshield.conf ] ; then
-    chmod 600 /etc/dshield.conf
-    echo reading old configuration
-    if grep -q 'uid=<authkey>' /etc/dshield.conf; then
-	sed -i.bak 's/<.*>//' /etc/dshield.conf
-    fi
-    # source old config but don't overwrite progdir ...
-    progdirold=$progdir
-    . /etc/dshield.conf
-    progdir=$progdirold
+   dlog "dshield.conf found, content follows"
+   drun cat /etc/dshield.conf
+   chmod 600 /etc/dshield.conf
+   outlog reading old configuration
+   if grep -q 'uid=<authkey>' /etc/dshield.conf; then
+      dlog "erasing <.*> pattern from dshield.conf"
+      run sed -i.bak 's/<.*>//' /etc/dshield.conf
+      dlog "modified content of dshield.conf follows"
+      drun cat /etc/dshield.conf
+   fi
+   dlog "sourcing current dshield.conf but don't overwrite progdir in script ..."
+   progdirold=$progdir
+   . /etc/dshield.conf
+   progdir=$progdirold
 fi
+
+exit 99
+
 nomysql=0
 
 dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is dedicated to this task. There is no simple uninstall. Do you want to proceed?" 10 50
