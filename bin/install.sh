@@ -196,8 +196,6 @@ if [ "$ID" != "raspbian" ] ; then
    read lala
 fi
 
-exit 99
-
 outlog "using apt to install packages"
 
 dlog "creating a temporary directory"
