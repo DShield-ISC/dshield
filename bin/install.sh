@@ -1,4 +1,4 @@
-!/usr/bin/env bash
+#!/bin/bash
 
 ####
 #
@@ -116,7 +116,10 @@ dlog () {
 ## basic checks
 ###########################################################
 
+
 echo ${LINE}
+
+dlog "parent process: $(ps -o comm= $PPID)"
 
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
@@ -192,6 +195,8 @@ if [ "$ID" != "raspbian" ] ; then
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
 fi
+
+exit 99
 
 outlog "using apt to install packages"
 
