@@ -15,7 +15,7 @@
 ###########################################################
 
 
-readonly version=0.4
+readonly version=0.41
 
 # target directory for server components
 TARGETDIR="/srv"
@@ -28,6 +28,9 @@ LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 HONEYPORTS="2222"
+
+# which port the sshd should listen to
+SSHDPORT="12222"
 
 # Debug Flag
 # 1 = debug logging, debug commands
@@ -527,6 +530,31 @@ dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall 
 # Default Interface
 #
 
+# 
+# requirements:
+#
+# - every access from untrusted networks is logged for dshield with the correct port
+#   (up to V0.4 of this script there was a bug so that the logging for dshield took place
+#    for the redirected honeypot ports not the original ones)
+# - for untrusted nets only honeypot ports (redirected ports) are accessible
+# - access to "official" services like ssh is only allowed for trusted IPs
+# - for trusted IPs the firewall logging can be disabled 
+#   (to eliminate reporting irrelevant / false / internal packets)
+# - for listed IPs the honeypot can be disabled 
+#   (to eliminate reporting of legitimate credentials)
+
+
+# changes starting V0.41:
+# - logging for dshield done in PREROUTING
+# - only access to honeypot ports allowed for untrusted nets
+#
+# so the iptable looks like:
+# 
+# PREROUTING:
+# - logging for dshield
+
+
+
 dlog "firewall config: figuring out default interface"
 
 # if we don't have one configured, try to figure it out
@@ -744,8 +772,8 @@ fi
 
 cat >> /etc/network/iptables <<EOF
 -A INPUT -i $interface -s $localnet -j ACCEPT
--A INPUT -i $interface -p tcp --dport 12222 -s 10.0.0.0/8 -j ACCEPT
--A INPUT -i $interface -p tcp --dport 12222 -s 192.168.0.0/8 -j ACCEPT
+-A INPUT -i $interface -p tcp --dport ${SSHDPORT} -s 10.0.0.0/8 -j ACCEPT
+-A INPUT -i $interface -p tcp --dport ${SSHDPORT} -s 192.168.0.0/8 -j ACCEPT
 EOF
 
 # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
@@ -761,7 +789,7 @@ fi
 
 cat >> /etc/network/iptables <<EOF
 -A INPUT -i $interface -j LOG --log-prefix " INPUT "
--A INPUT -i $interface -p tcp --dport 12222 -j DROP
+-A INPUT -i $interface -p tcp --dport ${SSHDPORT} -j DROP
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
@@ -793,22 +821,22 @@ run "chmod 700 /etc/network/if-pre-up.d/dshield"
 
 dlog "changing port for sshd"
 
-run "sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config"
+run "sed -i.bak 's/^Port 22$/Port "${SSHDPORT}"/' /etc/ssh/sshd_config"
 
 dlog "checking if modification was successful"
-if [ `grep "^Port 12222\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
+if [ `grep "^Port ${SSHDPORT}\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
    dialog --title 'sshd port' --ok-label 'Yep, understood.' --cr-wrap --msgbox 'Congrats, you had already changed your sshd port to something other than 22.
 
 Please clean up and either
-  - change the port manually to 12222
+  - change the port manually to ${SSHDPORT}
      in  /etc/ssh/sshd_config    OR
   - clean up the firewall rules and
      other stuff reflecting YOUR PORT' 13 50
 
-   dlog "check unsuccessful, port 12222 not found in sshd_config"
+   dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
    drun 'cat /etc/ssh/sshd_config'
 else
-   dlog "check successful, port change to 12222 in sshd_config"
+   dlog "check successful, port change to ${SSHDPORT} in sshd_config"
 fi
 
 ###########################################################
@@ -1252,11 +1280,13 @@ outlog
 outlog "Please reboot your Pi now."
 outlog
 outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
-outlog "Please include a sanitized version of /etc/dshield.conf in bug reports."
+outlog "Please include a sanitized version of /etc/dshield.conf in bug reports"
+outlog "as well as a very carefully sanitized version of the installation log "
+outlog "  (${LOGFILE})."
 outlog "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 outlog
-outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
-outlog "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
+outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port ${SSHDPORT}"
+outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
 outlog
 
 
