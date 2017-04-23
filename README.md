@@ -44,7 +44,41 @@ sudo dshield/bin/install.sh
 
 # Updates:
 
-inside your "dshield" directory (the directory created above when you run "git clone"), run
+Special note for updating from versions <0.4 to 0.4 (and potentially above):
+
+The handling of Python packages changed from distro package manager to pip. This means the update is pain. Sorry for that.
+
+You have three alternatives:
+
+- easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete lost), reinstall from scratch using current Raspbian image
+- manual procedure: uninstall all below mentioned packages and then autoremove:
+```
+dpkg --remove python-crypto
+dpkg --remove python-gmpy
+dpkg --remove python-gmpy2
+dpkg --remove python-mysqldb
+dpkg --remove python-pip
+dpkg --remove python-pyasn1
+dpkg --remove python-twisted
+dpkg --remove python-virtualenv
+dpkg --remove python-zope.interface
+apt-get autoremove
+apt-get update
+apt-get dist-upgrade
+```
+- "automatic" brutal procedure (chances to break your system are VERY high, but hey, it's a disposable honeypot anyway ...): backup, uninstall all Python distro packages (and hope that's it):
+```
+/etc/init.d/cowrie stop
+for PKG in `dpkg --list | grep python- | cut -d " " -f 3 | grep "^python"` ; do echo "uninstalling ${PKG}"; dpkg --force-depends --purge ${PKG}; done
+apt-get update
+apt-get -f install
+apt-get dist-upgrade
+apt-get autoremove
+apt-get update
+apt-get dist-upgrade
+```
+
+Normal update: inside your "dshield" directory (the directory created above when you run "git clone"), run
 
 ```
 git pull
@@ -53,7 +87,11 @@ sudo bin/install.sh
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf.
 
+# Todos
 
+- see comments in install.sh
+- provide a script to update all Python packages to most recent version using pip
+- many other stuff :)
 
 # DEV Instance - web.py and sitecopy.py
 
