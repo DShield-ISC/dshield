@@ -53,6 +53,7 @@ You have three alternatives:
 - easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete lost), reinstall from scratch using current Raspbian image
 - manual procedure: uninstall all below mentioned packages and then autoremove:
 ```
+/etc/init.d/cowrie stop
 dpkg --remove python-crypto
 dpkg --remove python-gmpy
 dpkg --remove python-gmpy2
