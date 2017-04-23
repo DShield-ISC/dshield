@@ -4,6 +4,12 @@ DShield Raspberry Pi Sensor
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
+Design Goals:
+- use of a _dedicated_ device (Raspberry Pi)
+- easy installation / configuration (and not that much configurable)
+- disposable (when something breaks (e.g. during upgrade): re-install from scratch)
+- minimize complexity and overhead (e.g. no virtualization (e.g. docker))
+
 The current version is only tested on Raspbian, not on other distros, sorry. If other distros are wanted, someone has to check and update the installation script.
 
 In order to use the Raspberry Pi, you will need to first prepare it:
