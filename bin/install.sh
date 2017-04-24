@@ -138,8 +138,6 @@ dlog () {
 
 echo ${LINE}
 
-dlog "parent process: $(ps -o comm= $PPID)"
-
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
    echo "You have to run this script as root. eg."
@@ -151,6 +149,8 @@ else
 fi
 
 dlog "This is ${0} V${version}"
+
+dlog "parent process: $(ps -o comm= $PPID)"
 
 if [ ${DEBUG} -eq 1 ] ; then
    do_log "DEBUG flag is set."
@@ -268,7 +268,7 @@ fi
 ###########################################################
 
 
-dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is DEDICATED to this task. There is no simple uninstall. If something breakes you may need to reinstall from scratch. Do you want to proceed?" 10 50
+dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
@@ -355,6 +355,27 @@ drun 'pip list --format=legacy'
 
 dlog "Changing random number generator settings."
 run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
+
+
+###########################################################
+## Disable IPv6
+###########################################################
+
+dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
+run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
+cat > /etc/modprobe.d/ipv6.conf <<EOF
+# Don't load ipv6 by default
+alias net-pf-10 off
+# uncommented
+alias ipv6 off
+# added
+options ipv6 disable_ipv6=1
+# this is needed for not loading ipv6 driver
+blacklist ipv6
+EOF
+run "chmod 644 /etc/modprobe.d/ipv6.conf"
+drun "cat /etc/modprobe.d/ipv6.conf.bak"
+drun "cat /etc/modprobe.d/ipv6.conf"
 
 
 ###########################################################
@@ -465,7 +486,20 @@ if [ "${mysqlpassword}" == "" ] ; then
    exec 3>&1
    mysqlpassword=$(dialog --title 'No MySQL root password found' --form "I wasn't able to find any MySQL root password. If you know it: please provide it here. If not: cancel, restart installation and choose to re-install MySQL." 12 50 0 \
       "MySQL root password:" 1 2 "$mysqlpassword" 1 24 20 60 2>&1 1>&3)
+   response=${?}
    exec 3>&-
+   case ${response} in
+      ${DIALOG_OK})
+         ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled MySQL root pw dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in MySQL root pw dialogue."
+         exit 5
+         ;;
+   esac
 fi
 
 if [ "${mysqlpassword}" == "" ] ; then
@@ -478,6 +512,8 @@ run 'mysql -u root -p$mysqlpassword  -e ";"'
 if [ ${?} -ne 0 ] ; then
    outlog "The root user can't connect to MySQL server using password $mysqlpassword ."
    outlog "Perhaps obsolete password in /etc/dshield.conf?"
+   outlog "Perhaps no password at all, even not in /root/.my.cnf?"
+   outlog "Please see logfile for details."
    exit 9
 else
    dlog "OK, MySQL root user can connect using password $mysqlpassword ."
@@ -649,18 +685,31 @@ while [ $localnetok -eq  0 ] ; do
    exec 3>&1
    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
       "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+   response=${?}
    exec 3>&-
-   dlog "User input for interface: ${interface}"
-   dlog "check if input is valid"
-   for b in $validifs; do
-      if [ "$b" = "$interface" ] ; then
-         localnetok=1
-      fi
-   done
-   if [ $localnetok -eq 0 ] ; then
-      dlog "User provided interface ${interface} isn't valid"
-      dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
-   fi
+      case ${response} in
+         ${DIALOG_OK})
+            dlog "User input for interface: ${interface}"
+            dlog "check if input is valid"
+            for b in $validifs; do
+               if [ "$b" = "$interface" ] ; then
+                  localnetok=1
+               fi
+            done
+            if [ $localnetok -eq 0 ] ; then
+               dlog "User provided interface ${interface} isn't valid"
+               dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
+            fi
+         ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled default interface dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in default interface dialogue."
+         exit 5
+         ;;
+   esac
 done # while interface not OK
 
 dlog "Interface: $interface"
@@ -686,8 +735,8 @@ dlog "localnet: ${localnet}"
 # as trusted / local IP (just to make sure we include routed networks)
 drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
 CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print $2}'`
-drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '"
-CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '`
+drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'"
+CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'`
 
 localnetok=0
 ADMINPORTS=$adminports
@@ -701,7 +750,7 @@ fi
 # (localips is from dshield.conf)
 CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
-CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' '`
+CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
 
 dlog "Getting local network, further IPs and admin ports from user ..."
@@ -713,30 +762,43 @@ while [ $localnetok -eq  0 ] ; do
       "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
       2>&1 1>&3)
+   response=${?}
    exec 3>&-
 
-   dlog "User input for local network & IPs: ${RETVALUES}"
+   case ${response} in
+      ${DIALOG_OK})
+         dlog "User input for local network & IPs: ${RETVALUES}"
 
-   localnet=`echo "${RETVALUES}" | cut -d "
+         localnet=`echo "${RETVALUES}" | cut -d "
 " -f 1`
-   CONIPS=`echo "${RETVALUES}" | cut -d "
+         CONIPS=`echo "${RETVALUES}" | cut -d "
 " -f 2`
-   ADMINPORTS=`echo "${RETVALUES}" | cut -d "
+         ADMINPORTS=`echo "${RETVALUES}" | cut -d "
 " -f 3`
 
-   dlog "user input localnet: ${localnet}"
-   dlog "user input further IPs: ${CONIPS}"
-   dlog "user input further admin ports: ${ADMINPORTS}"
+         dlog "user input localnet: ${localnet}"
+         dlog "user input further IPs: ${CONIPS}"
+         dlog "user input further admin ports: ${ADMINPORTS}"
 
-   # OK (exit loop) if local network OK _AND_ admin ports not empty
-   if [ `echo "$localnet" | egrep '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$' | wc -l` -eq 1  -a -n "${ADMINPORTS// }" ] ; then
-      localnetok=1
-   fi
+         # OK (exit loop) if local network OK _AND_ admin ports not empty
+         if [ `echo "$localnet" | egrep '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$' | wc -l` -eq 1  -a -n "${ADMINPORTS// }" ] ; then
+            localnetok=1
+         fi
 
-   if [ $localnetok -eq 0 ] ; then
-      dlog "user provided localnet ${localnet} is not ok or adminports empty (${ADMINPORTS})"
-      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the admin portlist is empty (should contain at least the SSHD port (${ADMINPORTS})).' 10 40
-   fi
+         if [ $localnetok -eq 0 ] ; then
+            dlog "user provided localnet ${localnet} is not ok or adminports empty (${ADMINPORTS})"
+            dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the admin portlist is empty (should contain at least the SSHD port (${ADMINPORTS})).' 10 40
+         fi
+      ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled local network access dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in local network access dialogue."
+         exit 5
+         ;;
+   esac
 done
 
 dialog --title 'Admin Access' --cr-wrap --msgbox "Admin access to ports:
@@ -761,7 +823,7 @@ if [ "${nofwlogging}" == "" ] ; then
    # default: local net & connected IPs (as the user confirmed)
    nofwlogging="${localnet} ${CONIPS}"
    # remove duplicates
-   nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' '`
+   nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 fi
 
 dlog "nofwlogging: ${nofwlogging}"
@@ -773,7 +835,21 @@ NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --form "IPs and nets th
 Note: Traffic from these devices will also not be redirected to the honeypot ports.
 " \
 12 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 17 47 100 2>&1 1>&3)
+response=${?}
 exec 3>&-
+
+case ${response} in
+   ${DIALOG_OK})
+      ;;
+   ${DIALOG_CANCEL})
+      dlog "User canceled IP to ignore in FW log dialogue."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC in IP to ignore in FW log dialogue."
+      exit 5
+      ;;
+esac
 
 # for saving in dshield.conf
 nofwlogging="'${NOFWLOGGING}'"
@@ -813,7 +889,21 @@ NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and 
 12 70 0 \
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
 "Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
+response=${?}
 exec 3>&-
+
+case ${response} in
+   ${DIALOG_OK})
+      ;;
+   ${DIALOG_CANCEL})
+      dlog "User canceled honeypot disable dialogue."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC in honeypot disable dialogue."
+      exit 5
+      ;;
+esac
 
 dlog "user provided NOHONEY: ${NOHONEY}"
 
