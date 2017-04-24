@@ -16,6 +16,21 @@
 
 
 readonly version=0.41
+#
+# Major Changes (for details see Github):
+#
+# - V0.41
+#   - corrected firewall logging to dshield: in prior versions
+#     the redirected ports would be logged and reported, not
+#     the ports from the original requests (so ssh connection
+#     attempts were logged as attempts to connect to 2222)
+#   - changed firewall rules: access only allowed to honeypot ports
+#   - some configuration stuff
+#   - some bugfixes
+#
+# - V0.4
+#   - major additions and rewrites (e.g. added logging)
+#
 
 # target directory for server components
 TARGETDIR="/srv"
@@ -422,6 +437,42 @@ EOF
    drun 'cat  ~/.my.cnf'
 fi
 
+if [ "${mysqlpassword}" == "" ] ; then
+   outlog "MySQL root password is empty, this won't work"
+   outlog "(perhaps no dshield.conf and not allowed to install MySQL on my own)"
+   dlog "nomysql: ${nomysql}"
+   drun "ls -la /etc/dshield.conf"
+   if [ -f  /root/.my.cnf ] ; then
+      outlog "Trying to get password from /root/.my.cnf"
+      if [ `grep "user=root"  /root/.my.cnf | wc -l ` -eq 1 ] ; then
+         if [ `grep "password="  /root/.my.cnf | wc -l  ` -eq 1 ] ; then
+            drun 'grep "password="  /root/.my.cnf | cut -d "=" -f2' 
+            mysqlpassword=`grep "password="  /root/.my.cnf | cut -d "=" -f2`
+         else
+            # more than one password found
+            dlog "No or multiple lines with 'password=' found in /root/.my.cnf"
+         fi 
+      else
+         dlog "No or multiple lines with 'user=root' found in /root/.my.cnf"
+      fi
+   else 
+      dlog "No /root/.my.cnf found."
+   fi
+fi
+
+if [ "${mysqlpassword}" == "" ] ; then
+   dlog "OK, still no MySQL password for root, aksing user"
+   exec 3>&1
+   mysqlpassword=$(dialog --title 'No MySQL root password found' --form "I wasn't able to find any MySQL root password. If you know it: please provide it here. If not: cancel, restart installation and choose to re-install MySQL." 12 50 0 \
+      "MySQL root password:" 1 2 "$mysqlpassword" 1 24 20 60 2>&1 1>&3)
+   exec 3>&-
+fi
+
+if [ "${mysqlpassword}" == "" ] ; then
+   outlog "Still no MySQL root password. Giving up."
+   exit 5
+fi
+
 outlog "Checking, if the MySQL root account can connect."
 run 'mysql -u root -p$mysqlpassword  -e ";"'
 if [ ${?} -ne 0 ] ; then
@@ -556,26 +607,29 @@ dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall 
 #
 # PREROUTING:
 # - no logging for trusted nets -> skip rest of chain (4.)
-#   (this means for trusted nets the redirect for
-#    honeypot ports doesn't happen, but this shouldn't matter)
-# - logging of all requests (1.)
+#   (this means for trusted nets the redirects for
+#    honeypot ports don't happen, but this shouldn't matter)
+# - logging of all access attempts (1.)
 # - redirect for honeypot ports (6.)
 #
 # INPUT:
 # - allow localhost
 # - allow related, established
 # - disable access to honeypot ports for internal nets (5.)
-# - allow access to daemon ports for internal nets (2., 3.)
+# - allow access to daemon / admin ports only for internal nets (2., 3.)
 # - allow access to honeypot ports (2., 7.)
 # - default policy: DROP (8.)
 
+##---------------------------------------------------------
+## default interface 
+##---------------------------------------------------------
 
 dlog "firewall config: figuring out default interface"
 
 # if we don't have one configured, try to figure it out
 dlog "interface: ${interface}"
 drun 'ip link show'
-if [ "$interface" = "" ] ; then
+if [ "$interface" == "" ] ; then
    dlog "Trying to figure out interface"
    # we don't expect a honeypot connected by WLAN ... but the user can change this of course
    drun "ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan"
@@ -611,9 +665,9 @@ done # while interface not OK
 
 dlog "Interface: $interface"
 
-#
-# figuring out local network.
-#
+##---------------------------------------------------------
+## figuring out local network
+##---------------------------------------------------------
 
 dlog "firewall config: figuring out local network"
 
@@ -627,33 +681,38 @@ drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
 dlog "localnet: ${localnet}"
 
-# additionally we wiil use any connections to current sshd config 
-# as tristed / local IP
+# additionally we will use any connection to current sshd 
+# (ignroing config and using real connections)
+# as trusted / local IP (just to make sure we include routed networks)
 drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
-CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'`
+CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print $2}'`
 drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '"
 CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '`
 
 localnetok=0
 ADMINPORTS=$adminports
 if [ "${ADMINPORTS}" == "" ] ; then
-   # default: sshd
+   # default: sshd (after reboot)
    ADMINPORTS="${SSHDPORT}"
 fi
+# we present the localnet and the connected IPs to the user
+# so we are sure connection to the device will work after
+# reboot at least for the current remote device
+# (localips is from dshield.conf)
 CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
 CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' '`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
 
-dlog "Getting local network from user ..."
+dlog "Getting local network, further IPs and admin ports from user ..."
 while [ $localnetok -eq  0 ] ; do
-   exec 3>&1
-   RETVALUES=$(dialog --title 'Local Network' --form 'Admin access (ports separated by blank) will be restricted to this network / IPs (separated by blank), and logs originating from this network / IPs will not be reported.' 13 50 0 \
-      "Local Network:" 1 2 "$localnet" 1 18 27 20 \
-      "Further IPs:" 2 2 "${CONIPS}" 2 18 27 60 \
-      "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 27 20 \
-2>&1 1>&3)
 
+   exec 3>&1
+   RETVALUES=$(dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
+      "Local Network:" 1 2 "$localnet" 1 18 37 20 \
+      "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
+      "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
+      2>&1 1>&3)
    exec 3>&-
 
    dlog "User input for local network & IPs: ${RETVALUES}"
@@ -669,31 +728,40 @@ while [ $localnetok -eq  0 ] ; do
    dlog "user input further IPs: ${CONIPS}"
    dlog "user input further admin ports: ${ADMINPORTS}"
 
-   # OK (exit loop) if local network OK AND admin ports not empty
+   # OK (exit loop) if local network OK _AND_ admin ports not empty
    if [ `echo "$localnet" | egrep '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$' | wc -l` -eq 1  -a -n "${ADMINPORTS// }" ] ; then
       localnetok=1
    fi
 
    if [ $localnetok -eq 0 ] ; then
-      dlog "user provided localnet ${localnet} is not ok"
-      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the portlist is empty (should contain at least the SSHD port).' 10 40
+      dlog "user provided localnet ${localnet} is not ok or adminports empty (${ADMINPORTS})"
+      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the admin portlist is empty (should contain at least the SSHD port (${ADMINPORTS})).' 10 40
    fi
 done
 
-# values for dshield.conf
+dialog --title 'Admin Access' --cr-wrap --msgbox "Admin access to ports:
+${ADMINPORTS}
+will be allowed for IPs / nets:
+${localnet} and
+${CONIPS}" 0 0
+
+# save values for dshield.conf
+# (localnet will be saved directly)
 localips="'${CONIPS}'"
 adminports="'${ADMINPORTS}'"
 
 
-#
-# further IPs: no iptables logging
-#
+##---------------------------------------------------------
+## IPs for which logging should be disabled
+##---------------------------------------------------------
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
 if [ "${nofwlogging}" == "" ] ; then
-   # default: local net & connected IPs
+   # default: local net & connected IPs (as the user confirmed)
    nofwlogging="${localnet} ${CONIPS}"
+   # remove duplicates
+   nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' '`
 fi
 
 dlog "nofwlogging: ${nofwlogging}"
@@ -701,12 +769,10 @@ dlog "nofwlogging: ${nofwlogging}"
 dlog "getting IPs from user ..."
 
 exec 3>&1
-NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --cr-wrap --form "WARNING - USE WITH CARE!
-IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
-Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and the 'real' sshd will be exposed.
-If unsure don't change anything here or blank the input! Trusted IPs only. You have been warned.
+NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --form "IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
+Note: Traffic from these devices will also not be redirected to the honeypot ports.
 " \
-14 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 17 47 100 2>&1 1>&3)
+12 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 17 47 100 2>&1 1>&3)
 exec 3>&-
 
 # for saving in dshield.conf
@@ -719,18 +785,18 @@ if [ "${NOFWLOGGING}" == "" ] ; then
    dialog --title 'No Firewall Log Exceptions' --msgbox 'No firewall logging exceptions will be installed.' 10 40
 else
    dialog --title 'Firewall Logging Exceptions' --cr-wrap --msgbox "The firewall logging exceptions will be installed for IPs
-${NOFWLOGGING}." 0 0
+${NOFWLOGGING}" 0 0
 fi
 
-#
-# further IPs and ports: disable honeypot
-#
+##---------------------------------------------------------
+## disable honepot for nets / IPs
+##---------------------------------------------------------
 
 dlog "firewall config: IPs and ports to disable honeypot for"
 
 if [ "${nohoneyips}" == "" ] ; then
-   # default: local net
-   nohoneyips="${localnet}"
+   # default: admin IPs and nets
+   nohoneyips="${NOFWLOGGING}"
 fi
 dlog "nohoneyips: ${nohoneyips}"
 
@@ -743,14 +809,10 @@ dlog "nohoneyports: ${nohoneyports}"
 dlog "getting IPs and ports from user"
 
 exec 3>&1
-NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --cr-wrap --form "WARNING - USE WITH CARE!
-IPs and nets to disable honeypot for to prevent reporting internal legitimate failed access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING) separated by spaces).
-Attention: entries will be added to reject access to honeypot ports.
-If unsure don't change anything here!
-" \
-16 70 0 \
+NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
+12 70 0 \
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
-"Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
+"Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
 exec 3>&-
 
 dlog "user provided NOHONEY: ${NOHONEY}"
@@ -760,9 +822,6 @@ NOHONEYIPS=`echo "${NOHONEY}"  | cut -d "
 NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
 " -f 2`
 
-# echo "###${NOHONEYIPS}###"
-# echo "###${}###"
-
 dlog "NOHONEYIPS: ${NOHONEYIPS}"
 dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
 
@@ -770,7 +829,6 @@ if [ "${NOHONEYIPS}" == "" -o "${NOHONEYPORTS}" == "" ] ; then
    dlog "at least one of the lines were empty, so can't do anything with the rest and will ignore it"
    NOHONEYIPS=""
    NOHONEYPORTS=""
-   # echo "No honeyport exceptions will be done."
    dialog --title 'No Honeypot Exceptions' --msgbox 'No honeypot exceptions will be installed.' 10 40
 else
    dialog --title 'Honeypot Exceptions' --cr-wrap --msgbox "The honeypot exceptions will be installed for IPs
@@ -786,9 +844,10 @@ dlog "final values: "
 dlog "NOHONEYIPS: ${NOHONEYIPS} / NOHONEYPORTS: ${NOHONEYPORTS}"
 dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 
-#
-# create default firewall rule set
-#
+
+##---------------------------------------------------------
+## create firewall rule set
+##---------------------------------------------------------
 
 outlog "Doing further configuration"
 
@@ -812,7 +871,6 @@ EOF
 # as soon as possible
 if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
    echo "# START: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
-   # echo "###${NOFWLOGGING}###"
    for NOHONEYIP in ${NOHONEYIPS} ; do
       for NOHONEYPORT in ${NOHONEYPORTS} ; do
          echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >> /etc/network/iptables
@@ -1022,7 +1080,7 @@ if ! grep '^cowrie:' -q /etc/passwd; then
    run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
    outlog "Added user 'cowrie'"
 else
-   outlog "User 'cowrie' already exists in OS. Making no changes."
+   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi    
 
 # check if cowrie db schema exists
@@ -1147,6 +1205,7 @@ dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements
 dlog "        and requirements-output.txt"
 dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
 
+# simpler installation routines didn't work some point in time, so using this funny stuff
 for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 ; do
 
    # echo "PKGVER: ${PKGVER}"
