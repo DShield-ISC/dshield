@@ -27,6 +27,7 @@ LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
 # which ports will be handled e.g. by cowrie (separated by blanks)
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
+# note: doesn't make sense to ask the user because cowrie is configured statically
 HONEYPORTS="2222"
 
 # which port the sshd should listen to
@@ -326,7 +327,7 @@ else
 
 fi
 
-drun 'pip list'
+drun 'pip list --format=legacy'
 
 
 ###########################################################
@@ -529,30 +530,44 @@ dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall 
 #
 # Default Interface
 #
-
-# 
-# requirements:
-#
-# - every access from untrusted networks is logged for dshield with the correct port
-#   (up to V0.4 of this script there was a bug so that the logging for dshield took place
-#    for the redirected honeypot ports not the original ones)
-# - for untrusted nets only honeypot ports (redirected ports) are accessible
-# - access to "official" services like ssh is only allowed for trusted IPs
-# - for trusted IPs the firewall logging can be disabled 
-#   (to eliminate reporting irrelevant / false / internal packets)
-# - for listed IPs the honeypot can be disabled 
-#   (to eliminate reporting of legitimate credentials)
-
-
 # changes starting V0.41:
 # - logging for dshield done in PREROUTING
 # - only access to honeypot ports allowed for untrusted nets
 #
-# so the iptable looks like:
-# 
-# PREROUTING:
-# - logging for dshield
 
+# 
+# requirements:
+#
+# 1. every access from untrusted networks is logged for dshield with the correct port
+#    (up to V0.4 of this script there was a bug so that the logging for dshield took place
+#     for the redirected honeypot ports and not the original ones)
+# 2. for untrusted nets only honeypot ports (redirected ports) are accessible
+# 3. access to "official" services like ssh is only allowed for trusted IPs
+# 4. for trusted IPs the firewall logging can be disabled 
+#    (to eliminate reporting irrelevant / false / internal packets)
+# 5. for listed IPs the honeypot can be disabled 
+#    (to eliminate reporting of legitimate credentials)
+# 6. honeyport services don't run on official ports 
+#    (redirect official ports to honeypot ports)
+# 7. redirected honeypot ports can be accessed from untrusted nets
+# 8. secure default 
+#
+# Firewall Layout:
+#
+# PREROUTING:
+# - no logging for trusted nets -> skip rest of chain (4.)
+#   (this means for trusted nets the redirect for
+#    honeypot ports doesn't happen, but this shouldn't matter)
+# - logging of all requests (1.)
+# - redirect for honeypot ports (6.)
+#
+# INPUT:
+# - allow localhost
+# - allow related, established
+# - disable access to honeypot ports for internal nets (5.)
+# - allow access to daemon ports for internal nets (2., 3.)
+# - allow access to honeypot ports (2., 7.)
+# - default policy: DROP (8.)
 
 
 dlog "firewall config: figuring out default interface"
@@ -603,7 +618,7 @@ dlog "Interface: $interface"
 dlog "firewall config: figuring out local network"
 
 drun "ip addr show  eth0"
-drun "ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'"
+drun "ip addr show  eth0 | grep 'inet ' |  awk '{print \$2}' | cut -f1 -d'/'"
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 dlog "ipaddr: ${ipaddr}"
 
@@ -612,26 +627,63 @@ drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
 dlog "localnet: ${localnet}"
 
+# additionally we wiil use any connections to current sshd config 
+# as tristed / local IP
+drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
+CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'`
+drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '"
+CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' '`
 
 localnetok=0
+ADMINPORTS=$adminports
+if [ "${ADMINPORTS}" == "" ] ; then
+   # default: sshd
+   ADMINPORTS="${SSHDPORT}"
+fi
+CONIPS="$localips ${CONIPS}"
+dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
+CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' '`
+dlog "CONIPS with removed duplicates: ${CONIPS}"
 
 dlog "Getting local network from user ..."
 while [ $localnetok -eq  0 ] ; do
    exec 3>&1
-   localnet=$(dialog --title 'Local Network' --form 'Admin access will be restricted to this network, and logs originating from this network will not be reported.' 10 50 0 \
-      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
+   RETVALUES=$(dialog --title 'Local Network' --form 'Admin access (ports separated by blank) will be restricted to this network / IPs (separated by blank), and logs originating from this network / IPs will not be reported.' 13 50 0 \
+      "Local Network:" 1 2 "$localnet" 1 18 27 20 \
+      "Further IPs:" 2 2 "${CONIPS}" 2 18 27 60 \
+      "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 27 20 \
+2>&1 1>&3)
 
    exec 3>&-
+
+   dlog "User input for local network & IPs: ${RETVALUES}"
+
+   localnet=`echo "${RETVALUES}" | cut -d "
+" -f 1`
+   CONIPS=`echo "${RETVALUES}" | cut -d "
+" -f 2`
+   ADMINPORTS=`echo "${RETVALUES}" | cut -d "
+" -f 3`
+
    dlog "user input localnet: ${localnet}"
-   if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
+   dlog "user input further IPs: ${CONIPS}"
+   dlog "user input further admin ports: ${ADMINPORTS}"
+
+   # OK (exit loop) if local network OK AND admin ports not empty
+   if [ `echo "$localnet" | egrep '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$' | wc -l` -eq 1  -a -n "${ADMINPORTS// }" ] ; then
       localnetok=1
    fi
 
    if [ $localnetok -eq 0 ] ; then
       dlog "user provided localnet ${localnet} is not ok"
-      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
+      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the portlist is empty (should contain at least the SSHD port).' 10 40
    fi
 done
+
+# values for dshield.conf
+localips="'${CONIPS}'"
+adminports="'${ADMINPORTS}'"
+
 
 #
 # further IPs: no iptables logging
@@ -640,8 +692,8 @@ done
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
 if [ "${nofwlogging}" == "" ] ; then
-   # default: local net
-   nofwlogging="${localnet}"
+   # default: local net & connected IPs
+   nofwlogging="${localnet} ${CONIPS}"
 fi
 
 dlog "nofwlogging: ${nofwlogging}"
@@ -709,7 +761,7 @@ NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
 " -f 2`
 
 # echo "###${NOHONEYIPS}###"
-# echo "###${NOHONEYPORTS}###"
+# echo "###${}###"
 
 dlog "NOHONEYIPS: ${NOHONEYIPS}"
 dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
@@ -749,7 +801,7 @@ cat > /etc/network/iptables <<EOF
 #
 
 *filter
-:INPUT ACCEPT [0:0]
+:INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
 -A INPUT -i lo -j ACCEPT
@@ -769,37 +821,52 @@ if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
    echo "# END: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
 fi
 
-
-cat >> /etc/network/iptables <<EOF
--A INPUT -i $interface -s $localnet -j ACCEPT
--A INPUT -i $interface -p tcp --dport ${SSHDPORT} -s 10.0.0.0/8 -j ACCEPT
--A INPUT -i $interface -p tcp --dport ${SSHDPORT} -s 192.168.0.0/8 -j ACCEPT
-EOF
-
-# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
-if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
-   echo "# START: IPs firewall logging should be disabled for"  >> /etc/network/iptables
-   # echo "###${NOFWLOGGING}###"
-   for NOFWLOG in ${NOFWLOGGING} ; do
-      echo "-A INPUT -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
+# allow access to admin ports for local nets / IPs
+echo "# START: allow access to admin ports for local IPs"  >> /etc/network/iptables
+for PORT in ${ADMINPORTS} ; do
+   # first: local network
+   echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >> /etc/network/iptables
+   # second: other IPs
+   for IP in ${CONIPS} ; do
+      echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >> /etc/network/iptables
    done
-   echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+done
+echo "# END: allow access to admin ports for local IPs"  >> /etc/network/iptables
+
+# allow access to noneypot ports
+if [ "${HONEYPORTS}" != "" ] ; then
+   echo "# START: Ports honeypot should be enabled for"  >> /etc/network/iptables
+   for HONEYPORT in ${HONEYPORTS} ; do
+      echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >> /etc/network/iptables
+   done
+   echo "# END: Ports honeypot should be enabled for"  >> /etc/network/iptables
 fi
 
 
+
 cat >> /etc/network/iptables <<EOF
--A INPUT -i $interface -j LOG --log-prefix " INPUT "
--A INPUT -i $interface -p tcp --dport ${SSHDPORT} -j DROP
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
 :INPUT ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
--A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
--A PREROUTING -p tcp -m tcp --dport 25 -j REDIRECT --to-ports 2525
--A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+EOF
 
+# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
+if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
+   echo "# START: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+   for NOFWLOG in ${NOFWLOGGING} ; do
+      echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
+   done
+   echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+fi
+
+cat >> /etc/network/iptables <<EOF
+# log all traffic with original ports
+-A PREROUTING -i $interface -j LOG --log-prefix " INPUT "
+# redirect honeypot ports
+-A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 COMMIT
 EOF
 
@@ -834,7 +901,7 @@ Please clean up and either
      other stuff reflecting YOUR PORT' 13 50
 
    dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
-   drun 'cat /etc/ssh/sshd_config'
+   drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
 else
    dlog "check successful, port change to ${SSHDPORT} in sshd_config"
 fi
@@ -896,6 +963,8 @@ run 'echo "apikey=$apikey" >> /etc/dshield.conf'
 run 'echo "email=$email" >> /etc/dshield.conf'
 run 'echo "interface=$interface" >> /etc/dshield.conf'
 run 'echo "localnet=$localnet" >> /etc/dshield.conf'
+run 'echo "localips=$localips" >> /etc/dshield.conf'
+run 'echo "adminports=$adminports" >> /etc/dshield.conf'
 run 'echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf'
 run 'echo "mysqluser=root" >> /etc/dshield.conf'
 run 'echo "version=$version" >> /etc/dshield.conf'
@@ -1210,7 +1279,7 @@ Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
 permitted by applicable law.
 
 ***
-***    DShield Honeypot - Web Admin on port 8080
+***    DShield Honeypot
 ***
 
 EOF
