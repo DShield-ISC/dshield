@@ -96,7 +96,7 @@ Configuration parameters like your API Key will be retained. To edit the configu
 - provide a script to update all Python packages to most recent version using pip
 - do all the user input stuff at the beginning of the script so it will run the long lasting stuff afterwards
 - tighten the firewall 
-- the PREROUTING chain contains redirects for ports, theses redirects falsify dshield iptable reports because the redirect target port is reported in the logs
+- the PREROUTING chain contains redirects for ports, these redirects falsify dshield iptable reports because the redirect target port is reported in the logs instead of the originally probed port
 - many other stuff :)
 
 # DEV Instance - web.py and sitecopy.py
