@@ -54,6 +54,15 @@ class DshieldSubmit:
         else:
             print 'no valid type defined in post'
 
+    def getmyip(self):
+        header = {'User-Agent': 'DShield PyLib 0.1'}
+        r = requests.get('https://isc.sans.edu/api/myip?json',headers=header)
+        if r.status_code != 200:
+            print 'received status code %d in response to getmyiprequest' % r.status_code
+            return -1
+        return r.json()['ip']
+
+
     def makeauthheader(self):
         nonce = base64.b64encode(os.urandom(8))
         myhash = hmac.new(nonce + str(self.id), msg=self.key, digestmod=hashlib.sha256).digest()
