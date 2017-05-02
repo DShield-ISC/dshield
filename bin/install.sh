@@ -1514,5 +1514,7 @@ outlog
 outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port ${SSHDPORT}"
 outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
 outlog
+outlog "### Thank you for supporting the ISC and dshield! ###"
+outlog
 
 
