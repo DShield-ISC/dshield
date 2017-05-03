@@ -50,9 +50,10 @@ The handling of Python packages changed from distro package manager to pip. This
 
 You have three alternatives:
 
-- easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete lost), reinstall from scratch using current Raspbian image
+- easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image
 - manual procedure: uninstall all below mentioned packages and then autoremove:
 ```
+sudo su -
 /etc/init.d/cowrie stop
 dpkg --remove python-crypto
 dpkg --remove python-gmpy
@@ -69,6 +70,7 @@ apt-get dist-upgrade
 ```
 - "automatic" brutal procedure (chances to break your system are VERY high, but hey, it's a disposable honeypot anyway ...): backup, uninstall all Python distro packages (and hope that's it):
 ```
+sudo su -
 /etc/init.d/cowrie stop
 for PKG in `dpkg --list | grep python- | cut -d " " -f 3 | grep "^python"` ; do echo "uninstalling ${PKG}"; dpkg --force-depends --purge ${PKG}; done
 apt-get update
@@ -92,6 +94,9 @@ Configuration parameters like your API Key will be retained. To edit the configu
 
 - see comments in install.sh
 - provide a script to update all Python packages to most recent version using pip
+- do all the user input stuff at the beginning of the script so it will run the long lasting stuff afterwards
+- tighten the firewall 
+- the PREROUTING chain contains redirects for ports, these redirects falsify dshield iptable reports because the redirect target port is reported in the logs instead of the originally probed port
 - many other stuff :)
 
 # DEV Instance - web.py and sitecopy.py
