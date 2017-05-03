@@ -48,9 +48,9 @@ passwd
 ```
 sudo raspi-config
 ```
-- enable SSH permanently: interfacing options -> enable ssh
-- make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
-- finish, don't reboot yet
+   - enable SSH permanently: interfacing options -> enable ssh
+   - make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
+   - finish, don't reboot yet
 - make sure Pi's system time is somewhat reasonable, e.g.
 ```
 sudo --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
