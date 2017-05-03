@@ -121,7 +121,7 @@ Testing of update procedure is normally done (between two releases) as follows:
 
 ### Special Update Note: Versions < 0.4 to >= 0.4
 
-The handling of Python packages hat to be changed from distro package manager to pip. This means the update is pain. Sorry for that.
+The handling of Python packages had to be changed from distro package manager to pip. This means the update is pain. Sorry for that.
 
 You have three alternatives:
 
