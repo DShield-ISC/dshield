@@ -24,17 +24,17 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
 - boot the pi from the SD card and log into the console using an USB keyboard
   - hint: when you don't want to connect a display you may just enter the following (note: US keyboard layout)
-```
-pi
-raspberry
-sudo /etc/init.d/ssh start
-```
+   ```
+   pi
+   raspberry
+   sudo /etc/init.d/ssh start
+   ```
   - example for German keyboard:
-```
-pi
-raspberrz
-sudo -etc-init.d-ssh start
-```
+   ```
+   pi
+   raspberrz
+   sudo -etc-init.d-ssh start
+   ```
 - connect to the device using an ssh client (port 22), user `pi`, password `raspberry`
 - __CHANGE THE DEFAULT PASSWORD__ for the `pi` user (better: use keys to authenticate)
 ```
