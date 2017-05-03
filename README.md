@@ -1,19 +1,30 @@
 # dshield
 
-DShield Raspberry Pi Sensor
+## DShield Raspberry Pi Sensor
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
-Design Goals:
-- use of a _dedicated_ device (Raspberry Pi)
+Current Design Goals:
+- use of a __dedicated__ device (Raspberry Pi)
 - easy installation / configuration (and not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
-- minimize complexity and overhead (e.g. no virtualization (e.g. docker))
+- minimize complexity and overhead (e.g. no virtualization like docker)
 
-The current version is only tested on Raspbian, not on other distros, sorry. If other distros are wanted, someone has to check and update the installation script.
+The current version is only tested on Raspbian, not on other distros, sorry.
+If there is the need for other distros, someone has to check and maintain the installation script.
 
-In order to use the Raspberry Pi, you will need to first prepare it:
+## Installation
 
+### Prerequisites
+
+For the magic of the installation script to happen the following prerequisites apply:
+- 
+
+- 
+
+In order to use the installation script on the Raspberry Pi, you will need to first prepare it:
+
+- get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
 - CHANGE THE DEFAULT SSH PASSWORD (better: use keys to authenticate)
 - make sure the Pi can reach out to the Internet using http(s)
 - make sure the root file system of the Pi is properly expanded
@@ -48,7 +59,7 @@ sudo dshield/bin/install.sh
 - install the ssh honeypot cowrie 
 - configure a default web server and submit logs to DShield (TODO)
 
-# Updates:
+## Updates
 
 Special note for updating from versions <0.4 to 0.4 (and potentially above):
 
@@ -96,7 +107,11 @@ sudo bin/install.sh
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf.
 
-# Todos
+Testing is normally done as follows:
+- update on Pi 3 from the last version to current
+- install on a current clean image of raspbian lite
+
+## Todos
 
 - see comments in install.sh
 - provide a script to update all Python packages to most recent version using pip
@@ -105,7 +120,7 @@ Configuration parameters like your API Key will be retained. To edit the configu
 - the PREROUTING chain contains redirects for ports, these redirects falsify dshield iptable reports because the redirect target port is reported in the logs instead of the originally probed port
 - many other stuff :)
 
-# DEV Instance - web.py and sitecopy.py
+## DEV Instance - web.py and sitecopy.py
 
 sitecopy.py will copy any site serve up the site in using the web.py script just use:
 
