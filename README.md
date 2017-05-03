@@ -35,7 +35,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
    raspberrz
    sudo -etc-init.d-ssh start
    ```
-- connect to the device using an ssh client (port 22), user `pi`, password `raspberry`
+- connect to the device using an ssh client (port 22), log in with user `pi`, password `raspberry`
 - __CHANGE THE DEFAULT PASSWORD__ for the `pi` user (better: use keys to authenticate)
 ```
 passwd
