@@ -1,10 +1,8 @@
-# dshield
-
-DShield Raspberry Pi Sensor
+# DShield Raspberry Pi Honeypot
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
-The current version is only tested on Raspbian, not on other distros, sorry. If other distros are wanted, someone has to check and update the installation script.
+The current version is only tested on Raspbian, not on other distros, sorry. If other distros are wanted, someone has to check and update the installation script. For support, try our Slack channel (see link at the end of this file) . Please file an "Issue" here to report bugs.
 
 In order to use the Raspberry Pi, you will need to first prepare it:
 
@@ -118,4 +116,5 @@ Todo:
 
 Any input appreciated - mweeks9989@gmail.com - thanks!
 
+Slack group invite link: https://join.slack.com/dshieldusers/shared_invite/MTc4MTE4NzA1MTg5LTE0OTM4MTQyNzctNDQ4YTVhY2RiYQ
 
