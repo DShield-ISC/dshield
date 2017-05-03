@@ -10,7 +10,7 @@ Current design goals and prerequisites for using the automated installation proc
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
-- support for IPv4 only
+- support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
 The current version is only tested on Raspbian, not on other distros, sorry.
