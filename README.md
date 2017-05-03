@@ -127,7 +127,7 @@ You have three alternatives:
 
 #### Easy
 
-The Easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image
+The easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image.
 
 #### Manual
 
@@ -176,7 +176,7 @@ apt-get dist-upgrade
 
 ## Todos
 
-- see comments in install.sh
+- see comments in `install.sh`
 - provide a script to update all Python packages to most recent version using pip
 - configure a default web server and submit logs to DShield
 - enable other honeypot ports than ssh
