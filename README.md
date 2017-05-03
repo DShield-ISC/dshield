@@ -100,19 +100,20 @@ This script will:
 - enable firewall logging and submitting of logs to DShield
 - change your ssh server to listen on port 12222
 - install the ssh honeypot cowrie (for ssh)
+- install needed environment (e.g. MySQL server, Python packages, ...)
 
 ## Updates
 
 ### Normal Updates
 
-Inside your "dshield" directory (the directory created above when you run 'git clone'), run
+Inside your "dshield" directory (the directory created above when you run `git clone`), run
 ```
 cd install/dshield
 git pull
 sudo bin/install.sh
 ```
 
-Configuration parameters like your API Key will be retained. To edit the configuration, edit '/etc/dshield.conf', to configure the firewall edit '/etc/network/iptables'.
+Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.conf`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
 
 Testing of update proceduer is normally done (between two releases) as follows:
 - update on Pi 3 from the last version to current
