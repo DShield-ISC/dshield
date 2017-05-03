@@ -208,4 +208,5 @@ Todo:
 
 Any input appreciated - mweeks9989@gmail.com - thanks!
 
+Slack group invite link: https://join.slack.com/dshieldusers/shared_invite/MTc4MTE4NzA1MTg5LTE0OTM4MTQyNzctNDQ4YTVhY2RiYQ
 
