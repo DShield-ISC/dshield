@@ -21,7 +21,7 @@ If there is the need for other distros, "someone" has to check and maintain the 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
 - get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
-- put it onto an SD card (e.g. using procedures [described here (note the additional links at the bottom] (https://www.raspberrypi.org/documentation/installation/installing-images/README.md))
+- put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
 - boot the pi from the SD card and log into the console
   - hint: when you don't want to connect a display you may just enter the following (note: US keyboard layout)
 ```
@@ -43,55 +43,94 @@ passwd
    new pw
    new pw
 ```
-- make sure the Pi can reach out to the Internet using http(s)
-- make sure the root file system of the Pi is properly expanded
-- expose the Pi to inbound traffic. For example, in many firewalls and home routers
-  you will be able to configure it as a "DMZ Hosts", "exposed devices", ...
+- make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
+- run raspi-config to set up some basic things
+```
+sudo raspi-config
+```
+- enable SSH permanently: interfacing options -> enable ssh
+- make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
+- finish, don't reboot yet
+- make sure Pi's system time is somewhat reasonable, e.g.
+```
+sudo --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
+```
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
-
-### Details
-
-
-
-To update:
-
 ```
 sudo apt-get update
-sudo apt-get upgrade
-sudo reboot
+sudo apt-get -u dist-upgrade
 ```
-
-only on "Jessie Lite":
-- install GIT: 
+- reboot
+```
+sudo init 6
+```
+- if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
 sudo apt-get install git
 ```
-
-on all versions of Raspbian (including Jessie Light):
-- get the dshield files from the GIT repo
+- make install directory and get GIT repository
+```
+mkdir install
+cd install
+git clone https://github.com/DShield-ISC/dshield.git
+```
 - run the installation script
 ```
-git clone https://github.com/DShield-ISC/dshield.git
-sudo dshield/bin/install.sh
+cd dshield/bin
+sudo ./install.sh
 ```
+- if curious watch the debug log file in parallel to the installation: connect with an additional ssh session to the system and run (name of the log file will be printed out by the installation script):
+```
+sudo tail -f LOGFILE
+```
+- answer the questions of the installation routine
+- if everything goes fine and the script finishes OK: reboot the device 
+```
+sudo init 6
+```
+- from now on you have to use port 12222 to connect to the device by SSH
+- expose the Pi to inbound traffic. For example, in many firewalls and home routers
+  you will be able to configure it as a "DMZ Hosts", "exposed devices", ...
 
-  This script will:
+## Background: `install.sh`
 
+This script will:
+
+- disable IPv6 on the Pi
 - enable firewall logging and submitting of logs to DShield
 - change your ssh server to listen on port 12222
-- install the ssh honeypot cowrie 
-- configure a default web server and submit logs to DShield (TODO)
+- install the ssh honeypot cowrie (for ssh)
 
 ## Updates
 
-Special note for updating from versions <0.4 to 0.4 (and potentially above):
+### Normal Updates
 
-The handling of Python packages changed from distro package manager to pip. This means the update is pain. Sorry for that.
+Inside your "dshield" directory (the directory created above when you run 'git clone'), run
+```
+cd install/dshield
+git pull
+sudo bin/install.sh
+```
+
+Configuration parameters like your API Key will be retained. To edit the configuration, edit '/etc/dshield.conf', to configure the firewall edit '/etc/network/iptables'.
+
+Testing of update proceduer is normally done (between two releases) as follows:
+- update on Pi 3 from the last version to current
+- install on a current clean image of raspbian lite on a Pi 3
+
+### Special Update Note: Versions < 0.4 to >= 0.4
+
+The handling of Python packages hat to be changed from distro package manager to pip. This means the update is pain. Sorry for that.
 
 You have three alternatives:
 
-- easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image
-- manual procedure: uninstall all below mentioned packages and then autoremove:
+#### Easy
+
+The Easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image
+
+#### Manual
+
+The manual procedure: uninstall all below mentioned packages and then autoremove and cross fingers:
 ```
 sudo su -
 /etc/init.d/cowrie stop
@@ -108,7 +147,10 @@ apt-get autoremove
 apt-get update
 apt-get dist-upgrade
 ```
-- "automatic" brutal procedure (chances to break your system are VERY high, but hey, it's a disposable honeypot anyway ...): backup, uninstall all Python distro packages (and hope that's it):
+
+#### Automatic
+
+The "automatic" **brutal** procedure (chances to break your system are **VERY** high, but hey, it's a disposable honeypot anyway ...): backup (if needed), uninstall all Python distro packages (and hope that's it):
 ```
 sudo su -
 /etc/init.d/cowrie stop
@@ -121,31 +163,30 @@ apt-get update
 apt-get dist-upgrade
 ```
 
-Normal update: inside your "dshield" directory (the directory created above when you run "git clone"), run
-
-```
-git pull
-sudo bin/install.sh
-```
-
-Configuration parameters like your API Key will be retained. To edit the configuration, edit /etc/dshield.conf.
-
-Testing is normally done as follows:
-- update on Pi 3 from the last version to current
-- install on a current clean image of raspbian lite
-
 ## Hints
 
 ### Navigating in Forms
+- RETURN: submit the form (OK)
+- ESC: exit the form (Cancel)
+- cursor up / down: navigate through form / between input fields
+- cursor left / right: navigate within an input field
+- TAB: swich between input field and "buttons"
+- don't use Pos 1 / End
 
 ## Todos
 
 - see comments in install.sh
 - provide a script to update all Python packages to most recent version using pip
+- configure a default web server and submit logs to DShield
+- enable other honeypot ports than ssh
 - do all the user input stuff at the beginning of the script so it will run the long lasting stuff afterwards
-- tighten the firewall 
-- the PREROUTING chain contains redirects for ports, these redirects falsify dshield iptable reports because the redirect target port is reported in the logs instead of the originally probed port
 - many other stuff :)
+
+## Changelog
+
+- see comments in install.sh
+- see GIT commit comments
+
 
 ## DEV Instance - web.py and sitecopy.py
 
