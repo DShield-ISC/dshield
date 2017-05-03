@@ -115,7 +115,7 @@ sudo bin/install.sh
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.conf`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
 
-Testing of update proceduer is normally done (between two releases) as follows:
+Testing of update procedure is normally done (between two releases) as follows:
 - update on Pi 3 from the last version to current
 - install on a current clean image of raspbian lite on a Pi 3
 
