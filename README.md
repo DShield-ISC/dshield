@@ -45,15 +45,15 @@ passwd
 ```
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - run raspi-config to set up some basic things
-```
-sudo raspi-config
-```
+   ```
+   sudo raspi-config
+   ```
    - enable SSH permanently: interfacing options -> enable ssh
    - make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
    - finish, don't reboot yet
 - make sure Pi's system time is somewhat reasonable, e.g.
 ```
-sudo --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
+sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 ```
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
 ```
