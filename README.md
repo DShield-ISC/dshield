@@ -4,33 +4,56 @@
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
-Current Design Goals:
+Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi)
-- easy installation / configuration (and not that much configurable)
+- current raspbian OS
+- easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
+- support for IPv4 only
+- one interface only (e.g. eth0)
 
 The current version is only tested on Raspbian, not on other distros, sorry.
-If there is the need for other distros, someone has to check and maintain the installation script.
+If there is the need for other distros, "someone" has to check and maintain the installation script.
 
 ## Installation
 
-### Prerequisites
-
-For the magic of the installation script to happen the following prerequisites apply:
-- 
-
-- 
-
-In order to use the installation script on the Raspberry Pi, you will need to first prepare it:
+In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
 - get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
-- CHANGE THE DEFAULT SSH PASSWORD (better: use keys to authenticate)
+- put it onto an SD card (e.g. using procedures [described here (note the additional links at the bottom] (https://www.raspberrypi.org/documentation/installation/installing-images/README.md))
+- boot the pi from the SD card and log into the console
+  - hint: when you don't want to connect a display you may just enter the following (note: US keyboard layout)
+```
+pi
+raspberry
+sudo /etc/init.d/ssh start
+```
+  - example for German keyboard:
+```
+pi
+raspberrz
+sudo -etc-init.d-ssh start
+```
+- connect to the device using an ssh client (port 22), user `pi`, password `raspberry`
+- __CHANGE THE DEFAULT PASSWORD__ for the `pi` user (better: use keys to authenticate)
+```
+passwd
+   raspberry
+   new pw
+   new pw
+```
 - make sure the Pi can reach out to the Internet using http(s)
 - make sure the root file system of the Pi is properly expanded
-- expose the Pi to inbound traffic. For example, in many firewalls
-  you will be able to configure it as a "DMZ Hosts"
-- update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. To update:
+- expose the Pi to inbound traffic. For example, in many firewalls and home routers
+  you will be able to configure it as a "DMZ Hosts", "exposed devices", ...
+- update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
+
+### Details
+
+
+
+To update:
 
 ```
 sudo apt-get update
@@ -110,6 +133,10 @@ Configuration parameters like your API Key will be retained. To edit the configu
 Testing is normally done as follows:
 - update on Pi 3 from the last version to current
 - install on a current clean image of raspbian lite
+
+## Hints
+
+### Navigating in Forms
 
 ## Todos
 
