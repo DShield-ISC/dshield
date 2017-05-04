@@ -22,6 +22,9 @@ readonly version=0.42
 # - V0.42
 #   - quick fix for Johannes' experiments with new Python code
 #     (create dshield.ini with default values)
+#   - let user choose between old, working and experimental stuff
+#     (procedure: copy all stuff but only activate the stuff the user chose
+#      so the user may do experimenting even if he chose mature)
 #
 # - V0.41
 #   - corrected firewall logging to dshield: in prior versions
@@ -133,6 +136,27 @@ dlog () {
    if [ ${DEBUG} -eq 1 ] ; then
       do_log "DEBUG OUTPUT: ${*}"
    fi
+}
+
+# copy file(s) and chmod
+# $1: file (opt. incl. dir)
+# $2: dest dir
+# optional: $3: chmod bitmask
+do_copy () { 
+   dlog "copying ${1} to ${2} and chmod to ${3}"
+   run "cp ${1} ${2}"
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error copying ${1} to ${2}. Aborting."
+      exit 9
+   fi
+   if [ "${3}" != "" ] ; then
+      run "chmod ${3} ${2}/`basename ${1}`"
+      if [ ${?} -ne 0 ] ; then
+         outlog "Error executing chmod ${3} ${2}/${1}. Aborting."
+         exit 9
+      fi
+   fi
+
 }
 
 ###########################################################
@@ -275,20 +299,66 @@ fi
 ## last chance to escape before hurting the system ...
 ###########################################################
 
-
+dlog "Offering user last chance to quit with a nearly untouched system."
 dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
+      dlog "User clicked CANCEL"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
       outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
       outlog "See ${LOGFILE} for details."
       exit 5
       ;;
 esac
 
+###########################################################
+## let the user decide:
+## working stuff vs. experimental
+###########################################################
+
+dlog "Offering user choice of maturity."
+
+exec 3>&1
+VALUES=$(dialog --title 'Installaion Flavour' --radiolist "We offer two different installation flavours: mature (this is known to be working in general) and experimental (new stuff currently in development, don't expect things to work at all). Choose your taste." 0 0 2 \
+   mature "" on \
+   experimental "" off \
+   2>&1 1>&3)
+
+response=$?
+exec 3>&-
+
+case $response in
+   ${DIALOG_CANCEL})
+      dlog "User clicked CANCEL."
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+esac
+
+if [ ${VALUES} == "mature" ] ; then
+   MATURE=1
+else
+   MATURE=0
+fi
+
+dlog "MATURE: ${MATURE}"
+
 
 ###########################################################
-## Stoppgin Cowrie if already installed
+## Stopping Cowrie if already installed
 ###########################################################
 
 if [ -x /etc/init.d/cowrie ] ; then
@@ -1091,12 +1161,11 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 #
 
 run "mkdir -p ${DSHIELDDIR}"
-dlog "copying pifwparser.py to ${DSHIELDDIR}"
-run "cp $progdir/pifwparser.py ${DSHIELDDIR}"
-run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
-dlog "copying DShield.py to ${DSHIELDDIR}"
-run "cp $progdir/DShield.py ${DSHIELDDIR}"
-run "chmod 700 ${DSHIELDDIR}/DShield.py"
+# legacy version
+do_copy $progdir/dshield.pl ${DSHIELDDIR} 700
+# Johannes' experiments ;-)
+do_copy $progdir/pifwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/DShield.py ${DSHIELDDIR} 700
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1105,9 +1174,17 @@ run "chmod 700 ${DSHIELDDIR}/DShield.py"
 dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
-cat > /etc/cron.d/dshield <<EOF
+
+# legacy stuff
+if [ ${MATURE} -eq 1 ] ; then
+   cat > /etc/cron.d/dshield <<EOF
+$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
+EOF
+else # Johannes' experiments ;-)
+   cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
 EOF
+fi
 
 drun 'cat /etc/cron.d/dshield'
 
