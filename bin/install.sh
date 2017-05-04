@@ -15,9 +15,13 @@
 ###########################################################
 
 
-readonly version=0.41
+readonly version=0.42
 #
 # Major Changes (for details see Github):
+#
+# - V0.42
+#   - quick fix for Johannes' experiments with new Python code
+#     (create dshield.ini with default values)
 #
 # - V0.41
 #   - corrected firewall logging to dshield: in prior versions
@@ -31,13 +35,17 @@ readonly version=0.41
 # - V0.4
 #   - major additions and rewrites (e.g. added logging)
 #
+#
+# TODOs:
+# - ask for additional / new values in dshield.ini
 
 # target directory for server components
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 # COWRIEDIR="${TARGETDIR}/cowrie"
 LOGDIR="${TARGETDIR}/log"
-LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
+INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
+LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
 # which ports will be handled e.g. by cowrie (separated by blanks)
 # used e.g. for setting up block rules for trusted nets
@@ -1082,10 +1090,13 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-dlog "copying pifwparser.py to ${DSHIELDDIR}"
 run "mkdir -p ${DSHIELDDIR}"
+dlog "copying pifwparser.py to ${DSHIELDDIR}"
 run "cp $progdir/pifwparser.py ${DSHIELDDIR}"
 run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
+dlog "copying DShield.py to ${DSHIELDDIR}"
+run "cp $progdir/DShield.py ${DSHIELDDIR}"
+run "chmod 700 ${DSHIELDDIR}/DShield.py"
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1108,9 +1119,16 @@ dlog "creating new /etc/dshield.conf"
 if [ -f /etc/dshield.conf ]; then
    dlog "old dshield.conf follows"
    drun 'cat /etc/dshield.conf'
-   run 'rm /etc/dshield.conf'
+   run 'mv /etc/dshield.conf /etc/dshield.conf.${INSTDATE}'
+fi
+dlog "creating new /etc/dshield.ini"
+if [ -f /etc/dshield.ini ]; then
+   dlog "old dshield.ini follows"
+   drun 'cat /etc/dshield.ini'
+   run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
 fi
 
+# legacy config file
 run 'touch /etc/dshield.conf'
 run 'chmod 600 /etc/dshield.conf'
 
@@ -1131,6 +1149,24 @@ run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.conf'
 
 dlog "new /etc/dshield.conf follows"
 drun 'cat /etc/dshield.conf'
+
+# new shiny config file
+run 'touch /etc/dshield.ini'
+run 'chmod 600 /etc/dshield.ini'
+
+run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "userid=$uid" >> /etc/dshield.ini'
+run 'echo "apikey=$apikey" >> /etc/dshield.ini'
+run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
+run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
+run 'echo "honeypotip=" >> /etc/dshield.ini'
+run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
+run 'echo "anonymizeip=" >> /etc/dshield.ini'
+run 'echo "anonymizemask=" >> /etc/dshield.ini'
+
+dlog "new /etc/dshield.ini follows"
+drun 'cat /etc/dshield.ini'
+
 
 #
 # creating srv directories
