@@ -1020,7 +1020,7 @@ fi
 
 cat >> /etc/network/iptables <<EOF
 # log all traffic with original ports
--A PREROUTING -i $interface -j LOG --log-prefix " DSHIELDINPUT "
+-A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
 # redirect honeypot ports
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 COMMIT

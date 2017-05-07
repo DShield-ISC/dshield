@@ -14,3 +14,4 @@ bin/sitecopy.pyc
 bin/db_builder.pyc
 .lastufw
 *.pyc
+samplelogs/
