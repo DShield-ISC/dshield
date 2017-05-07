@@ -24,11 +24,6 @@ if msg.is_multipart():
                                   'sha256hash': shahash, 
                                   'filesize': filesize,
                                   'filetype': filetype})
-        if filetype == 'text/html'
-
-
-
-
 d = DshieldSubmit('')
 data['type'] = 'email'
 d.post(data)
