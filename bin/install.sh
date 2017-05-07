@@ -1082,10 +1082,10 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-dlog "copying dshield.pl to ${DSHIELDDIR}"
+dlog "copying pifwparser.py to ${DSHIELDDIR}"
 run "mkdir -p ${DSHIELDDIR}"
-run "cp $progdir/dshield.pl ${DSHIELDDIR}"
-run "chmod 700 ${DSHIELDDIR}/dshield.pl"
+run "cp $progdir/pifwparser.py ${DSHIELDDIR}"
+run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1095,7 +1095,7 @@ dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
+$offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
 EOF
 
 drun 'cat /etc/cron.d/dshield'
