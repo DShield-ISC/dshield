@@ -28,6 +28,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
+
 class DshieldSubmit:
     id = 0
     key = ''
@@ -103,7 +104,7 @@ class DshieldSubmit:
         return self.long2ip4(ip)
 
     def anontranslateip4(self,ip):
-        self.translateip4(ip)
+        ip=self.translateip4(ip)
         return self.anonymizeip4(ip)
 
     # convert an IPv4 address from a string to its long integer representation
@@ -160,6 +161,7 @@ class DshieldSubmit:
                 filename = '/etc/dshield/dshield.ini'
             else:
                 filename = home+'/.dshield.ini'
+        print(filename)
 
         if os.path.isfile(filename):
             config = ConfigParser.ConfigParser()
@@ -198,3 +200,11 @@ class DshieldSubmit:
             print "config file %s not found" % filename
             sys.exit()
         return 1
+
+    def getopts(self,argv):
+        opts = {}  # Empty dictionary to store key-value pairs.
+        while argv:  # While there are arguments left to parse...
+            if argv[0][0] == '-':  # Found a "-name value" pair.
+                opts[argv[0]] = argv[1]  # Add key and value to the dictionary.
+            argv = argv[1:]  # Reduce the argument list by copying it starting from index 1.
+        return opts
