@@ -13,4 +13,6 @@ server.key
 bin/sitecopy.pyc
 bin/db_builder.pyc
 .lastufw
-.pyc
+*.pyc
+samplelogs/
+etc/dshield.conf

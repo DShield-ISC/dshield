@@ -15,7 +15,22 @@
 ###########################################################
 
 
-readonly version=0.4
+readonly version=0.41
+#
+# Major Changes (for details see Github):
+#
+# - V0.41
+#   - corrected firewall logging to dshield: in prior versions
+#     the redirected ports would be logged and reported, not
+#     the ports from the original requests (so ssh connection
+#     attempts were logged as attempts to connect to 2222)
+#   - changed firewall rules: access only allowed to honeypot ports
+#   - some configuration stuff
+#   - some bugfixes
+#
+# - V0.4
+#   - major additions and rewrites (e.g. added logging)
+#
 
 # target directory for server components
 TARGETDIR="/srv"
@@ -27,7 +42,11 @@ LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
 # which ports will be handled e.g. by cowrie (separated by blanks)
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
+# note: doesn't make sense to ask the user because cowrie is configured statically
 HONEYPORTS="2222"
+
+# which port the sshd should listen to
+SSHDPORT="12222"
 
 # Debug Flag
 # 1 = debug logging, debug commands
@@ -119,8 +138,6 @@ dlog () {
 
 echo ${LINE}
 
-dlog "parent process: $(ps -o comm= $PPID)"
-
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
    echo "You have to run this script as root. eg."
@@ -132,6 +149,8 @@ else
 fi
 
 dlog "This is ${0} V${version}"
+
+dlog "parent process: $(ps -o comm= $PPID)"
 
 if [ ${DEBUG} -eq 1 ] ; then
    do_log "DEBUG flag is set."
@@ -249,7 +268,7 @@ fi
 ###########################################################
 
 
-dialog --title 'WARNING' --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is DEDICATED to this task. There is no simple uninstall. If something breakes you may need to reinstall from scratch. Do you want to proceed?" 10 50
+dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
@@ -284,7 +303,15 @@ if [ ${?} -gt 0 ] ; then
    dlog "no pip found, Installing pip"
 
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error downloading get-pip, aborting."
+      exit 9
+   fi
    run 'python $TMPDIR/get-pip.py'
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error running get-pip, aborting."
+      exit 9
+   fi
 
 else
    # hmmmm ...
@@ -323,7 +350,7 @@ else
 
 fi
 
-drun 'pip list'
+drun 'pip list --format=legacy'
 
 
 ###########################################################
@@ -336,6 +363,27 @@ drun 'pip list'
 
 dlog "Changing random number generator settings."
 run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
+
+
+###########################################################
+## Disable IPv6
+###########################################################
+
+dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
+run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
+cat > /etc/modprobe.d/ipv6.conf <<EOF
+# Don't load ipv6 by default
+alias net-pf-10 off
+# uncommented
+alias ipv6 off
+# added
+options ipv6 disable_ipv6=1
+# this is needed for not loading ipv6 driver
+blacklist ipv6
+EOF
+run "chmod 644 /etc/modprobe.d/ipv6.conf"
+drun "cat /etc/modprobe.d/ipv6.conf.bak"
+drun "cat /etc/modprobe.d/ipv6.conf"
 
 
 ###########################################################
@@ -418,11 +466,62 @@ EOF
    drun 'cat  ~/.my.cnf'
 fi
 
+if [ "${mysqlpassword}" == "" ] ; then
+   outlog "MySQL root password is empty, this won't work"
+   outlog "(perhaps no dshield.conf and not allowed to install MySQL on my own)"
+   dlog "nomysql: ${nomysql}"
+   drun "ls -la /etc/dshield.conf"
+   if [ -f  /root/.my.cnf ] ; then
+      outlog "Trying to get password from /root/.my.cnf"
+      if [ `grep "user=root"  /root/.my.cnf | wc -l ` -eq 1 ] ; then
+         if [ `grep "password="  /root/.my.cnf | wc -l  ` -eq 1 ] ; then
+            drun 'grep "password="  /root/.my.cnf | cut -d "=" -f2' 
+            mysqlpassword=`grep "password="  /root/.my.cnf | cut -d "=" -f2`
+         else
+            # more than one password found
+            dlog "No or multiple lines with 'password=' found in /root/.my.cnf"
+         fi 
+      else
+         dlog "No or multiple lines with 'user=root' found in /root/.my.cnf"
+      fi
+   else 
+      dlog "No /root/.my.cnf found."
+   fi
+fi
+
+if [ "${mysqlpassword}" == "" ] ; then
+   dlog "OK, still no MySQL password for root, aksing user"
+   exec 3>&1
+   mysqlpassword=$(dialog --title 'No MySQL root password found' --form "I wasn't able to find any MySQL root password. If you know it: please provide it here. If not: cancel, restart installation and choose to re-install MySQL." 12 50 0 \
+      "MySQL root password:" 1 2 "$mysqlpassword" 1 24 20 60 2>&1 1>&3)
+   response=${?}
+   exec 3>&-
+   case ${response} in
+      ${DIALOG_OK})
+         ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled MySQL root pw dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in MySQL root pw dialogue."
+         exit 5
+         ;;
+   esac
+fi
+
+if [ "${mysqlpassword}" == "" ] ; then
+   outlog "Still no MySQL root password. Giving up."
+   exit 5
+fi
+
 outlog "Checking, if the MySQL root account can connect."
 run 'mysql -u root -p$mysqlpassword  -e ";"'
 if [ ${?} -ne 0 ] ; then
    outlog "The root user can't connect to MySQL server using password $mysqlpassword ."
    outlog "Perhaps obsolete password in /etc/dshield.conf?"
+   outlog "Perhaps no password at all, even not in /root/.my.cnf?"
+   outlog "Please see logfile for details."
    exit 9
 else
    dlog "OK, MySQL root user can connect using password $mysqlpassword ."
@@ -526,13 +625,55 @@ dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall 
 #
 # Default Interface
 #
+# changes starting V0.41:
+# - logging for dshield done in PREROUTING
+# - only access to honeypot ports allowed for untrusted nets
+#
+
+# 
+# requirements:
+#
+# 1. every access from untrusted networks is logged for dshield with the correct port
+#    (up to V0.4 of this script there was a bug so that the logging for dshield took place
+#     for the redirected honeypot ports and not the original ones)
+# 2. for untrusted nets only honeypot ports (redirected ports) are accessible
+# 3. access to "official" services like ssh is only allowed for trusted IPs
+# 4. for trusted IPs the firewall logging can be disabled 
+#    (to eliminate reporting irrelevant / false / internal packets)
+# 5. for listed IPs the honeypot can be disabled 
+#    (to eliminate reporting of legitimate credentials)
+# 6. honeyport services don't run on official ports 
+#    (redirect official ports to honeypot ports)
+# 7. redirected honeypot ports can be accessed from untrusted nets
+# 8. secure default 
+#
+# Firewall Layout:
+#
+# PREROUTING:
+# - no logging for trusted nets -> skip rest of chain (4.)
+#   (this means for trusted nets the redirects for
+#    honeypot ports don't happen, but this shouldn't matter)
+# - logging of all access attempts (1.)
+# - redirect for honeypot ports (6.)
+#
+# INPUT:
+# - allow localhost
+# - allow related, established
+# - disable access to honeypot ports for internal nets (5.)
+# - allow access to daemon / admin ports only for internal nets (2., 3.)
+# - allow access to honeypot ports (2., 7.)
+# - default policy: DROP (8.)
+
+##---------------------------------------------------------
+## default interface 
+##---------------------------------------------------------
 
 dlog "firewall config: figuring out default interface"
 
 # if we don't have one configured, try to figure it out
 dlog "interface: ${interface}"
 drun 'ip link show'
-if [ "$interface" = "" ] ; then
+if [ "$interface" == "" ] ; then
    dlog "Trying to figure out interface"
    # we don't expect a honeypot connected by WLAN ... but the user can change this of course
    drun "ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan"
@@ -552,30 +693,43 @@ while [ $localnetok -eq  0 ] ; do
    exec 3>&1
    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
       "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+   response=${?}
    exec 3>&-
-   dlog "User input for interface: ${interface}"
-   dlog "check if input is valid"
-   for b in $validifs; do
-      if [ "$b" = "$interface" ] ; then
-         localnetok=1
-      fi
-   done
-   if [ $localnetok -eq 0 ] ; then
-      dlog "User provided interface ${interface} isn't valid"
-      dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
-   fi
+      case ${response} in
+         ${DIALOG_OK})
+            dlog "User input for interface: ${interface}"
+            dlog "check if input is valid"
+            for b in $validifs; do
+               if [ "$b" = "$interface" ] ; then
+                  localnetok=1
+               fi
+            done
+            if [ $localnetok -eq 0 ] ; then
+               dlog "User provided interface ${interface} isn't valid"
+               dialog --title 'Default Interface Error' --msgbox "You did not specify a valid interface. Valid interfaces are $validifs" 10 40
+            fi
+         ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled default interface dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in default interface dialogue."
+         exit 5
+         ;;
+   esac
 done # while interface not OK
 
 dlog "Interface: $interface"
 
-#
-# figuring out local network.
-#
+##---------------------------------------------------------
+## figuring out local network
+##---------------------------------------------------------
 
 dlog "firewall config: figuring out local network"
 
 drun "ip addr show  eth0"
-drun "ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'"
+drun "ip addr show  eth0 | grep 'inet ' |  awk '{print \$2}' | cut -f1 -d'/'"
 ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 dlog "ipaddr: ${ipaddr}"
 
@@ -584,36 +738,100 @@ drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
 dlog "localnet: ${localnet}"
 
+# additionally we will use any connection to current sshd 
+# (ignroing config and using real connections)
+# as trusted / local IP (just to make sure we include routed networks)
+drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
+CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print $2}'`
+drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'"
+CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'`
 
 localnetok=0
+ADMINPORTS=$adminports
+if [ "${ADMINPORTS}" == "" ] ; then
+   # default: sshd (after reboot)
+   ADMINPORTS="${SSHDPORT}"
+fi
+# we present the localnet and the connected IPs to the user
+# so we are sure connection to the device will work after
+# reboot at least for the current remote device
+# (localips is from dshield.conf)
+CONIPS="$localips ${CONIPS}"
+dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
+CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
+dlog "CONIPS with removed duplicates: ${CONIPS}"
 
-dlog "Getting local network from user ..."
+dlog "Getting local network, further IPs and admin ports from user ..."
 while [ $localnetok -eq  0 ] ; do
+
    exec 3>&1
-   localnet=$(dialog --title 'Local Network' --form 'Admin access will be restricted to this network, and logs originating from this network will not be reported.' 10 50 0 \
-      "Local Network:" 1 2 "$localnet" 1 25 20 20 2>&1 1>&3)
-
+   RETVALUES=$(dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
+      "Local Network:" 1 2 "$localnet" 1 18 37 20 \
+      "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
+      "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
+      2>&1 1>&3)
+   response=${?}
    exec 3>&-
-   dlog "user input localnet: ${localnet}"
-   if echo "$localnet" | egrep -q '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$'; then
-      localnetok=1
-   fi
 
-   if [ $localnetok -eq 0 ] ; then
-      dlog "user provided localnet ${localnet} is not ok"
-      dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong. It has to be in Network/CIDR format. For example 192.168.0.0/16' 40 10
-   fi
+   case ${response} in
+      ${DIALOG_OK})
+         dlog "User input for local network & IPs: ${RETVALUES}"
+
+         localnet=`echo "${RETVALUES}" | cut -d "
+" -f 1`
+         CONIPS=`echo "${RETVALUES}" | cut -d "
+" -f 2`
+         ADMINPORTS=`echo "${RETVALUES}" | cut -d "
+" -f 3`
+
+         dlog "user input localnet: ${localnet}"
+         dlog "user input further IPs: ${CONIPS}"
+         dlog "user input further admin ports: ${ADMINPORTS}"
+
+         # OK (exit loop) if local network OK _AND_ admin ports not empty
+         if [ `echo "$localnet" | egrep '^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$' | wc -l` -eq 1  -a -n "${ADMINPORTS// }" ] ; then
+            localnetok=1
+         fi
+
+         if [ $localnetok -eq 0 ] ; then
+            dlog "user provided localnet ${localnet} is not ok or adminports empty (${ADMINPORTS})"
+            dialog --title 'Local Network Error' --msgbox 'The format of the local network is wrong (it has to be in Network/CIDR format, for example 192.168.0.0/16) or the admin portlist is empty (should contain at least the SSHD port (${ADMINPORTS})).' 10 40
+         fi
+      ;;
+      ${DIALOG_CANCEL})
+         dlog "User canceled local network access dialogue."
+         exit 5
+         ;;
+      ${DIALOG_ESC})
+         dlog "User pressed ESC in local network access dialogue."
+         exit 5
+         ;;
+   esac
 done
 
-#
-# further IPs: no iptables logging
-#
+dialog --title 'Admin Access' --cr-wrap --msgbox "Admin access to ports:
+${ADMINPORTS}
+will be allowed for IPs / nets:
+${localnet} and
+${CONIPS}" 0 0
+
+# save values for dshield.conf
+# (localnet will be saved directly)
+localips="'${CONIPS}'"
+adminports="'${ADMINPORTS}'"
+
+
+##---------------------------------------------------------
+## IPs for which logging should be disabled
+##---------------------------------------------------------
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
 if [ "${nofwlogging}" == "" ] ; then
-   # default: local net
-   nofwlogging="${localnet}"
+   # default: local net & connected IPs (as the user confirmed)
+   nofwlogging="${localnet} ${CONIPS}"
+   # remove duplicates
+   nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 fi
 
 dlog "nofwlogging: ${nofwlogging}"
@@ -621,13 +839,25 @@ dlog "nofwlogging: ${nofwlogging}"
 dlog "getting IPs from user ..."
 
 exec 3>&1
-NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --cr-wrap --form "WARNING - USE WITH CARE!
-IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
-Attention: entries will be added to use default policy for INPUT chain (ACCEPT) and the 'real' sshd will be exposed.
-If unsure don't change anything here or blank the input! Trusted IPs only. You have been warned.
+NOFWLOGGING=$(dialog --title 'IPs to ignore for FW Log'  --form "IPs and nets the firewall should do no logging for (in notation iptables likes, separated by spaces).
+Note: Traffic from these devices will also not be redirected to the honeypot ports.
 " \
-14 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 17 47 100 2>&1 1>&3)
+12 70 0 "Ignore FW Log:" 1 1 "${nofwlogging}" 1 17 47 100 2>&1 1>&3)
+response=${?}
 exec 3>&-
+
+case ${response} in
+   ${DIALOG_OK})
+      ;;
+   ${DIALOG_CANCEL})
+      dlog "User canceled IP to ignore in FW log dialogue."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC in IP to ignore in FW log dialogue."
+      exit 5
+      ;;
+esac
 
 # for saving in dshield.conf
 nofwlogging="'${NOFWLOGGING}'"
@@ -639,18 +869,18 @@ if [ "${NOFWLOGGING}" == "" ] ; then
    dialog --title 'No Firewall Log Exceptions' --msgbox 'No firewall logging exceptions will be installed.' 10 40
 else
    dialog --title 'Firewall Logging Exceptions' --cr-wrap --msgbox "The firewall logging exceptions will be installed for IPs
-${NOFWLOGGING}." 0 0
+${NOFWLOGGING}" 0 0
 fi
 
-#
-# further IPs and ports: disable honeypot
-#
+##---------------------------------------------------------
+## disable honepot for nets / IPs
+##---------------------------------------------------------
 
 dlog "firewall config: IPs and ports to disable honeypot for"
 
 if [ "${nohoneyips}" == "" ] ; then
-   # default: local net
-   nohoneyips="${localnet}"
+   # default: admin IPs and nets
+   nohoneyips="${NOFWLOGGING}"
 fi
 dlog "nohoneyips: ${nohoneyips}"
 
@@ -663,15 +893,25 @@ dlog "nohoneyports: ${nohoneyports}"
 dlog "getting IPs and ports from user"
 
 exec 3>&1
-NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --cr-wrap --form "WARNING - USE WITH CARE!
-IPs and nets to disable honeypot for to prevent reporting internal legitimate failed access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING) separated by spaces).
-Attention: entries will be added to reject access to honeypot ports.
-If unsure don't change anything here!
-" \
-16 70 0 \
+NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
+12 70 0 \
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
-"Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
+"Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
+response=${?}
 exec 3>&-
+
+case ${response} in
+   ${DIALOG_OK})
+      ;;
+   ${DIALOG_CANCEL})
+      dlog "User canceled honeypot disable dialogue."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC in honeypot disable dialogue."
+      exit 5
+      ;;
+esac
 
 dlog "user provided NOHONEY: ${NOHONEY}"
 
@@ -680,9 +920,6 @@ NOHONEYIPS=`echo "${NOHONEY}"  | cut -d "
 NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
 " -f 2`
 
-# echo "###${NOHONEYIPS}###"
-# echo "###${NOHONEYPORTS}###"
-
 dlog "NOHONEYIPS: ${NOHONEYIPS}"
 dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
 
@@ -690,7 +927,6 @@ if [ "${NOHONEYIPS}" == "" -o "${NOHONEYPORTS}" == "" ] ; then
    dlog "at least one of the lines were empty, so can't do anything with the rest and will ignore it"
    NOHONEYIPS=""
    NOHONEYPORTS=""
-   # echo "No honeyport exceptions will be done."
    dialog --title 'No Honeypot Exceptions' --msgbox 'No honeypot exceptions will be installed.' 10 40
 else
    dialog --title 'Honeypot Exceptions' --cr-wrap --msgbox "The honeypot exceptions will be installed for IPs
@@ -706,9 +942,10 @@ dlog "final values: "
 dlog "NOHONEYIPS: ${NOHONEYIPS} / NOHONEYPORTS: ${NOHONEYPORTS}"
 dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 
-#
-# create default firewall rule set
-#
+
+##---------------------------------------------------------
+## create firewall rule set
+##---------------------------------------------------------
 
 outlog "Doing further configuration"
 
@@ -721,7 +958,7 @@ cat > /etc/network/iptables <<EOF
 #
 
 *filter
-:INPUT ACCEPT [0:0]
+:INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
 -A INPUT -i lo -j ACCEPT
@@ -732,7 +969,6 @@ EOF
 # as soon as possible
 if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
    echo "# START: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
-   # echo "###${NOFWLOGGING}###"
    for NOHONEYIP in ${NOHONEYIPS} ; do
       for NOHONEYPORT in ${NOHONEYPORTS} ; do
          echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >> /etc/network/iptables
@@ -741,37 +977,52 @@ if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
    echo "# END: IPs / Ports honeypot should be disabled for"  >> /etc/network/iptables
 fi
 
-
-cat >> /etc/network/iptables <<EOF
--A INPUT -i $interface -s $localnet -j ACCEPT
--A INPUT -i $interface -p tcp --dport 12222 -s 10.0.0.0/8 -j ACCEPT
--A INPUT -i $interface -p tcp --dport 12222 -s 192.168.0.0/8 -j ACCEPT
-EOF
-
-# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
-if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
-   echo "# START: IPs firewall logging should be disabled for"  >> /etc/network/iptables
-   # echo "###${NOFWLOGGING}###"
-   for NOFWLOG in ${NOFWLOGGING} ; do
-      echo "-A INPUT -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
+# allow access to admin ports for local nets / IPs
+echo "# START: allow access to admin ports for local IPs"  >> /etc/network/iptables
+for PORT in ${ADMINPORTS} ; do
+   # first: local network
+   echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >> /etc/network/iptables
+   # second: other IPs
+   for IP in ${CONIPS} ; do
+      echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >> /etc/network/iptables
    done
-   echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+done
+echo "# END: allow access to admin ports for local IPs"  >> /etc/network/iptables
+
+# allow access to noneypot ports
+if [ "${HONEYPORTS}" != "" ] ; then
+   echo "# START: Ports honeypot should be enabled for"  >> /etc/network/iptables
+   for HONEYPORT in ${HONEYPORTS} ; do
+      echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >> /etc/network/iptables
+   done
+   echo "# END: Ports honeypot should be enabled for"  >> /etc/network/iptables
 fi
 
 
+
 cat >> /etc/network/iptables <<EOF
--A INPUT -i $interface -j LOG --log-prefix " INPUT "
--A INPUT -i $interface -p tcp --dport 12222 -j DROP
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
 :INPUT ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
--A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
--A PREROUTING -p tcp -m tcp --dport 25 -j REDIRECT --to-ports 2525
--A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+EOF
 
+# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
+if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
+   echo "# START: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+   for NOFWLOG in ${NOFWLOGGING} ; do
+      echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >> /etc/network/iptables
+   done
+   echo "# END: IPs firewall logging should be disabled for"  >> /etc/network/iptables
+fi
+
+cat >> /etc/network/iptables <<EOF
+# log all traffic with original ports
+-A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
+# redirect honeypot ports
+-A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 COMMIT
 EOF
 
@@ -793,22 +1044,22 @@ run "chmod 700 /etc/network/if-pre-up.d/dshield"
 
 dlog "changing port for sshd"
 
-run "sed -i.bak 's/^Port 22$/Port 12222/' /etc/ssh/sshd_config"
+run "sed -i.bak 's/^Port 22$/Port "${SSHDPORT}"/' /etc/ssh/sshd_config"
 
 dlog "checking if modification was successful"
-if [ `grep "^Port 12222\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
+if [ `grep "^Port ${SSHDPORT}\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
    dialog --title 'sshd port' --ok-label 'Yep, understood.' --cr-wrap --msgbox 'Congrats, you had already changed your sshd port to something other than 22.
 
 Please clean up and either
-  - change the port manually to 12222
+  - change the port manually to ${SSHDPORT}
      in  /etc/ssh/sshd_config    OR
   - clean up the firewall rules and
      other stuff reflecting YOUR PORT' 13 50
 
-   dlog "check unsuccessful, port 12222 not found in sshd_config"
-   drun 'cat /etc/ssh/sshd_config'
+   dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
+   drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
 else
-   dlog "check successful, port change to 12222 in sshd_config"
+   dlog "check successful, port change to ${SSHDPORT} in sshd_config"
 fi
 
 ###########################################################
@@ -831,10 +1082,10 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-dlog "copying dshield.pl to ${DSHIELDDIR}"
+dlog "copying pifwparser.py to ${DSHIELDDIR}"
 run "mkdir -p ${DSHIELDDIR}"
-run "cp $progdir/dshield.pl ${DSHIELDDIR}"
-run "chmod 700 ${DSHIELDDIR}/dshield.pl"
+run "cp $progdir/pifwparser.py ${DSHIELDDIR}"
+run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -844,7 +1095,7 @@ dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
+$offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
 EOF
 
 drun 'cat /etc/cron.d/dshield'
@@ -868,6 +1119,8 @@ run 'echo "apikey=$apikey" >> /etc/dshield.conf'
 run 'echo "email=$email" >> /etc/dshield.conf'
 run 'echo "interface=$interface" >> /etc/dshield.conf'
 run 'echo "localnet=$localnet" >> /etc/dshield.conf'
+run 'echo "localips=$localips" >> /etc/dshield.conf'
+run 'echo "adminports=$adminports" >> /etc/dshield.conf'
 run 'echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf'
 run 'echo "mysqluser=root" >> /etc/dshield.conf'
 run 'echo "version=$version" >> /etc/dshield.conf'
@@ -925,7 +1178,7 @@ if ! grep '^cowrie:' -q /etc/passwd; then
    run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
    outlog "Added user 'cowrie'"
 else
-   outlog "User 'cowrie' already exists in OS. Making no changes."
+   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi    
 
 # check if cowrie db schema exists
@@ -1050,6 +1303,7 @@ dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements
 dlog "        and requirements-output.txt"
 dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
 
+# simpler installation routines didn't work some point in time, so using this funny stuff
 for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 ; do
 
    # echo "PKGVER: ${PKGVER}"
@@ -1182,7 +1436,7 @@ Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
 permitted by applicable law.
 
 ***
-***    DShield Honeypot - Web Admin on port 8080
+***    DShield Honeypot
 ***
 
 EOF
@@ -1252,11 +1506,15 @@ outlog
 outlog "Please reboot your Pi now."
 outlog
 outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
-outlog "Please include a sanitized version of /etc/dshield.conf in bug reports."
+outlog "Please include a sanitized version of /etc/dshield.conf in bug reports"
+outlog "as well as a very carefully sanitized version of the installation log "
+outlog "  (${LOGFILE})."
 outlog "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 outlog
-outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port 12222"
-outlog "           connect using ssh -p 12222 $SUDO_USER@$ipaddr"
+outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port ${SSHDPORT}"
+outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
+outlog
+outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
 
 
