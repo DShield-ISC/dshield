@@ -15,9 +15,12 @@
 ###########################################################
 
 
-readonly version=0.42
+readonly version=0.43
 #
 # Major Changes (for details see Github):
+#
+# - V0.43
+#   - revised cowrie installation to reflect current instructions
 #
 # - V0.42
 #   - quick fix for Johannes' experiments with new Python code
@@ -45,7 +48,7 @@ readonly version=0.42
 # target directory for server components
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
-# COWRIEDIR="${TARGETDIR}/cowrie"
+COWRIEDIR="${TARGETDIR}/cowrie"
 LOGDIR="${TARGETDIR}/log"
 INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
@@ -281,7 +284,8 @@ if [ "$dist" == "apt" ]; then
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev'
+   # 2017-05-17: added python-virtualenv authbind for cowrie
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
    # pip install python-dateutil > /dev/null
 
 fi
@@ -1263,8 +1267,26 @@ run 'chmod 1777 /var/log/mini-httpd'
 # installing cowrie
 # TODO: don't use a static path but a configurable one
 #
+# 2017-05-17: revised section to reflect current installation instructions
+#             https://github.com/micheloosterhof/cowrie/blob/master/INSTALL.md
+#
 
 dlog "installing cowrie"
+
+# step 1 (Install dependencies): done
+
+# step 2 (Create a user account)
+dlog "checking if cowrie OS user already exists"
+if ! grep '^cowrie:' -q /etc/passwd; then
+   dlog "... no, creating"
+   run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+   outlog "Added user 'cowrie'"
+else
+   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
+fi
+
+
+# step 3 (Checkout the code)
 dlog "downloading and unzipping cowrie"
 run 'wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip'
 run 'unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip '
@@ -1274,25 +1296,29 @@ if [ ${?} -ne 0 ] ; then
    exit 9
 fi
 
-if [ -d /srv/cowrie ]; then
-   dlog "old cowrie installatin found, removing"
+if [ -d ${COWRIEDIR} ]; then
+   dlog "old cowrie installation found, moving"
    # TODO: warn user, backup dl etc.
-   run 'rm -rf /srv/cowrie'
+   run 'mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}'
 fi
-dlog "moving extracted cowrie to /srv/cowrie"
-run "mv $TMPDIR/cowrie-master /srv/cowrie"
+dlog "moving extracted cowrie to ${COWRIEDIR}"
+run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
 
+# step 4 (Setup Virtual Environment)
+OLDDIR=`pwd`
+cd ${COWRIEDIR}
+dlog "setting up virtual environment"
+run 'virtualenv cowrie-env'
+dlog "activating virtual environment"
+run 'source cowrie-env/bin/activate'
+dlog "installing dependencies"
+run 'pip install -r requirements.txt'
+
+
+# step 6 (Generate a DSA key)
 dlog "generating cowrie SSH hostkey"
-run "ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key "
+run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 
-dlog "checking if cowrie OS user already exists"
-if ! grep '^cowrie:' -q /etc/passwd; then
-   dlog "... no, creating"
-   run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
-   outlog "Added user 'cowrie'"
-else
-   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
-fi    
 
 # check if cowrie db schema exists
 dlog "check if cowrie db schema exists"
@@ -1346,7 +1372,7 @@ else
    dlog "OK, MySQL cowrie user can connect using password $cowriepassword ."
 fi
 
-
+# step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
 run 'cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg'
 cat >> /srv/cowrie/cowrie.cfg <<EOF
@@ -1393,6 +1419,12 @@ run "cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly"
 run "cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly"
 run "cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf"
 run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
+
+###########################################################
+## START: not needed anymore (starting with V0.43)
+###########################################################
+
+ignoreme () {
 
 #
 # Checking cowrie Dependencies
@@ -1496,6 +1528,12 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
 
 
 done
+
+}
+###########################################################
+## END: not needed anymore
+###########################################################
+
 
 ###########################################################
 ## Setting up Services
