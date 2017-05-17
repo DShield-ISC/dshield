@@ -494,6 +494,14 @@ if [ -f /etc/dshield.conf ] ; then
    dlog "hanlding of dshield.conf finished"
 fi
 
+if [ -f /etc/dshield.ini ] ; then
+   dlog "dshield.ini found, content follows"
+   drun 'cat /etc/dshield.ini'
+   dlog "securing dshield.ini"
+   run 'chmod 600 /etc/dshield.ini'
+   run 'chown root:root /etc/dshield.ini'
+fi
+
 ###########################################################
 ## MySQL
 ###########################################################
@@ -1315,9 +1323,19 @@ dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
 run 'pip install -r requirements.txt'
+if [ ${?} -ne 0 ] ; then
+   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+   exit 9
+fi
 dlog "installing dependencies requirements-output.txt"
 run 'pip install -r requirements-output.txt'
+if [ ${?} -ne 0 ] ; then
+   outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+   exit 9
+fi
 cd ${OLDDIR}
+
+outlog "Doing further cowrie configuration."
 
 
 # step 6 (Generate a DSA key)
