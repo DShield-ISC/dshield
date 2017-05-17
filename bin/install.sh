@@ -48,7 +48,7 @@ readonly version=0.43
 # target directory for server components
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
-COWRIEDIR="${TARGETDIR}/cowrie"
+COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 LOGDIR="${TARGETDIR}/log"
 INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
@@ -1311,8 +1311,10 @@ dlog "setting up virtual environment"
 run 'virtualenv cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-dlog "installing dependencies"
+dlog "installing dependencies: requirements.txt"
 run 'pip install -r requirements.txt'
+dlog "installing dependencies requirements-output.txt"
+run 'pip install -r requirements-output.txt'
 
 
 # step 6 (Generate a DSA key)
