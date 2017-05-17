@@ -26,8 +26,8 @@ readonly version=0.43
 #   - quick fix for Johannes' experiments with new Python code
 #     (create dshield.ini with default values)
 #   - let user choose between old, working and experimental stuff
-#     (procedure: copy all stuff but only activate the stuff the user chose
-#      so the user may do experimenting even if he chose mature)
+#     (idea: copy all stuff but only activate that stuff the user chose
+#      so the user can experiment even if he chose mature)
 #
 # - V0.41
 #   - corrected firewall logging to dshield: in prior versions
@@ -1273,7 +1273,7 @@ run 'chmod 1777 /var/log/mini-httpd'
 
 dlog "installing cowrie"
 
-# step 1 (Install dependencies): done
+# step 1 (Install OS dependencies): done
 
 # step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
@@ -1287,9 +1287,10 @@ fi
 
 
 # step 3 (Checkout the code)
+# (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run 'wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip'
-run 'unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip '
+run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip"
+run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
 
 if [ ${?} -ne 0 ] ; then
    outlog "Something went wrong downloading cowrie, ZIP corrupt."
@@ -1299,12 +1300,13 @@ fi
 if [ -d ${COWRIEDIR} ]; then
    dlog "old cowrie installation found, moving"
    # TODO: warn user, backup dl etc.
-   run 'mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}'
+   run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
 run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
 
 # step 4 (Setup Virtual Environment)
+outlog "Installing Python packages with PIP. This will take a LOOONG time."
 OLDDIR=`pwd`
 cd ${COWRIEDIR}
 dlog "setting up virtual environment"
@@ -1315,6 +1317,7 @@ dlog "installing dependencies: requirements.txt"
 run 'pip install -r requirements.txt'
 dlog "installing dependencies requirements-output.txt"
 run 'pip install -r requirements-output.txt'
+cd ${OLDDIR}
 
 
 # step 6 (Generate a DSA key)
