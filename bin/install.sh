@@ -284,8 +284,10 @@ if [ "$dist" == "apt" ]; then
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
+
    # 2017-05-17: added python-virtualenv authbind for cowrie
    run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
+
    # pip install python-dateutil > /dev/null
 
 fi
@@ -1552,10 +1554,12 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
 
 done
 
+
 }
 ###########################################################
 ## END: not needed anymore
 ###########################################################
+
 
 
 ###########################################################

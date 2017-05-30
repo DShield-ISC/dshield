@@ -22,6 +22,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
+- if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE.
 - boot the pi from the SD card and log into the console using an USB keyboard
   - hint: when you don't want to connect a display you may just enter the following (note: US keyboard layout)
    ```
