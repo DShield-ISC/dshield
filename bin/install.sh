@@ -1385,9 +1385,13 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
 done
 
 # Setting up virtual environment for cowrie
-
-cd /srv/cowrie
-virtualenv cowrie-env
+if [ -d /srv/cowrie/cowrie-env ]; then
+  dlog "virtual environment for cowrie already exists"
+else
+  dlog "creating virtual environment for cowrie"
+  run 'cd /srv/cowrie'
+  run 'virtualenv cowrie-env'
+fi
 
 ###########################################################
 ## Setting up Services
