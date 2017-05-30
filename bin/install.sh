@@ -15,9 +15,19 @@
 ###########################################################
 
 
-readonly version=0.41
+readonly version=0.43
 #
 # Major Changes (for details see Github):
+#
+# - V0.43
+#   - revised cowrie installation to reflect current instructions
+#
+# - V0.42
+#   - quick fix for Johannes' experiments with new Python code
+#     (create dshield.ini with default values)
+#   - let user choose between old, working and experimental stuff
+#     (idea: copy all stuff but only activate that stuff the user chose
+#      so the user can experiment even if he chose mature)
 #
 # - V0.41
 #   - corrected firewall logging to dshield: in prior versions
@@ -31,13 +41,17 @@ readonly version=0.41
 # - V0.4
 #   - major additions and rewrites (e.g. added logging)
 #
+#
+# TODOs:
+# - ask for additional / new values in dshield.ini
 
 # target directory for server components
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
-# COWRIEDIR="${TARGETDIR}/cowrie"
+COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 LOGDIR="${TARGETDIR}/log"
-LOGFILE="${LOGDIR}/install_`date +'%Y-%m-%d_%H%M%S'`.log"
+INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
+LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
 # which ports will be handled e.g. by cowrie (separated by blanks)
 # used e.g. for setting up block rules for trusted nets
@@ -125,6 +139,27 @@ dlog () {
    if [ ${DEBUG} -eq 1 ] ; then
       do_log "DEBUG OUTPUT: ${*}"
    fi
+}
+
+# copy file(s) and chmod
+# $1: file (opt. incl. dir)
+# $2: dest dir
+# optional: $3: chmod bitmask
+do_copy () { 
+   dlog "copying ${1} to ${2} and chmod to ${3}"
+   run "cp ${1} ${2}"
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error copying ${1} to ${2}. Aborting."
+      exit 9
+   fi
+   if [ "${3}" != "" ] ; then
+      run "chmod ${3} ${2}/`basename ${1}`"
+      if [ ${?} -ne 0 ] ; then
+         outlog "Error executing chmod ${3} ${2}/${1}. Aborting."
+         exit 9
+      fi
+   fi
+
 }
 
 ###########################################################
@@ -249,7 +284,10 @@ if [ "$dist" == "apt" ]; then
    # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv'
+
+   # 2017-05-17: added python-virtualenv authbind for cowrie
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
+
    # pip install python-dateutil > /dev/null
 
 fi
@@ -267,16 +305,62 @@ fi
 ## last chance to escape before hurting the system ...
 ###########################################################
 
-
+dlog "Offering user last chance to quit with a nearly untouched system."
 dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
+      dlog "User clicked CANCEL"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
       outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
       outlog "See ${LOGFILE} for details."
       exit 5
       ;;
 esac
+
+###########################################################
+## let the user decide:
+## working stuff vs. experimental
+###########################################################
+
+dlog "Offering user choice of maturity."
+
+exec 3>&1
+VALUES=$(dialog --title 'Installaion Flavour' --radiolist "We offer two different installation flavours: mature (this is known to be working in general) and experimental (new stuff currently in development, don't expect things to work at all). Choose your taste." 0 0 2 \
+   mature "" on \
+   experimental "" off \
+   2>&1 1>&3)
+
+response=$?
+exec 3>&-
+
+case $response in
+   ${DIALOG_CANCEL})
+      dlog "User clicked CANCEL."
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+esac
+
+if [ ${VALUES} == "mature" ] ; then
+   MATURE=1
+else
+   MATURE=0
+fi
+
+dlog "MATURE: ${MATURE}"
 
 
 ###########################################################
@@ -410,6 +494,14 @@ if [ -f /etc/dshield.conf ] ; then
    dlog "... progdir in dshield.conf: ${progdir}"
    progdir=$progdirold
    dlog "hanlding of dshield.conf finished"
+fi
+
+if [ -f /etc/dshield.ini ] ; then
+   dlog "dshield.ini found, content follows"
+   drun 'cat /etc/dshield.ini'
+   dlog "securing dshield.ini"
+   run 'chmod 600 /etc/dshield.ini'
+   run 'chown root:root /etc/dshield.ini'
 fi
 
 ###########################################################
@@ -1082,10 +1174,12 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-dlog "copying pifwparser.py to ${DSHIELDDIR}"
 run "mkdir -p ${DSHIELDDIR}"
-run "cp $progdir/pifwparser.py ${DSHIELDDIR}"
-run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
+# legacy version
+do_copy $progdir/dshield.pl ${DSHIELDDIR} 700
+# Johannes' experiments ;-)
+do_copy $progdir/pifwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/DShield.py ${DSHIELDDIR} 700
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1094,9 +1188,17 @@ run "chmod 700 ${DSHIELDDIR}/pifwparser.py"
 dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
-cat > /etc/cron.d/dshield <<EOF
+
+# legacy stuff
+if [ ${MATURE} -eq 1 ] ; then
+   cat > /etc/cron.d/dshield <<EOF
+$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
+EOF
+else # Johannes' experiments ;-)
+   cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
 EOF
+fi
 
 drun 'cat /etc/cron.d/dshield'
 
@@ -1108,9 +1210,16 @@ dlog "creating new /etc/dshield.conf"
 if [ -f /etc/dshield.conf ]; then
    dlog "old dshield.conf follows"
    drun 'cat /etc/dshield.conf'
-   run 'rm /etc/dshield.conf'
+   run 'mv /etc/dshield.conf /etc/dshield.conf.${INSTDATE}'
+fi
+dlog "creating new /etc/dshield.ini"
+if [ -f /etc/dshield.ini ]; then
+   dlog "old dshield.ini follows"
+   drun 'cat /etc/dshield.ini'
+   run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
 fi
 
+# legacy config file
 run 'touch /etc/dshield.conf'
 run 'chmod 600 /etc/dshield.conf'
 
@@ -1132,6 +1241,24 @@ run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.conf'
 dlog "new /etc/dshield.conf follows"
 drun 'cat /etc/dshield.conf'
 
+# new shiny config file
+run 'touch /etc/dshield.ini'
+run 'chmod 600 /etc/dshield.ini'
+
+run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "userid=$uid" >> /etc/dshield.ini'
+run 'echo "apikey=$apikey" >> /etc/dshield.ini'
+run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
+run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
+run 'echo "honeypotip=" >> /etc/dshield.ini'
+run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
+run 'echo "anonymizeip=" >> /etc/dshield.ini'
+run 'echo "anonymizemask=" >> /etc/dshield.ini'
+
+dlog "new /etc/dshield.ini follows"
+drun 'cat /etc/dshield.ini'
+
+
 #
 # creating srv directories
 #
@@ -1150,28 +1277,15 @@ run 'chmod 1777 /var/log/mini-httpd'
 # installing cowrie
 # TODO: don't use a static path but a configurable one
 #
+# 2017-05-17: revised section to reflect current installation instructions
+#             https://github.com/micheloosterhof/cowrie/blob/master/INSTALL.md
+#
 
 dlog "installing cowrie"
-dlog "downloading and unzipping cowrie"
-run 'wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip'
-run 'unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip '
 
-if [ ${?} -ne 0 ] ; then
-   outlog "Something went wrong downloading cowrie, ZIP corrupt."
-   exit 9
-fi
+# step 1 (Install OS dependencies): done
 
-if [ -d /srv/cowrie ]; then
-   dlog "old cowrie installatin found, removing"
-   # TODO: warn user, backup dl etc.
-   run 'rm -rf /srv/cowrie'
-fi
-dlog "moving extracted cowrie to /srv/cowrie"
-run "mv $TMPDIR/cowrie-master /srv/cowrie"
-
-dlog "generating cowrie SSH hostkey"
-run "ssh-keygen -t dsa -b 1024 -N '' -f /srv/cowrie/data/ssh_host_dsa_key "
-
+# step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
    dlog "... no, creating"
@@ -1179,7 +1293,57 @@ if ! grep '^cowrie:' -q /etc/passwd; then
    outlog "Added user 'cowrie'"
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
-fi    
+fi
+
+
+# step 3 (Checkout the code)
+# (we will stay with zip instead of using GIT for the time being)
+dlog "downloading and unzipping cowrie"
+run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip"
+run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
+
+if [ ${?} -ne 0 ] ; then
+   outlog "Something went wrong downloading cowrie, ZIP corrupt."
+   exit 9
+fi
+
+if [ -d ${COWRIEDIR} ]; then
+   dlog "old cowrie installation found, moving"
+   # TODO: warn user, backup dl etc.
+   run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
+fi
+dlog "moving extracted cowrie to ${COWRIEDIR}"
+run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
+
+# step 4 (Setup Virtual Environment)
+outlog "Installing Python packages with PIP. This will take a LOOONG time."
+OLDDIR=`pwd`
+cd ${COWRIEDIR}
+dlog "setting up virtual environment"
+run 'virtualenv cowrie-env'
+dlog "activating virtual environment"
+run 'source cowrie-env/bin/activate'
+dlog "installing dependencies: requirements.txt"
+run 'pip install -r requirements.txt'
+if [ ${?} -ne 0 ] ; then
+   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+   exit 9
+fi
+dlog "installing dependencies requirements-output.txt"
+run 'pip install -r requirements-output.txt'
+if [ ${?} -ne 0 ] ; then
+   outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+   exit 9
+fi
+cd ${OLDDIR}
+
+outlog "Doing further cowrie configuration."
+
+
+# step 6 (Generate a DSA key)
+dlog "generating cowrie SSH hostkey"
+run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
+
 
 # check if cowrie db schema exists
 dlog "check if cowrie db schema exists"
@@ -1233,7 +1397,7 @@ else
    dlog "OK, MySQL cowrie user can connect using password $cowriepassword ."
 fi
 
-
+# step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
 run 'cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg'
 cat >> /srv/cowrie/cowrie.cfg <<EOF
@@ -1280,6 +1444,12 @@ run "cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly"
 run "cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly"
 run "cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf"
 run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
+
+###########################################################
+## START: not needed anymore (starting with V0.43)
+###########################################################
+
+ignoreme () {
 
 #
 # Checking cowrie Dependencies
@@ -1384,14 +1554,13 @@ for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 
 
 done
 
-# Setting up virtual environment for cowrie
-if [ -d /srv/cowrie/cowrie-env ]; then
-  dlog "virtual environment for cowrie already exists"
-else
-  dlog "creating virtual environment for cowrie"
-  run 'cd /srv/cowrie'
-  run 'virtualenv cowrie-env'
-fi
+
+}
+###########################################################
+## END: not needed anymore
+###########################################################
+
+
 
 ###########################################################
 ## Setting up Services
