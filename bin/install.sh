@@ -15,9 +15,12 @@
 ###########################################################
 
 
-readonly version=0.43
+readonly version=0.44
 #
 # Major Changes (for details see Github):
+#
+# - V0.44
+#   - enabled telnet in cowrie
 #
 # - V0.43
 #   - revised cowrie installation to reflect current instructions
@@ -57,7 +60,7 @@ LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 # note: doesn't make sense to ask the user because cowrie is configured statically
-HONEYPORTS="2222"
+HONEYPORTS="2222 2223"
 
 # which port the sshd should listen to
 SSHDPORT="12222"
@@ -1115,6 +1118,8 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
 # redirect honeypot ports
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
+-A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
+-A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
 COMMIT
 EOF
 
@@ -1418,7 +1423,7 @@ drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-
+run "sed -i.back 's/^enabled = false/enabled = true/ /srv/cowrie/cowrie.cfg"
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real
