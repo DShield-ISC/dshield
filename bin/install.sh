@@ -1120,6 +1120,10 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 -A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
 -A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
+-A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 8080 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 7547 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 9000 -j REDIRECT --to-ports 8000
 COMMIT
 EOF
 
