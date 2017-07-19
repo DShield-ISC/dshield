@@ -284,12 +284,12 @@ if [ "$dist" == "apt" ]; then
    run 'apt-get -y -q upgrade'
 
    outlog "Installing additional packages"
-   # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
+   # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
 
    # 2017-05-17: added python-virtualenv authbind for cowrie
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mini-httpd mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
 
    # pip install python-dateutil > /dev/null
 
@@ -1120,10 +1120,6 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 -A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
 -A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
--A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 8080 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 7547 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 9000 -j REDIRECT --to-ports 8000
 COMMIT
 EOF
 
@@ -1267,18 +1263,25 @@ run 'echo "anonymizemask=" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
+###########################################################
+## Installation of web honeypot
+###########################################################
 
-#
-# creating srv directories
-#
+drun "mkdir -p /srv/www/bin"
+drun "mkdir -p /srv/www/etc"
+drun "mkdir -p /srv/www/DB"
+drun "mkdir -p /srv/www/log"
 
-dlog "creating further srv directories"
-run 'mkdir -p /srv/www/html'
-run 'mkdir -p /var/log/mini-httpd'
-run 'chmod 1777 /var/log/mini-httpd'
+run "cp $progdir/../DB/config.sqlite /srv/www/DB"
+run "cp $progdir/web.py /srv/www/bin"
+run "cp $progdir/db_builder.py /srv/www/bin"
+run "cp $progdir/sigmatch.py /srv/www/bin"
+run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
+run "systemctl enable webpy.service"
+run "systemctl daemon-reload"
 
 ###########################################################
-## Installation of cwrie
+## Installation of cowrie
 ###########################################################
 
 
@@ -1427,7 +1430,7 @@ drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-run "sed -i.back 's/^enabled = false/enabled = true/' /srv/cowrie/cowrie.cfg"
+run "sed -i.back 's/^enabled = false/enabled = true/ /srv/cowrie/cowrie.cfg"
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real

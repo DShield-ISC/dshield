@@ -5,7 +5,7 @@ from xml.etree import ElementTree
 import os
 import sqlite3
 
-requests = '..' + os.path.sep + "signatures.xml"
+requests = '..' + os.path.sep + "/etc/signatures.xml"
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 
 # honeydb builder - can get database name - so be careful what you name it

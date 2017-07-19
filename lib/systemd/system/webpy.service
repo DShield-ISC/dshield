@@ -1,0 +1,12 @@
+[Unit]
+Description=DShield Web Honeypot
+After=multi-user.target
+
+[Service]
+Type=idle
+WorkingDirectory=/srv/www/bin
+User=cowrie
+ExecStart=/usr/bin/python /srv/www/bin/web.py
+
+[Install]
+WantedBy=multi-user.target
