@@ -60,7 +60,7 @@ LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 # note: doesn't make sense to ask the user because cowrie is configured statically
-HONEYPORTS="2222 2223"
+HONEYPORTS="2222 2223 80 8080 8000 7547 5555 9000"
 
 # which port the sshd should listen to
 SSHDPORT="12222"
@@ -1121,8 +1121,10 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
 -A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
 -A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 5000 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 7547 -j REDIRECT --to-ports 8000
 -A PREROUTING -p tcp -m tcp --dport 8080 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 7647 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 9000 -j REDIRECT --to-ports 8000
 COMMIT
 EOF
 
