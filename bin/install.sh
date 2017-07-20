@@ -1302,6 +1302,7 @@ do_copy $progdir/web.py /srv/www/bin 700
 do_copy $progdir/db_builder.py /srv/www/bin 700
 do_copy $progdir/sigmatch.py /srv/www/bin 700
 do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 700
+do_copy $progdir/../signatures.xml /etc 600
 run "systemctl enable webpy.service"
 run "systemctl daemon-reload"
 
