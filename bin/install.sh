@@ -198,7 +198,7 @@ fi
 
 drun env
 drun 'df -h'
-
+clear
 outlog "Checking Pre-Requisits"
 
 progname=$0;
@@ -1041,7 +1041,7 @@ dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 ##---------------------------------------------------------
 ## create firewall rule set
 ##---------------------------------------------------------
-
+clear
 outlog "Doing further configuration"
 
 dlog "creating /etc/network/iptables"
@@ -1203,7 +1203,7 @@ offset2=$((offset1+30));
 if [ ${MATURE} -eq 1 ] ; then
    cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
-$offset1,$offset3 * * * * root "cd ${DSHIELDDIR; ./weblogsubmit.py"
+$offset1,$offset2 * * * * root "cd ${DSHIELDDIR; ./weblogsubmit.py"
 EOF
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
