@@ -15,9 +15,12 @@
 ###########################################################
 
 
-readonly version=0.44
+readonly version=0.45
 #
 # Major Changes (for details see Github):
+#
+# - V0.45
+#    - enabled web honeypot
 #
 # - V0.44
 #   - enabled telnet in cowrie
