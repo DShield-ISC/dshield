@@ -147,7 +147,8 @@ def build_DB():
                     path text,
                     useragent text,
                     vers text,
-                    summary text
+                    summary text,
+                    targetip text
                 )
             ''')
     # Creates table for useragent unique values - refid will be response refid

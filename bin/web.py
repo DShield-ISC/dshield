@@ -89,7 +89,8 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = time.time()
-        cladd = '%s' % self.client_address[0]  #
+        cladd = self.address_string()
+        targetip = '0.0.0.0'
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
 
@@ -100,8 +101,8 @@ class MyHandler(BaseHTTPRequestHandler):
             useragentstring = ""
         #self.send_response(200)
         rvers=''
-        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                  (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.'))
+        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary,targetip) VALUES(?, ?, ?, ?, ?, ?, ?,?)""",
+                  (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.',targetip))
         try:
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", [useragentstring])
         except sqlite3.IntegrityError:

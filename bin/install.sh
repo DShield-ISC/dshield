@@ -1212,7 +1212,7 @@ offset2=$((offset1+30));
 # legacy stuff
 if [ ${MATURE} -eq 1 ] ; then
    echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl" > /etc/cron.d/dshield
-   echo "${offset1},${offset2} * * * * root \"cd ${DSHIELDDIR}; ./weblogsubmit.py\"" >> /etc/cron.d/dshield 
+   echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >> /etc/cron.d/dshield 
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
