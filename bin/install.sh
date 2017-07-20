@@ -205,7 +205,6 @@ fi
 
 drun env
 drun 'df -h'
-clear
 outlog "Checking Pre-Requisits"
 
 progname=$0;
@@ -376,7 +375,7 @@ dlog "MATURE: ${MATURE}"
 ###########################################################
 ## Stopping Cowrie if already installed
 ###########################################################
-
+clear
 if [ -x /etc/init.d/cowrie ] ; then
    outlog "Existing cowrie startup file found, stopping cowrie."
    run '/etc/init.d/cowrie stop'
@@ -1210,8 +1209,8 @@ offset2=$((offset1+30));
 # legacy stuff
 if [ ${MATURE} -eq 1 ] ; then
    cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
-$offset1,$offset2 * * * * root "cd ${DSHIELDDIR; ./weblogsubmit.py"
+${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl
+${offset1},${offset2} * * * * root \"cd ${DSHIELDDIR; ./weblogsubmit.py\"
 EOF
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
