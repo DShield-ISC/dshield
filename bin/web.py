@@ -14,7 +14,7 @@ import re
 #from sys import stderr
 
 # Default port - feel free to change
-PORT_NUMBER = 8080
+PORT_NUMBER = 8000
 
 # Global Variables - bummer need to fix :(
 # configure config SQLLite DB and log directory
@@ -45,6 +45,7 @@ if not os.path.exists(certpath) and not os.path.exists(keypath):
 else:
     _USE_SSL = True
 
+    
 def build_db():
     DBPath = '..' + os.path.sep + 'DB'
     if not os.path.exists(DBPath):
@@ -76,7 +77,8 @@ class MyHandler(BaseHTTPRequestHandler):
                              self.log_date_time_string(),
                              format % args))
     '''
-
+    server_version="GoAhead-Webs"
+    sys_version=""
     def do_GET(self):
         webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
         webpath_exists = os.path.exists(webpath)
@@ -86,18 +88,18 @@ class MyHandler(BaseHTTPRequestHandler):
             for i in webdirlst:
                 site = i
                 file_path = os.path.join(webpath, i)
-        dte = self.date_time_string()   # date for logs
+        dte = time.time()
         cladd = '%s' % self.client_address[0]  #
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
 
         try:
             if str(self.headers['user-agent']) is not None:
-                useragentstring = '%s' & str(self.headers['user-agent'])
+                useragentstring = str(self.headers['user-agent'])
         except:
-            useragentstring = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
-        rvers = "Server: Apache/2.0.1"
+            useragentstring = ""
         #self.send_response(200)
+        rvers=''
         c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)""",
                   (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.'))
         try:
@@ -121,12 +123,12 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin','*')
             self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'Apache/2.0.1')
+            self.server_version='Apache/3.2.3'
             self.end_headers()
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.send_header('Server', 'Apache/2.0.1')
+        self.server_version='Apache/3.2.3'
         self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
@@ -180,7 +182,7 @@ class MyHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.send_header('Server', 'Apache/2.0.1')
+        self.server_version='Apache/3.2.3'
         self.end_headers()
         print self.client_address[
                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy."
@@ -191,6 +193,7 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Content-type', 'text/html')
             self.send_header('Server', 'Apache/2.0.1')
+            self.server_version='Apache/3.2.3'
             self.end_headers()
             print self.client_address[
                       0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy."
@@ -202,7 +205,12 @@ class MyHandler(BaseHTTPRequestHandler):
         cladd = '%s' % self.client_address[0]
         cmd = '%s' % self.command
         path = '%s' % self.path
-        useragentstring = '%s' % str(self.headers['user-agent'])
+        try:
+            if str(self.headers['user-agent']) is not None:
+                useragentstring = str(self.headers['user-agent'])
+        except:
+            useragentstring = ""
+
         rvers = '%s' % self.request_version
         c.execute('''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
                   (dte, cladd, cmd, path, useragentstring, rvers, "- standard post"))
