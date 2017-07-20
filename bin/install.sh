@@ -60,7 +60,14 @@ LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 # note: doesn't make sense to ask the user because cowrie is configured statically
-HONEYPORTS="2222 2223 80 8080 8000 7547 5555 9000"
+SSHHONEYPORT=2222
+TELNETHONEYPORT=2223
+WEBHONEYPORT=8000
+SSHREDIRECT="22"
+TELNETREDIRECT="23 2323"
+WEBREDIRECT="80 8080 7547 5555 9000"
+HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
+
 
 # which port the sshd should listen to
 SSHDPORT="12222"
@@ -1117,16 +1124,17 @@ cat >> /etc/network/iptables <<EOF
 # log all traffic with original ports
 -A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
 # redirect honeypot ports
--A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
--A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
--A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
--A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 5000 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 7547 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 8080 -j REDIRECT --to-ports 8000
--A PREROUTING -p tcp -m tcp --dport 9000 -j REDIRECT --to-ports 8000
-COMMIT
 EOF
+for PORT in ${SSHREDIRECT}; do
+   echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >> /etc/network/iptables
+done
+for PORT in ${TELNETREDIRECT}; do
+   echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >> /etc/network/iptables
+done
+for PORT in ${WEBREDIRECT}; do
+   echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >> /etc/network/iptables
+done
+echo "COMMIT" >> /etc/network/iptables
 
 run 'chmod 700 /etc/network/iptables'
 
