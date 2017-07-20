@@ -91,7 +91,7 @@ sudo init 6
 ```
 - from now on you have to use port 12222 to connect to the device by SSH
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
-  you will be able to configure it as a "DMZ Hosts", "exposed devices", ...
+  you will be able to configure it as a "DMZ Hosts", "exposed devices", ... see hints below for - well - hints ...
 
 ## Background: `install.sh`
 
@@ -166,6 +166,21 @@ apt-get dist-upgrade
 ```
 
 ## Hints
+
+### How to place the dshield sensor / honeypot
+
+This dshield sensor and honeypot is meant to only analyze Internet related traffic, i.e. traffic which is issued from public IP addresses:
+- this is due to how the dshield project works (collection of information about the current state of the Internet)
+- only in this way information which is interesting for the Internet security community can be gathered
+- only in this way it can be ensured that no internal, non-public information is leaked from your Pi to Dshield
+
+So you must place the Pi on a network where it can be exposed to the Internet (and won't be connected to from the inner networks, except for administrative tasks). For a maximum sensor benefit it is desirable that the Pi is exposed to the whole traffic the Internet routes to a public IP (and not only selected ports).
+
+For SoHo users there is normally an option in the DSL or cable router to direct all traffic from the public IP the router is using (i.e. has been assigned by the ISP) to an internal IP. This has to be the Pi. This feature is named e.g. "exposed host", "DMZ" (here you may have to enable further configuration to ensure ___all___ traffic is being routed to the Pi's internal IP address and not only e.g. port 80).
+
+For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the dhshield project and the community which can be tracked via whois to your company.
+
+To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your dshield account. Use only for quick and limited testing purposes, please, so that dhshield data isn't falsified.
 
 ### Navigating in Forms
 - RETURN: submit the form (OK)
