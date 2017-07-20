@@ -15,9 +15,15 @@
 ###########################################################
 
 
-readonly version=0.45
+readonly version=0.451
 #
 # Major Changes (for details see Github):
+#
+# - V0.451
+#   - cleanup (removed obsolete, commented-out code)
+#   - added multicast for no logging: 224.0.0.0/4
+#   - minor bug fixes
+#   - removed mini-httpd
 #
 # - V0.45
 #    - enabled web honeypot
@@ -55,6 +61,7 @@ readonly version=0.45
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
+WEBDIR="${TARGETDIR}/www"
 LOGDIR="${TARGETDIR}/log"
 INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
@@ -79,7 +86,9 @@ SSHDPORT="12222"
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
 DEBUG=1
+
 clear
+
 # delimiter
 LINE="##########################################################################################################"
 
@@ -293,14 +302,11 @@ if [ "$dist" == "apt" ]; then
    run 'apt-get -y -q upgrade'
 
    outlog "Installing additional packages"
-   # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
 
    # OS packages: no python modules
 
    # 2017-05-17: added python-virtualenv authbind for cowrie
    run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
-
-   # pip install python-dateutil > /dev/null
 
 fi
 
@@ -934,6 +940,8 @@ dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 if [ "${nofwlogging}" == "" ] ; then
    # default: local net & connected IPs (as the user confirmed)
    nofwlogging="${localnet} ${CONIPS}"
+   # add multicast
+   nofwlogging="${nofwlogging} 224.0.0.0/4"
    # remove duplicates
    nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 fi
@@ -1127,12 +1135,15 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
 # redirect honeypot ports
 EOF
+echo "# - ssh ports" >> /etc/network/iptables
 for PORT in ${SSHREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >> /etc/network/iptables
 done
+echo "# - telnet ports" >> /etc/network/iptables
 for PORT in ${TELNETREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >> /etc/network/iptables
 done
+echo "# - web ports" >> /etc/network/iptables
 for PORT in ${WEBREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >> /etc/network/iptables
 done
@@ -1281,16 +1292,16 @@ drun 'cat /etc/dshield.ini'
 ## Installation of web honeypot
 ###########################################################
 
-drun "mkdir -p /srv/www/bin"
-drun "mkdir -p /srv/www/etc"
-drun "mkdir -p /srv/www/DB"
-drun "mkdir -p /srv/www/log"
+run "mkdir -p ${WEBDIR}/bin"
+run "mkdir -p ${WEBDIR}/etc"
+run "mkdir -p ${WEBDIR}/DB"
+run "mkdir -p ${WEBDIR}/log"
 
-run "cp $progdir/../DB/config.sqlite /srv/www/DB"
-run "cp $progdir/web.py /srv/www/bin"
-run "cp $progdir/db_builder.py /srv/www/bin"
-run "cp $progdir/sigmatch.py /srv/www/bin"
-run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
+do_copy $progdir/../DB/config.sqlite /srv/www/DB 600
+do_copy $progdir/web.py /srv/www/bin 700
+do_copy $progdir/db_builder.py /srv/www/bin 700
+do_copy $progdir/sigmatch.py /srv/www/bin 700
+do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 700
 run "systemctl enable webpy.service"
 run "systemctl daemon-reload"
 
@@ -1444,7 +1455,7 @@ drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-run "sed -i.back 's/^enabled = false/enabled = true/ /srv/cowrie/cowrie.cfg"
+run "sed -i.back 's/^enabled = false/enabled = true/' /srv/cowrie/cowrie.cfg"
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real
@@ -1464,128 +1475,12 @@ run 'chown -R cowrie:cowrie /srv/cowrie'
 
 dlog "copying system files"
 
-run "cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie"
-run "cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d"
-run "cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly"
-run "cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly"
-run "cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf"
-run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
-
-###########################################################
-## START: not needed anymore (starting with V0.43)
-###########################################################
-
-ignoreme () {
-
-#
-# Checking cowrie Dependencies
-# see: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt
-# ... and local requirements-output.txt
-# ... and twisted dependencies: https://twistedmatrix.com/documents/current/installation/howto/optional.html
-#
-
-# format: <PKGNAME1>,<MINVERSION1>  <PKGNAME2>,<MINVERSION2>  <PKGNAMEn>,<MINVERSIONn>
-#         meaning: <PGKNAME> must be installes in version >=<MINVERSION>
-# if no MINVERSION: 0
-# replace _ with -
-
-# 2017-04-17: twisted v15.2.1 isn't working (problems with SSH key), neither is 17.1.0, so we use the latest version of 16 (16.6.0)
-# 2017-04-23: seems to be working fine is all most current versions are installed using pip (w/o ANY distro package)
-#             so if pkg not found it is OK (as of now) to install the most recent version
-
-dlog "checking and installing Python packages for cowrie"
-dlog "current requirements can be found here:"
-dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt"
-dlog "        and requirements-output.txt"
-dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
-
-# simpler installation routines didn't work some point in time, so using this funny stuff
-for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 crtifi,0 chardet,0 urllib3,0 idna,0; do
-
-   # echo "PKGVER: ${PKGVER}"
-
-   PKG=`echo "${PKGVER}" | cut -d "," -f 1`
-   VERREQ=`echo "${PKGVER}" | cut -d "," -f 2`
-   VERREQLIST=`echo "${VERREQ}" | tr "." " "`
-
-   VERINST=`pip show ${PKG} | grep "^Version: " | cut -d " " -f 2`
-
-   if [ "${VERINST}" == "" ] ; then
-      VERINST="0"
-   fi
-
-   VERINSTLIST=`echo "${VERINST}" | tr "." " "`
-
-   # echo "PKG: ${PKG}"
-   # echo "VERREQ: ${VERREQ}"
-   # echo "VERREQLIST: ${VERREQLIST}"
-   # echo "VERINST: ${VERINST}"
-   # echo "VERINSTLIST: ${VERINSTLIST}"
-   dlog "checking package ${PKG}: installed: v${VERINST}, required: v${VERREQ}"
-
-   MUSTINST=0
-
-   outlog "+ checking cowrie dependency: module '${PKG}' ..."
-
-   if [ "${VERINST}" == "0" ] ; then
-      outlog "  WARN: not found at all, will be installed"
-      MUSTINST=1
-      # as of now: install the most recent version if not installed yet
-      run "pip install ${PKG}"
-      if [ ${?} -ne 0 ] ; then
-         # TODO: give the user a chance to continue w/o cowrie
-         outlog "Error installing '${PKG}'. Aborting."
-         exit 9
-      fi
-   else
-      FIELD=1
-      # check if version number of installed module is sufficient
-      for VERNO in ${VERREQLIST} ; do
-         # echo "FIELD: ${FIELD}"
-         FIELDINST=`echo "${VERINSTLIST}" | cut -d " " -f "${FIELD}" `
-         if [ "${FIELDINST}" == "" ] ; then
-            FIELDINST=0
-         fi
-         FIELDREQ=`echo "${VERREQLIST}" | cut -d " " -f "${FIELD}" `
-         if [ "${FIELDREQ}" == "" ] ; then
-            FIELDREQ=0
-         fi
-         if [ ${FIELDINST} -lt ${FIELDREQ} ] ; then
-            # first version string from left with lower number installed -> update
-            MUSTINST=1
-            break
-         elif [ ${FIELDINST} -gt ${FIELDREQ} ] ; then
-            # first version string from left with hight number installed -> done
-            break
-         fi
-         FIELD=`echo "$((${FIELD} + 1))"`
-      done
-      if [ ${MUSTINST} -eq 1 ] ; then
-         outlog "  WARN: is installed in v${VERINST} but must at least be v${VERREQ}, will be updated"
-         run "pip install ${PKG}==${VERREQ}"
-         if [ ${?} -ne 0 ] ; then
-            # TODO: give the user a chance to continue w/o cowrie
-            outlog "Error upgrading '${PKG}'. Aborting."
-            exit 9
-         fi
-      fi
-   fi
-
-   # echo "MUSTINST: ${MUSTINST}"
-
-   if [ ${MUSTINST} -eq 0 ] ; then
-      outlog "  OK: is installed in a sufficient version, nothing to do"
-   fi
-
-
-done
-
-
-}
-###########################################################
-## END: not needed anymore
-###########################################################
-
+do_copy $progdir/../etc/init.d/cowrie /etc/init.d/cowrie 755
+do_copy $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d 600
+do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 600
+do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 600
+# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 600
+# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 600
 
 
 ###########################################################
@@ -1594,9 +1489,9 @@ done
 
 
 # setting up services
-dlog "setting up services: cowrie, mini-httpd"
+dlog "setting up services: cowrie"
 run 'update-rc.d cowrie defaults'
-run 'update-rc.d mini-httpd defaults'
+# run 'update-rc.d mini-httpd defaults'
 
 
 ###########################################################
