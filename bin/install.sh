@@ -289,7 +289,7 @@ if [ "$dist" == "apt" ]; then
    # OS packages: no python modules
 
    # 2017-05-17: added python-virtualenv authbind for cowrie
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind'
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
 
    # pip install python-dateutil > /dev/null
 
@@ -1120,6 +1120,9 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -p tcp -m tcp --dport 22 -j REDIRECT --to-ports 2222
 -A PREROUTING -p tcp -m tcp --dport 23 -j REDIRECT --to-ports 2223
 -A PREROUTING -p tcp -m tcp --dport 2323 -j REDIRECT --to-ports 2223
+-A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 8080 -j REDIRECT --to-ports 8000
+-A PREROUTING -p tcp -m tcp --dport 7647 -j REDIRECT --to-ports 8000
 COMMIT
 EOF
 
@@ -1198,6 +1201,7 @@ offset2=$((offset1+30));
 if [ ${MATURE} -eq 1 ] ; then
    cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/dshield.pl
+$offset1,$offset3 * * * * root "cd ${DSHIELDDIR; ./weblogsubmit.py"
 EOF
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
@@ -1486,7 +1490,7 @@ dlog "        and requirements-output.txt"
 dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
 
 # simpler installation routines didn't work some point in time, so using this funny stuff
-for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 ; do
+for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 crtifi,0 chardet,0 urllib3,0 idna,0; do
 
    # echo "PKGVER: ${PKGVER}"
 
