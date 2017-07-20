@@ -74,9 +74,9 @@ SSHDPORT="12222"
 
 # Debug Flag
 # 1 = debug logging, debug commands
-# 0 = normal logginf, no extra commands
+# 0 = normal logging, no extra commands
 DEBUG=1
-
+clear
 # delimiter
 LINE="##########################################################################################################"
 
@@ -1208,10 +1208,8 @@ offset2=$((offset1+30));
 
 # legacy stuff
 if [ ${MATURE} -eq 1 ] ; then
-   cat > /etc/cron.d/dshield <<EOF
-${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl
-${offset1},${offset2} * * * * root \"cd ${DSHIELDDIR; ./weblogsubmit.py\"
-EOF
+   echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl" > /etc/cron.d/dshield
+   echo "${offset1},${offset2} * * * * root \"cd ${DSHIELDDIR}; ./weblogsubmit.py\"" >> /etc/cron.d/dshield 
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
