@@ -1281,10 +1281,6 @@ drun 'cat /etc/dshield.ini'
 ## Installation of web honeypot
 ###########################################################
 
-drun "mkdir -p /srv/www/bin"
-drun "mkdir -p /srv/www/etc"
-drun "mkdir -p /srv/www/DB"
-drun "mkdir -p /srv/www/log"
 
 run "cp -r $progdir/../srv/www /srv/"
 run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
