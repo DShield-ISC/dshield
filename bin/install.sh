@@ -1284,6 +1284,7 @@ drun 'cat /etc/dshield.ini'
 
 
 run "cp -r $progdir/../srv/www /srv/"
+run "chown cowrie /srv/www/DB/*"
 run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
 run "systemctl enable webpy.service"
 run "systemctl daemon-reload"
