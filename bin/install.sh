@@ -1195,11 +1195,12 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 #
 
 run "mkdir -p ${DSHIELDDIR}"
-# legacy version
-do_copy $progdir/dshield.pl ${DSHIELDDIR} 700
-# Johannes' experiments ;-)
-do_copy $progdir/pifwparser.py ${DSHIELDDIR} 700
-do_copy $progdir/DShield.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/dshield.pl ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/pifwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
+
+
 
 #
 # "random" offset for cron job so not everybody is reporting at once
