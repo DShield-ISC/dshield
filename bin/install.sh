@@ -1438,7 +1438,7 @@ drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-run "sed -i.back 's/^enabled = false/enabled = true/ /srv/cowrie/cowrie.cfg"
+run "sed -i.back 's/^enabled = false/enabled = true/' /srv/cowrie/cowrie.cfg"
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real
