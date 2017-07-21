@@ -1195,11 +1195,12 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 #
 
 run "mkdir -p ${DSHIELDDIR}"
-# legacy version
-do_copy $progdir/dshield.pl ${DSHIELDDIR} 700
-# Johannes' experiments ;-)
-do_copy $progdir/pifwparser.py ${DSHIELDDIR} 700
-do_copy $progdir/DShield.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/dshield.pl ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/pifwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
+
+
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1212,7 +1213,7 @@ offset2=$((offset1+30));
 # legacy stuff
 if [ ${MATURE} -eq 1 ] ; then
    echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl" > /etc/cron.d/dshield
-   echo "${offset1},${offset2} * * * * root \"cd ${DSHIELDDIR}; ./weblogsubmit.py\"" >> /etc/cron.d/dshield 
+   echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >> /etc/cron.d/dshield 
 else # Johannes' experiments ;-)
    cat > /etc/cron.d/dshield <<EOF
 $offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
@@ -1281,15 +1282,8 @@ drun 'cat /etc/dshield.ini'
 ## Installation of web honeypot
 ###########################################################
 
-drun "mkdir -p /srv/www/bin"
-drun "mkdir -p /srv/www/etc"
-drun "mkdir -p /srv/www/DB"
-drun "mkdir -p /srv/www/log"
 
-run "cp $progdir/../DB/config.sqlite /srv/www/DB"
-run "cp $progdir/web.py /srv/www/bin"
-run "cp $progdir/db_builder.py /srv/www/bin"
-run "cp $progdir/sigmatch.py /srv/www/bin"
+run "cp -r $progdir/../srv/www /srv/"
 run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
 run "systemctl enable webpy.service"
 run "systemctl daemon-reload"
@@ -1320,6 +1314,10 @@ if ! grep '^cowrie:' -q /etc/passwd; then
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
+
+# change ownership for web databases to cowrie as we will run the
+# web honeypot as cowrie
+run "chown cowrie /srv/www/DB/*"
 
 
 # step 3 (Checkout the code)
@@ -1444,7 +1442,7 @@ drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 dlog "modyfing /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
 run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-run "sed -i.back 's/^enabled = false/enabled = true/ /srv/cowrie/cowrie.cfg"
+run "sed -i.back 's/^enabled = false/enabled = true/' /srv/cowrie/cowrie.cfg"
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
 
 # make output of simple text commands more real
