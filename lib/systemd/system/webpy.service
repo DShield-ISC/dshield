@@ -5,7 +5,7 @@ After=multi-user.target
 [Service]
 Type=idle
 WorkingDirectory=/srv/www/bin
-User=cowrie
+User=root
 ExecStart=/usr/bin/python /srv/www/bin/web.py
 
 [Install]
