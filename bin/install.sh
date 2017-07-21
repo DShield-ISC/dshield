@@ -1284,7 +1284,6 @@ drun 'cat /etc/dshield.ini'
 
 
 run "cp -r $progdir/../srv/www /srv/"
-run "chown cowrie /srv/www/DB/*"
 run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
 run "systemctl enable webpy.service"
 run "systemctl daemon-reload"
@@ -1315,6 +1314,10 @@ if ! grep '^cowrie:' -q /etc/passwd; then
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
+
+# change ownership for web databases to cowrie as we will run the
+# web honeypot as cowrie
+run "chown cowrie /srv/www/DB/*"
 
 
 # step 3 (Checkout the code)
