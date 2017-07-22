@@ -409,7 +409,7 @@ run 'pip > /dev/null'
 if [ ${?} -gt 0 ] ; then
    # nice, no pip found
 
-   outlog "no pip found, Installing pip"
+   outlog "no pip found, installing pip"
 
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
    if [ ${?} -ne 0 ] ; then
@@ -1228,7 +1228,7 @@ fi
 dlog "setting interface in syslog config"
 # no %%interface%% in dshield.conf template anymore, so only copying file
 # run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
-do_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d/dshield.conf 600
+do_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
 
 drun 'cat /etc/rsyslog.d/dshield.conf'
 
