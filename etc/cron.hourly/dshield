@@ -13,6 +13,11 @@ if [ ! "$userid" = "0" ]; then
    exit
 fi
 
+# check if automatic updates are allowed
+if [ ! -f /srv/dshield/auto-update-ok ] ; then
+   exit
+fi
+
 version=0.0
 . /etc/dshield.conf
 nonce=`openssl rand -hex 10`
