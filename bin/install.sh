@@ -24,7 +24,9 @@ readonly version=0.46
 #   - removed obsolete suff (already commented out)
 #   - added comments
 #   - some cleanup
-#   - remooved mini http
+#   - removed mini http
+#   - added multicast disable rule to ignore multicasts for dshield logs
+#   - ask if automatic updates are OK
 #
 # - V0.45 (Johannes)
 #    - enabled web honeypot
@@ -401,12 +403,55 @@ dlog "MATURE: ${MATURE}"
 
 
 ###########################################################
+## let the user decide:
+## automatic updates OK?
+###########################################################
+
+dlog "Offering user choice if automatic updates are OK."
+
+exec 3>&1
+VALUES=$(dialog --title 'Automatic Updates' --radiolist "In future versions automatic updates of this distribution may be conducted. Please choose if you want them or if you want to keep up your dshield stuff up-to-date manually." 0 0 2 \
+   manual "" on \
+   automatic "" off \
+   2>&1 1>&3)
+
+response=$?
+exec 3>&-
+
+case $response in
+   ${DIALOG_CANCEL})
+      dlog "User clicked CANCEL."
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+esac
+
+if [ ${VALUES} == "manual" ] ; then
+   MANUPDATES=1
+else
+   MANUPDATES=0
+fi
+
+dlog "MANUPDATES: ${MANUPDATES}"
+
+
+###########################################################
 ## Stopping Cowrie if already installed
 ###########################################################
 clear
 if [ -x /etc/init.d/cowrie ] ; then
    outlog "Existing cowrie startup file found, stopping cowrie."
    run '/etc/init.d/cowrie stop'
+   outlog "... giving cowrie time to stop ..."
+   run 'sleep 10'
+   outlog "... OK."
 fi
 
 
@@ -961,9 +1006,6 @@ dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 if [ "${nofwlogging}" == "" ] ; then
    # default: local net & connected IPs (as the user confirmed)
    nofwlogging="${localnet} ${CONIPS}"
-   # V0.46: add multicast (multicasts will most certainly be internal stuff we don't want
-   #        to get reported to the public; so spare out 224.0.0.0 - 239.255.255.255 from firewall logging)
-   nofwlogging="${nofwlogging} 224.0.0.0/4"
    # remove duplicates
    nofwlogging=`echo ${nofwlogging} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 fi
@@ -1163,6 +1205,8 @@ COMMIT
 :INPUT ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
+# ignore multicasts, no logging
+-A PREROUTING -i $interface -m pkttype –pkt-type multicast -j RETURN
 EOF
 
 # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
@@ -1260,6 +1304,11 @@ do_copy $progdir/../srv/dshield/pifwparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
+# check: automatic updates allowed?
+if [ ${MANUPDATES} -eq 0 ]; then
+   dlog "automatic updates OK, configuring"
+   run 'touch ${DSHIELDDIR}/auto-update-ok'
+fi
 
 
 #
@@ -1534,8 +1583,9 @@ run "systemctl daemon-reload"
 
 # change ownership for web databases to cowrie as we will run the
 # web honeypot as cowrie
-run "chown cowrie /srv/www/DB"
-run "chown cowrie /srv/www/DB/*"
+touch ${WEBDIR}/DB/webserver.sqlite
+run "chown cowrie ${WEBDIR}/DB"
+run "chown cowrie ${WEBDIR}/DB/*"
 
 
 ###########################################################
