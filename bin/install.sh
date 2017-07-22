@@ -1226,7 +1226,9 @@ fi
 
 
 dlog "setting interface in syslog config"
-run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
+# no %%interface%% in dshield.conf template anymore, so only copying file
+# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
+do_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d/dshield.conf 600
 
 drun 'cat /etc/rsyslog.d/dshield.conf'
 
@@ -1324,22 +1326,6 @@ run 'echo "anonymizemask=" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
-###########################################################
-## Installation of web honeypot
-###########################################################
-
-dlog "installing web honeypot"
-
-if [ -d ${WEBDIR} ]; then
-   dlog "old web honeypot installation found, moving"
-   # TODO: warn user, backup dl etc.
-   run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
-fi
-
-do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
-run "systemctl enable webpy.service"
-run "systemctl daemon-reload"
 
 ###########################################################
 ## Installation of cowrie
@@ -1476,7 +1462,7 @@ fi
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
-run 'cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg'
+do_copy /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg 644
 cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
 userid = $uid
@@ -1518,6 +1504,28 @@ dlog "copying cowrie system files"
 do_copy $progdir/../etc/init.d/cowrie /etc/init.d/cowrie 755
 do_copy $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d 644
 do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
+
+
+###########################################################
+## Installation of web honeypot
+###########################################################
+
+dlog "installing web honeypot"
+
+if [ -d ${WEBDIR} ]; then
+   dlog "old web honeypot installation found, moving"
+   # TODO: warn user, backup dl etc.
+   run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
+fi
+
+do_copy $progdir/../srv/www ${WEBDIR}/../
+do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
+run "systemctl enable webpy.service"
+run "systemctl daemon-reload"
+
+# change ownership for web databases to cowrie as we will run the
+# web honeypot as cowrie
+run "chown cowrie /srv/www/DB/*"
 
 
 ###########################################################
