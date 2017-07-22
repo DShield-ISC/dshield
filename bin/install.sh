@@ -26,6 +26,7 @@ readonly version=0.46
 #   - some cleanup
 #   - removed mini http
 #   - added multicast disable rule to ignore multicasts for dshield logs
+#   - dito broadcasts to 255.255.255.255
 #   - ask if automatic updates are OK
 #
 # - V0.45 (Johannes)
@@ -1206,7 +1207,9 @@ COMMIT
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
 # ignore multicasts, no logging
--A PREROUTING -i $interface -m pkttype –pkt-type multicast -j RETURN
+-A PREROUTING -i $interface -m pkttype --pkt-type multicast -j RETURN
+# ignore broadcast, no logging
+-A PREROUTING -i $interface -d 255.255.255.255 -j RETURN
 EOF
 
 # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
