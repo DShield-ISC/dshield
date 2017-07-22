@@ -1532,6 +1532,22 @@ do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
 
 
 ###########################################################
+## Remove old mini-httpd stuff (if run as an update)
+###########################################################
+
+dlog "removing old mini-httpd stuff"
+if [ -f /etc/mini-httpd.conf ] ; then
+   mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
+fi
+if [ -f /etc/default/mini-httpd ] ; then
+   run 'update-rc.d mini-httpd disable'
+   run 'update-rc.d -f mini-httpd remove'
+   mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
+fi
+
+
+
+###########################################################
 ## Setting up Services
 ###########################################################
 
