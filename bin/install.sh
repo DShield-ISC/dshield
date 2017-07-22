@@ -167,12 +167,17 @@ dlog () {
 }
 
 # copy file(s) and chmod
-# $1: file (opt. incl. dir)
+# $1: file (opt. incl. direcorty / absolute path)
+#     can also be a directory, but then chmod can't be done
 # $2: dest dir
-# optional: $3: chmod bitmask
+# optional: $3: chmod bitmask (only if $1 isn't a directory)
 do_copy () { 
    dlog "copying ${1} to ${2} and chmod to ${3}"
    if [ -d ${1} ] ; then
+      if [ "${3}" != "" ] ; then
+         # source is a directory, but chmod bitmask given nevertheless, issue a warning
+         dlog "WARNING: do_copy: $1 is a directory, but chmod bitmask given, ignored!"
+      fi
       run "cp -r ${1} ${2}"
    else
       run "cp ${1} ${2}"
@@ -181,7 +186,8 @@ do_copy () {
       outlog "Error copying ${1} to ${2}. Aborting."
       exit 9
    fi
-   if [ "${3}" != "" ] ; then
+   if [ "${3}" != "" -a ! -d ${1} ] ; then
+      # only if $1 isn't a directory!
       if [ -f ${2} ] ; then
          # target is a file, chmod directly
          run "chmod ${3} ${2}"
@@ -1528,6 +1534,7 @@ run "systemctl daemon-reload"
 
 # change ownership for web databases to cowrie as we will run the
 # web honeypot as cowrie
+run "chown cowrie /srv/www/DB"
 run "chown cowrie /srv/www/DB/*"
 
 
