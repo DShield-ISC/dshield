@@ -22,9 +22,9 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
-- if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE.
+- if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. __IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE__.
 - boot the pi from the SD card and log into the console using an USB keyboard
-  - hint: when you don't want to connect a display you may just enter the following (note: US keyboard layout)
+  - hint: when you don't want to connect a display and you haven't enabled SSH server as stated above you may just enter the following (note: US keyboard layout)
    ```
    pi
    raspberry
@@ -91,7 +91,7 @@ sudo init 6
 ```
 - from now on you have to use port 12222 to connect to the device by SSH
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
-  you will be able to configure it as a "DMZ Hosts", "exposed devices", ... see hints below for - well - hints ...
+  you will be able to configure it as a "DMZ Hosts", "exposed devices", ... see [hints below](#how-to-place-the-dshield-sensor-honeypot) for - well - hints ...
 
 ## Background: `install.sh`
 
