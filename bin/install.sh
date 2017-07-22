@@ -1513,6 +1513,8 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 dlog "installing web honeypot"
 
+run "mkdir -p ${WEBDIR}"
+
 if [ -d ${WEBDIR} ]; then
    dlog "old web honeypot installation found, moving"
    # TODO: warn user, backup dl etc.
