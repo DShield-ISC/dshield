@@ -182,7 +182,13 @@ do_copy () {
       exit 9
    fi
    if [ "${3}" != "" ] ; then
-      run "chmod ${3} ${2}/`basename ${1}`"
+      if [ -f ${2} ] ; then
+         # target is a file, chmod directly
+         run "chmod ${3} ${2}"
+      else
+         # target is a directory, so use basename
+         run "chmod ${3} ${2}/`basename ${1}`"
+      fi
       if [ ${?} -ne 0 ] ; then
          outlog "Error executing chmod ${3} ${2}/${1}. Aborting."
          exit 9
@@ -1353,11 +1359,6 @@ if ! grep '^cowrie:' -q /etc/passwd; then
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
-
-# change ownership for web databases to cowrie as we will run the
-# web honeypot as cowrie
-run "chown cowrie /srv/www/DB/*"
-
 
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
