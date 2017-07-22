@@ -1513,13 +1513,13 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 dlog "installing web honeypot"
 
-run "mkdir -p ${WEBDIR}"
-
 if [ -d ${WEBDIR} ]; then
    dlog "old web honeypot installation found, moving"
    # TODO: warn user, backup dl etc.
    run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
 fi
+
+run "mkdir -p ${WEBDIR}"
 
 do_copy $progdir/../srv/www ${WEBDIR}/../
 do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
