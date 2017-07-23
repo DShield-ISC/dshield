@@ -15,17 +15,27 @@
 ###########################################################
 
 
-readonly version=0.45
+readonly version=0.46
+
 #
 # Major Changes (for details see Github):
 #
-# - V0.45
+# - V0.46 (Gebhard)
+#   - removed obsolete suff (already commented out)
+#   - added comments
+#   - some cleanup
+#   - removed mini http
+#   - added multicast disable rule to ignore multicasts for dshield logs
+#   - dito broadcasts to 255.255.255.255
+#   - ask if automatic updates are OK
+#
+# - V0.45 (Johannes)
 #    - enabled web honeypot
 #
-# - V0.44
+# - V0.44 (Johannes)
 #   - enabled telnet in cowrie
 #
-# - V0.43
+# - V0.43 (Gebhard)
 #   - revised cowrie installation to reflect current instructions
 #
 # - V0.42
@@ -56,6 +66,7 @@ TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 LOGDIR="${TARGETDIR}/log"
+WEBDIR="${TARGETDIR}/www"
 INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
@@ -63,6 +74,10 @@ LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 # used e.g. for setting up block rules for trusted nets
 # use the ports after PREROUTING has been excecuted, i.e. the redirected (not native) ports
 # note: doesn't make sense to ask the user because cowrie is configured statically
+#
+# <SVC>HONEYPORT: target ports for requests, i.e. where the honey pot daemon listens on
+# <SVC>REDIRECT: source ports for requests, i.e. which ports should be redirected to the honey pot daemon
+# HONEYPORTS: all ports a honey pot is listening on so that the firewall can be configured accordingly
 SSHHONEYPORT=2222
 TELNETHONEYPORT=2223
 WEBHONEYPORT=8000
@@ -72,14 +87,14 @@ WEBREDIRECT="80 8080 7547 5555 9000"
 HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
 
 
-# which port the sshd should listen to
+# which port the real sshd should listen to
 SSHDPORT="12222"
 
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
 DEBUG=1
-clear
+
 # delimiter
 LINE="##########################################################################################################"
 
@@ -155,18 +170,34 @@ dlog () {
 }
 
 # copy file(s) and chmod
-# $1: file (opt. incl. dir)
+# $1: file (opt. incl. direcorty / absolute path)
+#     can also be a directory, but then chmod can't be done
 # $2: dest dir
-# optional: $3: chmod bitmask
+# optional: $3: chmod bitmask (only if $1 isn't a directory)
 do_copy () { 
    dlog "copying ${1} to ${2} and chmod to ${3}"
-   run "cp ${1} ${2}"
+   if [ -d ${1} ] ; then
+      if [ "${3}" != "" ] ; then
+         # source is a directory, but chmod bitmask given nevertheless, issue a warning
+         dlog "WARNING: do_copy: $1 is a directory, but chmod bitmask given, ignored!"
+      fi
+      run "cp -r ${1} ${2}"
+   else
+      run "cp ${1} ${2}"
+   fi
    if [ ${?} -ne 0 ] ; then
       outlog "Error copying ${1} to ${2}. Aborting."
       exit 9
    fi
-   if [ "${3}" != "" ] ; then
-      run "chmod ${3} ${2}/`basename ${1}`"
+   if [ "${3}" != "" -a ! -d ${1} ] ; then
+      # only if $1 isn't a directory!
+      if [ -f ${2} ] ; then
+         # target is a file, chmod directly
+         run "chmod ${3} ${2}"
+      else
+         # target is a directory, so use basename
+         run "chmod ${3} ${2}/`basename ${1}`"
+      fi
       if [ ${?} -ne 0 ] ; then
          outlog "Error executing chmod ${3} ${2}/${1}. Aborting."
          exit 9
@@ -178,6 +209,8 @@ do_copy () {
 ###########################################################
 ## MAIN
 ###########################################################
+
+clear
 
 ###########################################################
 ## basic checks
@@ -293,14 +326,9 @@ if [ "$dist" == "apt" ]; then
    run 'apt-get -y -q upgrade'
 
    outlog "Installing additional packages"
-   # apt-get -y -qq install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal python-crypto python-gmpy python-gmpy2 python-mysqldb python-pip python-pyasn1 python-twisted python-virtualenv python-zope.interface randomsound rng-tools unzip libssl-dev > /dev/null
-
    # OS packages: no python modules
-
    # 2017-05-17: added python-virtualenv authbind for cowrie
    run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
-
-   # pip install python-dateutil > /dev/null
 
 fi
 
@@ -376,12 +404,55 @@ dlog "MATURE: ${MATURE}"
 
 
 ###########################################################
+## let the user decide:
+## automatic updates OK?
+###########################################################
+
+dlog "Offering user choice if automatic updates are OK."
+
+exec 3>&1
+VALUES=$(dialog --title 'Automatic Updates' --radiolist "In future versions automatic updates of this distribution may be conducted. Please choose if you want them or if you want to keep up your dshield stuff up-to-date manually." 0 0 2 \
+   manual "" on \
+   automatic "" off \
+   2>&1 1>&3)
+
+response=$?
+exec 3>&-
+
+case $response in
+   ${DIALOG_CANCEL})
+      dlog "User clicked CANCEL."
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+   ${DIALOG_ESC})
+      dlog "User pressed ESC"
+      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
+      outlog "See ${LOGFILE} for details."
+      exit 5
+      ;;
+esac
+
+if [ ${VALUES} == "manual" ] ; then
+   MANUPDATES=1
+else
+   MANUPDATES=0
+fi
+
+dlog "MANUPDATES: ${MANUPDATES}"
+
+
+###########################################################
 ## Stopping Cowrie if already installed
 ###########################################################
 clear
 if [ -x /etc/init.d/cowrie ] ; then
    outlog "Existing cowrie startup file found, stopping cowrie."
    run '/etc/init.d/cowrie stop'
+   outlog "... giving cowrie time to stop ..."
+   run 'sleep 10'
+   outlog "... OK."
 fi
 
 
@@ -396,7 +467,7 @@ run 'pip > /dev/null'
 if [ ${?} -gt 0 ] ; then
    # nice, no pip found
 
-   dlog "no pip found, Installing pip"
+   outlog "no pip found, installing pip"
 
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
    if [ ${?} -ne 0 ] ; then
@@ -486,6 +557,7 @@ drun "cat /etc/modprobe.d/ipv6.conf"
 ## Handling existing config
 ###########################################################
 
+# legacy config file, still used for most stuff
 if [ -f /etc/dshield.conf ] ; then
    dlog "dshield.conf found, content follows"
    drun 'cat /etc/dshield.conf'
@@ -508,6 +580,7 @@ if [ -f /etc/dshield.conf ] ; then
    dlog "hanlding of dshield.conf finished"
 fi
 
+# fancy new config file, only used for experimental stuff as of now
 if [ -f /etc/dshield.ini ] ; then
    dlog "dshield.ini found, content follows"
    drun 'cat /etc/dshield.ini'
@@ -1048,12 +1121,25 @@ dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 
 
 ##---------------------------------------------------------
-## create firewall rule set
+## create actual firewall rule set
 ##---------------------------------------------------------
+#
+# Firewall Layout: see beginning of firewall section
+#
+
 clear
+
 outlog "Doing further configuration"
 
 dlog "creating /etc/network/iptables"
+
+# create stuff for INPUT chain:
+# - allow localhost
+# - allow related, established
+# - disable access to honeypot ports for internal nets (5.)
+# - allow access to daemon / admin ports only for internal nets (2., 3.)
+# - allow access to honeypot ports (2., 7.)
+# - default policy: DROP (8.)
 
 cat > /etc/network/iptables <<EOF
 
@@ -1065,7 +1151,9 @@ cat > /etc/network/iptables <<EOF
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
+# allow all on loopback
 -A INPUT -i lo -j ACCEPT
+# allow all for established connections
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 EOF
 
@@ -1104,6 +1192,13 @@ fi
 
 
 
+# create stuff for PREROUTING chain:
+# - no logging for trusted nets -> skip rest of chain (4.)
+#   (this means for trusted nets the redirects for
+#    honeypot ports don't happen, but this shouldn't matter)
+# - logging of all access attempts (1.)
+# - redirect for honeypot ports (6.)
+
 cat >> /etc/network/iptables <<EOF
 COMMIT
 *nat
@@ -1111,6 +1206,10 @@ COMMIT
 :INPUT ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
+# ignore multicasts, no logging
+-A PREROUTING -i $interface -m pkttype --pkt-type multicast -j RETURN
+# ignore broadcast, no logging
+-A PREROUTING -i $interface -d 255.255.255.255 -j RETURN
 EOF
 
 # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
@@ -1127,15 +1226,22 @@ cat >> /etc/network/iptables <<EOF
 -A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
 # redirect honeypot ports
 EOF
+
+echo "# - ssh ports" >> /etc/network/iptables
 for PORT in ${SSHREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >> /etc/network/iptables
 done
+
+echo "# - telnet ports" >> /etc/network/iptables
 for PORT in ${TELNETREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >> /etc/network/iptables
 done
+
+echo "# - web ports" >> /etc/network/iptables
 for PORT in ${WEBREDIRECT}; do
    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >> /etc/network/iptables
 done
+
 echo "COMMIT" >> /etc/network/iptables
 
 run 'chmod 700 /etc/network/iptables'
@@ -1145,12 +1251,11 @@ drun 'cat /etc/network/iptables'
 
 dlog "Copying /etc/network/if-pre-up.d"
 
-run "cp $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d"
-run "chmod 700 /etc/network/if-pre-up.d/dshield"
+do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 700
 
 
 ###########################################################
-## Change SSHD port
+## Change real SSHD port
 ###########################################################
 
 
@@ -1180,7 +1285,9 @@ fi
 
 
 dlog "setting interface in syslog config"
-run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
+# no %%interface%% in dshield.conf template anymore, so only copying file
+# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
+do_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
 
 drun 'cat /etc/rsyslog.d/dshield.conf'
 
@@ -1200,6 +1307,11 @@ do_copy $progdir/../srv/dshield/pifwparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
+# check: automatic updates allowed?
+if [ ${MANUPDATES} -eq 0 ]; then
+   dlog "automatic updates OK, configuring"
+   run 'touch ${DSHIELDDIR}/auto-update-ok'
+fi
 
 
 #
@@ -1278,15 +1390,6 @@ run 'echo "anonymizemask=" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
-###########################################################
-## Installation of web honeypot
-###########################################################
-
-
-run "cp -r $progdir/../srv/www /srv/"
-run "cp $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/"
-run "systemctl enable webpy.service"
-run "systemctl daemon-reload"
 
 ###########################################################
 ## Installation of cowrie
@@ -1314,11 +1417,6 @@ if ! grep '^cowrie:' -q /etc/passwd; then
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
-
-# change ownership for web databases to cowrie as we will run the
-# web honeypot as cowrie
-run "chown cowrie /srv/www/DB/*"
-
 
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
@@ -1423,7 +1521,7 @@ fi
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
-run 'cp /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg'
+do_copy /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg 644
 cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
 userid = $uid
@@ -1460,129 +1558,63 @@ run 'chown -R cowrie:cowrie /srv/cowrie'
 
 # echo "###########  $progdir  ###########"
 
-dlog "copying system files"
+dlog "copying cowrie system files"
 
-run "cp $progdir/../etc/init.d/cowrie /etc/init.d/cowrie"
-run "cp $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d"
-run "cp $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly"
-run "cp $progdir/../etc/cron.hourly/dshield /etc/cron.hourly"
-run "cp $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf"
-run "cp $progdir/../etc/default/mini-httpd /etc/default/mini-httpd"
+do_copy $progdir/../etc/init.d/cowrie /etc/init.d/cowrie 755
+do_copy $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d 644
+do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
+
 
 ###########################################################
-## START: not needed anymore (starting with V0.43)
+## Installation of web honeypot
 ###########################################################
 
-ignoreme () {
+dlog "installing web honeypot"
 
-#
-# Checking cowrie Dependencies
-# see: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt
-# ... and local requirements-output.txt
-# ... and twisted dependencies: https://twistedmatrix.com/documents/current/installation/howto/optional.html
-#
+if [ -d ${WEBDIR} ]; then
+   dlog "old web honeypot installation found, moving"
+   # TODO: warn user, backup dl etc.
+   run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
+fi
 
-# format: <PKGNAME1>,<MINVERSION1>  <PKGNAME2>,<MINVERSION2>  <PKGNAMEn>,<MINVERSIONn>
-#         meaning: <PGKNAME> must be installes in version >=<MINVERSION>
-# if no MINVERSION: 0
-# replace _ with -
+run "mkdir -p ${WEBDIR}"
 
-# 2017-04-17: twisted v15.2.1 isn't working (problems with SSH key), neither is 17.1.0, so we use the latest version of 16 (16.6.0)
-# 2017-04-23: seems to be working fine is all most current versions are installed using pip (w/o ANY distro package)
-#             so if pkg not found it is OK (as of now) to install the most recent version
+do_copy $progdir/../srv/www ${WEBDIR}/../
+do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
+run "systemctl enable webpy.service"
+run "systemctl daemon-reload"
 
-dlog "checking and installing Python packages for cowrie"
-dlog "current requirements can be found here:"
-dlog "cowrie: https://github.com/micheloosterhof/cowrie/blob/master/requirements.txt"
-dlog "        and requirements-output.txt"
-dlog "twisted: https://twistedmatrix.com/documents/current/installation/howto/optional.html"
-
-# simpler installation routines didn't work some point in time, so using this funny stuff
-for PKGVER in twisted,16.6.0 cryptography,1.8.1 configparser,0 pyopenssl,16.2.0 gmpy2,0 pyparsing,0 packaging,0 appdirs,0 pyasn1-modules,0.0.8 attrs,0 service-identity,0 pycrypto,2.6.1 python-dateutil,0 tftpy,0 idna,0 pyasn1,0.2.3 requests,0 MySQL-python,0 crtifi,0 chardet,0 urllib3,0 idna,0; do
-
-   # echo "PKGVER: ${PKGVER}"
-
-   PKG=`echo "${PKGVER}" | cut -d "," -f 1`
-   VERREQ=`echo "${PKGVER}" | cut -d "," -f 2`
-   VERREQLIST=`echo "${VERREQ}" | tr "." " "`
-
-   VERINST=`pip show ${PKG} | grep "^Version: " | cut -d " " -f 2`
-
-   if [ "${VERINST}" == "" ] ; then
-      VERINST="0"
-   fi
-
-   VERINSTLIST=`echo "${VERINST}" | tr "." " "`
-
-   # echo "PKG: ${PKG}"
-   # echo "VERREQ: ${VERREQ}"
-   # echo "VERREQLIST: ${VERREQLIST}"
-   # echo "VERINST: ${VERINST}"
-   # echo "VERINSTLIST: ${VERINSTLIST}"
-   dlog "checking package ${PKG}: installed: v${VERINST}, required: v${VERREQ}"
-
-   MUSTINST=0
-
-   outlog "+ checking cowrie dependency: module '${PKG}' ..."
-
-   if [ "${VERINST}" == "0" ] ; then
-      outlog "  WARN: not found at all, will be installed"
-      MUSTINST=1
-      # as of now: install the most recent version if not installed yet
-      run "pip install ${PKG}"
-      if [ ${?} -ne 0 ] ; then
-         # TODO: give the user a chance to continue w/o cowrie
-         outlog "Error installing '${PKG}'. Aborting."
-         exit 9
-      fi
-   else
-      FIELD=1
-      # check if version number of installed module is sufficient
-      for VERNO in ${VERREQLIST} ; do
-         # echo "FIELD: ${FIELD}"
-         FIELDINST=`echo "${VERINSTLIST}" | cut -d " " -f "${FIELD}" `
-         if [ "${FIELDINST}" == "" ] ; then
-            FIELDINST=0
-         fi
-         FIELDREQ=`echo "${VERREQLIST}" | cut -d " " -f "${FIELD}" `
-         if [ "${FIELDREQ}" == "" ] ; then
-            FIELDREQ=0
-         fi
-         if [ ${FIELDINST} -lt ${FIELDREQ} ] ; then
-            # first version string from left with lower number installed -> update
-            MUSTINST=1
-            break
-         elif [ ${FIELDINST} -gt ${FIELDREQ} ] ; then
-            # first version string from left with hight number installed -> done
-            break
-         fi
-         FIELD=`echo "$((${FIELD} + 1))"`
-      done
-      if [ ${MUSTINST} -eq 1 ] ; then
-         outlog "  WARN: is installed in v${VERINST} but must at least be v${VERREQ}, will be updated"
-         run "pip install ${PKG}==${VERREQ}"
-         if [ ${?} -ne 0 ] ; then
-            # TODO: give the user a chance to continue w/o cowrie
-            outlog "Error upgrading '${PKG}'. Aborting."
-            exit 9
-         fi
-      fi
-   fi
-
-   # echo "MUSTINST: ${MUSTINST}"
-
-   if [ ${MUSTINST} -eq 0 ] ; then
-      outlog "  OK: is installed in a sufficient version, nothing to do"
-   fi
+# change ownership for web databases to cowrie as we will run the
+# web honeypot as cowrie
+touch ${WEBDIR}/DB/webserver.sqlite
+run "chown cowrie ${WEBDIR}/DB"
+run "chown cowrie ${WEBDIR}/DB/*"
 
 
-done
-
-
-}
 ###########################################################
-## END: not needed anymore
+## Copying further system files
 ###########################################################
+
+dlog "copying further system files"
+
+do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
+# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
+
+
+###########################################################
+## Remove old mini-httpd stuff (if run as an update)
+###########################################################
+
+dlog "removing old mini-httpd stuff"
+if [ -f /etc/mini-httpd.conf ] ; then
+   mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
+fi
+if [ -f /etc/default/mini-httpd ] ; then
+   run 'update-rc.d mini-httpd disable'
+   run 'update-rc.d -f mini-httpd remove'
+   mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
+fi
 
 
 
@@ -1592,9 +1624,9 @@ done
 
 
 # setting up services
-dlog "setting up services: cowrie, mini-httpd"
+dlog "setting up services: cowrie"
 run 'update-rc.d cowrie defaults'
-run 'update-rc.d mini-httpd defaults'
+# run 'update-rc.d mini-httpd defaults'
 
 
 ###########################################################
