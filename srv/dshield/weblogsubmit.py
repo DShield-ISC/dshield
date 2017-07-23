@@ -46,8 +46,8 @@ lasttime = starttime
 linecount = 0
 for r in rsx:
      logdata['time']=float(r[0])
-     logdata['sip']=d.anontranslateip4((r[1]))
-     logdata['dip']=d.anontranslateip4((r[5]))
+     logdata['sip']=r[1]
+     logdata['dip']=r[5]
      logdata['method']=str(r[2])
      logdata['url']=str(r[3])
      logdata['useragent']=str(r[4])
