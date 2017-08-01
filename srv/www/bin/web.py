@@ -89,7 +89,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = time.time()
-        cladd = self.client_address()
+        cladd = self.client_address[0]
         targetip = '0.0.0.0'
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
