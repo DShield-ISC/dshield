@@ -750,9 +750,10 @@ if [ $return_value -eq  $DIALOG_OK ]; then
                dlog "Calculating hash."
 	       hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
                dlog "Calculated nonce (${nonce}) and hash (${hash})."
-   
-	       user=`echo $email | sed 's/@/%40/'`
-               dlog "Checking API key ...."
+
+	       # TODO: urlencode($user)
+	       user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
+               dlog "Checking API key ..."
 	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi'
    
                dlog "Curl return code is ${?}"
