@@ -71,3 +71,7 @@ l = {'type': '404report', 'logs': logs}
 d.post(l)
 os.remove(pidfile)
 
+try:
+    os.popen("systemctl restart webpy")
+except:
+    pass
