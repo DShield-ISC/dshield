@@ -105,7 +105,7 @@ This script will:
 
 ## Troubleshooting
 
-- logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by 'My Account' -> 'My Reports'
+- logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by ['My Account' -> 'My Reports'](https://www.dshield.org/myreports.html)
 - you can try running the script `/srv/dshield/dshield.pl` manually as root
 - have a look at the output from the status script: `/home/pi/install/dshield/bin/status.sh`
 
