@@ -26,7 +26,8 @@ fi
 
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-user=`echo $email | sed 's/@/%40/'`
+# TODO: urlencode($user)
+user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
 status=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash`
 if [ "$status" = "" ] ; then
    echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
