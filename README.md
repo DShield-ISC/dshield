@@ -103,6 +103,12 @@ This script will:
 - install the ssh honeypot cowrie (for ssh)
 - install needed environment (e.g. MySQL server, Python packages, ...)
 
+## Troubleshooting
+
+- logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by 'My Account' -> 'My Reports'
+- you can try running the script `/srv/dshield/dshield.pl` manually as root
+- have a look at the output from the status script: `/home/pi/install/dshield/bin/status.sh`
+
 ## Updates
 
 ### Normal Updates
@@ -199,6 +205,8 @@ To test your set up you may use a public port scanner and point it to the router
 - configure a default web server and submit logs to DShield
 - enable other honeypot ports than ssh
 - do all the user input stuff at the beginning of the script so it will run the long lasting stuff afterwards
+- create update script
+- move tools (e.g. `status.sh`) into `/srv` directory structure
 - many other stuff :)
 
 ## Changelog
