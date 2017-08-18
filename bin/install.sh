@@ -276,6 +276,10 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
    dist='apt';
 fi
 
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "9" ] ; then
+   dist='apt';
+fi
+
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
    dist='yum';
 fi
