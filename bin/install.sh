@@ -874,7 +874,7 @@ while [ $localnetok -eq  0 ] ; do
    dlog "asking user for default interface"
    exec 3>&1
    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
-      "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+      "Honeypot Interface:" 1 2 "$interface" 1 25 15 15 2>&1 1>&3)
    response=${?}
    exec 3>&-
       case ${response} in
