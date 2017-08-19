@@ -332,7 +332,7 @@ if [ "$dist" == "apt" ]; then
    outlog "Installing additional packages"
    # OS packages: no python modules
    # 2017-05-17: added python-virtualenv authbind for cowrie
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
+   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev default-libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
 
 fi
 
