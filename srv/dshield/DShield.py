@@ -52,7 +52,7 @@ class DshieldSubmit:
     id = 0
     key = ''
     url = 'https://www.dshield.org/submitapi/'
-    types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest']
+    types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest','webhoneypot']
     authheader = ''
 
     def __init__(self, filename):
