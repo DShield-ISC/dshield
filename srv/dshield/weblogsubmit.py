@@ -83,7 +83,7 @@ except sqlite3.Error, e:
     os.remove(pidfile)
     sys.exit(1)
 
-l = {'type': 'web_honeypot', 'logs': logs} # Changed type from 404report to reflect addition of new header data
+l = {'type': 'webhoneypot', 'logs': logs} # Changed type from 404report to reflect addition of new header data
 d.post(l)
 os.remove(pidfile)
 
