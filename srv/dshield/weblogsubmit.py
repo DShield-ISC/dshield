@@ -18,7 +18,7 @@ with open('/etc/dshield.conf') as conf:
         if 'interface' in line:
             iface = line.split('=')[1].replace("\n", "")
 
-ipaddr = os.popen('ifconfig ' + iface + ' | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1').read().replace("\n", "")
+ipaddr = os.popen('/sbin/ifconfig ' + iface + ' | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1').read().replace("\n", "")
 
 pidfile = "/var/run/weblogparser.pid"
 if os.path.isfile(pidfile):
