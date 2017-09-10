@@ -269,15 +269,23 @@ dist=invalid
 
 
 if [ "$ID" == "ubuntu" ] ; then
-   dist='apt';
+   dist='apt'
 fi
 
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
-   dist='apt';
+   dist='apt'
+   version=r8
+fi
+
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "9" ] ; then
+   dist='apt'
+   version=r9
+   
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
    dist='yum';
+   version=a201909
 fi
 
 dlog "dist: ${dist}"
@@ -328,8 +336,13 @@ if [ "$dist" == "apt" ]; then
    outlog "Installing additional packages"
    # OS packages: no python modules
    # 2017-05-17: added python-virtualenv authbind for cowrie
-   run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
 
+# distinguishing between rpi versions 
+   if [ "$version" == "r9" ]; then
+       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev default-libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
+   else
+       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
+   fi
 fi
 
 if [ "$ID" == "amzn" ]; then
@@ -870,7 +883,7 @@ while [ $localnetok -eq  0 ] ; do
    dlog "asking user for default interface"
    exec 3>&1
    interface=$(dialog --title 'Default Interface' --form 'Default Interface' 10 40 0 \
-      "Honeypot Interface:" 1 2 "$interface" 1 25 10 10 2>&1 1>&3)
+      "Honeypot Interface:" 1 2 "$interface" 1 25 15 15 2>&1 1>&3)
    response=${?}
    exec 3>&-
       case ${response} in

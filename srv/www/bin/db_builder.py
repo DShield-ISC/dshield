@@ -142,6 +142,7 @@ def build_DB():
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                 (
                     date text,
+                    headers text,
                     address text,
                     cmd text,
                     path text,

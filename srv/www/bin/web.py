@@ -89,10 +89,14 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = time.time()
-        cladd = self.client_address[0]
         targetip = '0.0.0.0'
+        # Each self.<module> item specified here as a variable needs to be specified in db_builder.py as well so that the db has a column to store it.
+        cladd = self.client_address[0]
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
+        headers = '%s' % self.headers
+        # content_len = int(self.headers.getheader('content-length', 0))
+        # body = self.rfile.read(content_len)
 
         try:
             if str(self.headers['user-agent']) is not None:
@@ -100,9 +104,9 @@ class MyHandler(BaseHTTPRequestHandler):
         except:
             useragentstring = ""
         #self.send_response(200)
-        rvers=''
-        c.execute("""INSERT INTO requests (date, address, cmd, path, useragent, vers, summary,targetip) VALUES(?, ?, ?, ?, ?, ?, ?,?)""",
-                  (dte, cladd, cmd, path, useragentstring, rvers, '- Standard Request.',targetip))
+        rvers = '%s' % self.request_version
+        c.execute("""INSERT INTO requests (date, headers, address, cmd, path, useragent, vers, summary,targetip) VALUES(?, ?, ?, ?, ?, ?, ?, ?,?)""",
+                  (dte, headers, cladd, cmd, path, useragentstring, rvers, '- Standard Request.',targetip))
         try:
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", [useragentstring])
         except sqlite3.IntegrityError:
@@ -206,6 +210,7 @@ class MyHandler(BaseHTTPRequestHandler):
         cladd = '%s' % self.client_address[0]
         cmd = '%s' % self.command
         path = '%s' % self.path
+
         try:
             if str(self.headers['user-agent']) is not None:
                 useragentstring = str(self.headers['user-agent'])
