@@ -273,6 +273,7 @@ dist=invalid
 
 if [ "$ID" == "ubuntu" ] ; then
    dist='apt'
+   distversion=""
 fi
 
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
@@ -291,7 +292,7 @@ if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then
    distversion=a201909
 fi
 
-dlog "dist: ${dist}"
+dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
    outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI."
