@@ -1279,17 +1279,17 @@ do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 700
 
 dlog "changing port for sshd"
 
-run "sed -i.bak 's/^Port 22$/Port "${SSHDPORT}"/' /etc/ssh/sshd_config"
+run "sed -i.bak 's/^[#\s]*Port 22\s*$/Port "${SSHDPORT}"/' /etc/ssh/sshd_config"
 
 dlog "checking if modification was successful"
 if [ `grep "^Port ${SSHDPORT}\$" /etc/ssh/sshd_config | wc -l` -ne 1 ] ; then
-   dialog --title 'sshd port' --ok-label 'Yep, understood.' --cr-wrap --msgbox 'Congrats, you had already changed your sshd port to something other than 22.
+   dialog --title 'sshd port' --ok-label 'Understood.' --cr-wrap --msgbox "Congrats, you had already changed your sshd port to something other than 22.
 
 Please clean up and either
   - change the port manually to ${SSHDPORT}
      in  /etc/ssh/sshd_config    OR
   - clean up the firewall rules and
-     other stuff reflecting YOUR PORT' 13 50
+     other stuff reflecting YOUR PORT" 13 50
 
    dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
    drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
