@@ -20,7 +20,7 @@ If there is the need for other distros, "someone" has to check and maintain the 
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
-- get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
+- get [Raspbian Stretch Lite](https://www.raspberrypi.org/downloads/raspbian/)
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
 - if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. __IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE__.
 - boot the pi from the SD card and log into the console using an USB keyboard
@@ -46,13 +46,20 @@ passwd
 ```
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - run raspi-config to set up some basic things
+   
+   - enable SSH permanently
    ```
-   sudo raspi-config
+   sudo raspi-config noninto do_ssh 1
    ```
-   - enable SSH permanently: interfacing options -> enable ssh
-   - make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
-   - finish, don't reboot yet
-- make sure Pi's system time is somewhat reasonable, e.g.
+   - make sure the root file system of the Pi is properly expanded
+   ```
+     sudo raspi-config --expand-rootfs
+   ```
+   - make sure Pi's system time is somewhat reasonable, e.g.
+```
+date
+```
+if the time is "off" run (replace date with current date)
 ```
 sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 ```
@@ -63,7 +70,7 @@ sudo apt-get -u dist-upgrade
 ```
 - reboot
 ```
-sudo init 6
+sudo reboot
 ```
 - if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
