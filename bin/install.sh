@@ -15,10 +15,13 @@
 ###########################################################
 
 
-readonly version=0.46
+readonly version=0.47
 
 #
 # Major Changes (for details see Github):
+#
+# - V0.47
+#   - many small changes, see GitHub
 #
 # - V0.46 (Gebhard)
 #   - removed obsolete suff (already commented out)
@@ -270,25 +273,26 @@ dist=invalid
 
 if [ "$ID" == "ubuntu" ] ; then
    dist='apt'
+   distversion=""
 fi
 
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
    dist='apt'
-   version=r8
+   distversion=r8
 fi
 
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "9" ] ; then
    dist='apt'
-   version=r9
+   distversion=r9
    
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
    dist='yum';
-   version=a201909
+   distversion=a201909
 fi
 
-dlog "dist: ${dist}"
+dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
    outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI."
@@ -338,7 +342,7 @@ if [ "$dist" == "apt" ]; then
    # 2017-05-17: added python-virtualenv authbind for cowrie
 
 # distinguishing between rpi versions 
-   if [ "$version" == "r9" ]; then
+   if [ "$distversion" == "r9" ]; then
        run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev default-libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
    else
        run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
