@@ -239,7 +239,7 @@ Todo:
 - SQL Injection - will likely use separate dorked database
 - Would like to integrate with cowrie for shell attacks - (BHAG)
 
-Any input appreciated - mweeks9989@gmail.com - thanks!
+Any input appreciated - Please file a bug report / issue vai github - thanks!
 
 Slack group invite link: https://join.slack.com/dshieldusers/shared_invite/MTc4MTE4NzA1MTg5LTE0OTM4MTQyNzctNDQ4YTVhY2RiYQ
 
