@@ -66,7 +66,7 @@ sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
 ```
 sudo apt-get update
-sudo apt-get -u dist-upgrade
+sudo apt-get -uy dist-upgrade
 ```
 - reboot
 ```
@@ -74,7 +74,7 @@ sudo reboot
 ```
 - if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
-sudo apt-get install git
+sudo apt-get -y install git
 ```
 - make install directory and get GIT repository
 ```
@@ -94,7 +94,7 @@ sudo tail -f LOGFILE
 - answer the questions of the installation routine
 - if everything goes fine and the script finishes OK: reboot the device 
 ```
-sudo init 6
+sudo reboot
 ```
 - from now on you have to use port 12222 to connect to the device by SSH
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
