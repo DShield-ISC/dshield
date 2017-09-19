@@ -47,9 +47,9 @@ passwd
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - run raspi-config to set up some basic things
    
-   - enable SSH permanently
+   - enable SSH permanently (only if you haven't done so already)
    ```
-   sudo raspi-config nonint do_ssh 1
+   sudo touch /boot/ssh
    ```
    - make sure the root file system of the Pi is properly expanded
    ```
