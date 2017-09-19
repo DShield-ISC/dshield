@@ -49,7 +49,7 @@ passwd
    
    - enable SSH permanently
    ```
-   sudo raspi-config noninto do_ssh 1
+   sudo raspi-config nonint do_ssh 1
    ```
    - make sure the root file system of the Pi is properly expanded
    ```
