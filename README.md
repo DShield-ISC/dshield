@@ -20,7 +20,7 @@ If there is the need for other distros, "someone" has to check and maintain the 
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
-- get [Raspbian Jessie Lite](https://www.raspberrypi.org/downloads/raspbian/)
+- get [Raspbian Stretch Lite](https://www.raspberrypi.org/downloads/raspbian/)
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
 - if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. __IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE__.
 - boot the pi from the SD card and log into the console using an USB keyboard
@@ -46,28 +46,35 @@ passwd
 ```
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - run raspi-config to set up some basic things
+   
+   - enable SSH permanently (only if you haven't done so already)
    ```
-   sudo raspi-config
+   sudo touch /boot/ssh
    ```
-   - enable SSH permanently: interfacing options -> enable ssh
-   - make sure the root file system of the Pi is properly expanded: advanced options -> expand filesystem
-   - finish, don't reboot yet
-- make sure Pi's system time is somewhat reasonable, e.g.
+   - make sure the root file system of the Pi is properly expanded
+   ```
+     sudo raspi-config --expand-rootfs
+   ```
+   - make sure Pi's system time is somewhat reasonable, e.g.
+```
+date
+```
+if the time is "off" run (replace date with current date)
 ```
 sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 ```
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
 ```
 sudo apt-get update
-sudo apt-get -u dist-upgrade
+sudo apt-get -uy dist-upgrade
 ```
 - reboot
 ```
-sudo init 6
+sudo reboot
 ```
 - if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
-sudo apt-get install git
+sudo apt-get -y install git
 ```
 - make install directory and get GIT repository
 ```
@@ -87,7 +94,7 @@ sudo tail -f LOGFILE
 - answer the questions of the installation routine
 - if everything goes fine and the script finishes OK: reboot the device 
 ```
-sudo init 6
+sudo reboot
 ```
 - from now on you have to use port 12222 to connect to the device by SSH
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
@@ -232,7 +239,7 @@ Todo:
 - SQL Injection - will likely use separate dorked database
 - Would like to integrate with cowrie for shell attacks - (BHAG)
 
-Any input appreciated - mweeks9989@gmail.com - thanks!
+Any input appreciated - Please file a bug report / issue vai github - thanks!
 
 Slack group invite link: https://join.slack.com/dshieldusers/shared_invite/MTc4MTE4NzA1MTg5LTE0OTM4MTQyNzctNDQ4YTVhY2RiYQ
 
