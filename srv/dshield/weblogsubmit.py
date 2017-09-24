@@ -26,7 +26,7 @@ if os.path.isfile(pidfile):
     if d.check_pid:
         print "stale lock file."
         os.remove(pidfile)
-    else    
+    else:    
         sys.exit('PID file found. Am I already running?')
 
 
