@@ -248,10 +248,15 @@ class DshieldSubmit:
             argv = argv[1:]  # Reduce the argument list by copying it starting from index 1.
         return opts
 
-    def check_pid(pid):        
-    """ Check For the existence of a unix pid. """
+    def check_pid(self,pidfile):        
+        """ Check For the existence of a unix pid. """
+        f=open(pidfile,'r')
+        pid=f.readline()
+        pid=pid.rstrip('\n')	
+        print pid
+	print pidfile
         try:
-            os.kill(pid, 0)
+            os.kill(int(pid), 0)
         except OSError:
             return False
         else:

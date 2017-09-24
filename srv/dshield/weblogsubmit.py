@@ -23,11 +23,11 @@ ipaddr = os.popen('/sbin/ifconfig ' + iface + ' | grep "inet\ addr" | cut -d: -f
 pidfile = "/var/run/weblogparser.pid"
 d = DshieldSubmit('')
 if os.path.isfile(pidfile):
-    if d.check_pid:
-        print "stale lock file."
-        os.remove(pidfile)
-    else:    
+    if d.check_pid(pidfile):
         sys.exit('PID file found. Am I already running?')
+    else: 
+	print "stale lock file."
+        os.remove(pidfile)
 
 
 f = open(pidfile, 'w')
