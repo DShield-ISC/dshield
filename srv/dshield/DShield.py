@@ -247,3 +247,12 @@ class DshieldSubmit:
                 opts[argv[0]] = argv[1]  # Add key and value to the dictionary.
             argv = argv[1:]  # Reduce the argument list by copying it starting from index 1.
         return opts
+
+    def check_pid(pid):        
+    """ Check For the existence of a unix pid. """
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        else:
+            return True

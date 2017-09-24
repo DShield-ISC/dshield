@@ -21,14 +21,19 @@ with open('/etc/dshield.conf') as conf:
 ipaddr = os.popen('/sbin/ifconfig ' + iface + ' | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1').read().replace("\n", "")
 
 pidfile = "/var/run/weblogparser.pid"
+d = DshieldSubmit('')
 if os.path.isfile(pidfile):
-    sys.exit('PID file found. Am I already running?')
+    if d.check_pid:
+        print "stale lock file."
+        os.remove(pidfile)
+    else    
+        sys.exit('PID file found. Am I already running?')
 
 
 f = open(pidfile, 'w')
 f.write(str(os.getpid()))
 f.close()
-d = DshieldSubmit('')
+
 config = '..' + os.path.sep + 'www'+os.path.sep+'DB' + os.path.sep + 'webserver.sqlite'
 try :
     conn = sqlite3.connect(config)
@@ -91,3 +96,5 @@ try:
     os.popen("systemctl restart webpy")  # Web.py seems to hang periodically, so to bandaid this situation, we restart web.py twice an hour
 except:
     pass
+
+
