@@ -117,6 +117,7 @@ sub submit() {
     $ua->timeout(10);
     $ua->ssl_opts(verify_hostname=>1);
     $ua->ssl_opts(SSL_ca_path=>'/etc/ssl/certs');
+    $ua->agent('dshield.pl submit script');
     $log="From: $email
 Subject: FORMAT DSHIELD USERID $userid AUTHKEY $apikey TZ $tz CLIENTNAME RASPI Version 0.2
 
