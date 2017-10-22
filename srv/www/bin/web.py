@@ -37,7 +37,7 @@ certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
-local_pub_IP = requests.get('https://www4.dshield.org/api/myip', verify = False)
+local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = False)
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
@@ -93,7 +93,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = time.time()
-        targetip = re.findall(r'(?:2(?:5[0-5]|[0-4][0-9])|[0-1]?[0-9]{1,2})(?:\.(?:2(?:5[0-5]|[0-4][0-9])|[0-1]?[0-9]{1,2})){3}', local_pub_IP.content)[0]
+        targetip = local_pub_IP.json()['ip']
         # Each self.<module> item specified here as a variable needs to be specified in db_builder.py as well so that the db has a column to store it.
         address = self.client_address[0]
         cmd = '%s' % self.command  # same as ubelow
