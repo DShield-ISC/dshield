@@ -119,6 +119,7 @@ def build_DB():
                 (
                     ID integer primary key,
                     date text,
+                    headers text,
                     address text,
                     cmd text,
                     path text,

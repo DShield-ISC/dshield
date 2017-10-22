@@ -11,6 +11,7 @@ import sqlite3
 import time
 import cgi
 import re
+import requests
 #from sys import stderr
 
 # Default port - feel free to change
@@ -34,6 +35,9 @@ honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
 # will be if user sets up SSL cert and key
 certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
+
+# Query to DShield API to determine local public IP address
+local_pub_IP = requests.get('https://www4.dshield.org/api/myip', verify = False)
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
@@ -89,9 +93,9 @@ class MyHandler(BaseHTTPRequestHandler):
                 site = i
                 file_path = os.path.join(webpath, i)
         dte = time.time()
-        targetip = '0.0.0.0'
+        targetip = re.findall(r'(?:2(?:5[0-5]|[0-4][0-9])|[0-1]?[0-9]{1,2})(?:\.(?:2(?:5[0-5]|[0-4][0-9])|[0-1]?[0-9]{1,2})){3}', local_pub_IP.content)[0]
         # Each self.<module> item specified here as a variable needs to be specified in db_builder.py as well so that the db has a column to store it.
-        cladd = self.client_address[0]
+        address = self.client_address[0]
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
         headers = '%s' % self.headers
@@ -106,7 +110,7 @@ class MyHandler(BaseHTTPRequestHandler):
         #self.send_response(200)
         rvers = '%s' % self.request_version
         c.execute("""INSERT INTO requests (date, headers, address, cmd, path, useragent, vers, summary,targetip) VALUES(?, ?, ?, ?, ?, ?, ?, ?,?)""",
-                  (dte, headers, cladd, cmd, path, useragentstring, rvers, '- Standard Request.',targetip))
+                  (dte, headers, address, cmd, path, useragentstring, rvers, '- Standard Request.',targetip))
         try:
             c.execute("""INSERT INTO useragents (useragent) VALUES (?)""", [useragentstring])
         except sqlite3.IntegrityError:
@@ -207,9 +211,10 @@ class MyHandler(BaseHTTPRequestHandler):
         # Parse the form data posted
         # try:
         dte = self.date_time_string()
-        cladd = '%s' % self.client_address[0]
+        address = '%s' % self.client_address[0]
         cmd = '%s' % self.command
         path = '%s' % self.path
+        headers = '%s' % self.headers
 
         try:
             if str(self.headers['user-agent']) is not None:
@@ -218,8 +223,8 @@ class MyHandler(BaseHTTPRequestHandler):
             useragentstring = ""
 
         rvers = '%s' % self.request_version
-        c.execute('''INSERT INTO postlogs (date, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?)''',
-                  (dte, cladd, cmd, path, useragentstring, rvers, "- standard post"))
+        c.execute('''INSERT INTO postlogs (date, headers, address, cmd, path, useragent, vers, summary) VALUES(?, ?, ?, ?, ?, ?, ?, ?)''',
+                  (dte, headers, address, cmd, path, useragentstring, rvers, "- standard post"))
         try:
             c.execute('''INSERT INTO useragents (useragent) VALUES (?)''', [useragentstring])
         except sqlite3.IntegrityError:
@@ -292,7 +297,7 @@ class MyHandler(BaseHTTPRequestHandler):
                     else:
                         c.execute("""INSERT INTO postlogs (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
                                   """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                                  (dte, cladd, cmd, path, useragentstring, rvers, key, val[0]))
+                                  (dte, address, cmd, path, useragentstring, rvers, key, val[0]))
                     self.wfile.write('        <tr>')
                     self.wfile.write('          <td align="right">%d</td>' % i)
                     self.wfile.write('          <td align="right">%s</td>' % key)
