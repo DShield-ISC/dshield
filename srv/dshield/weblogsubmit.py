@@ -9,14 +9,6 @@ from datetime import datetime
 import json
 
 # We need to collect the local IP to scrub it from any logs being submitted for anonymity, and to reduce noise/dirty data.
-# To do: turn below into a function and add __name__ to this script so that if we need to import parsing dshield.conf elsewhere, can be done easily.
-# Should also define DSHIELD_CONF as a variable, to allow for flexibility of location.
-iface = ''
-with open('/etc/dshield.conf') as conf:
-    data = conf.readlines()
-    for line in data:
-        if 'interface' in line:
-            iface = line.split('=')[1].replace("\n", "")
 
 ipaddr = os.popen('/bin/hostname -I').read().replace(" \n", "")
 
