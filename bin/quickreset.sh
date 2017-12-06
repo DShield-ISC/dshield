@@ -9,4 +9,4 @@ deluser cowrie
 rm -rf /srv/www
 rm -rf /srv/cowrie
 rm -rf /var/log/mini-httpd
-apt-get -y purge mysql-server mysql-server-5.5 mysql-server-core-5.5
+
