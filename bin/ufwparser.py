@@ -54,8 +54,8 @@ def parse(logline):
                 for fcount in tcpflagmap:
                     if fcount in parts:
                         logdata['flags'] += tcpflagmap[fcount]
-            logdata['dst'] = d.anontranslateip4(logdata['dst'])
-            logdata['src'] = d.anontranslateip4(logdata['src'])
+            logdata['dip'] = d.anontranslateip4(logdata['dip'])
+            logdata['sip'] = d.anontranslateip4(logdata['sip'])
 
             if isinstance(logdata['proto'], int):
                 return logdata
