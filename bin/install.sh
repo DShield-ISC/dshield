@@ -343,9 +343,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev default-libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
+       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3'
    else
-       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl mysql-client python2.7-minimal randomsound rng-tools unzip libssl-dev libmysqlclient-dev python-virtualenv authbind python-requests python-urllib3'
+       run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3'
    fi
 fi
 
@@ -353,8 +353,7 @@ if [ "$ID" == "amzn" ]; then
    outlog "Updating your Operating System"
    run 'yum -q update -y'
    outlog "Installing additional packages"
-   # run yum -q install -y dialog perl-libwww-perl perl-Switch python27-twisted python27-crypto python27-pyasn1 python27-zope-interface python27-pip mysql rng-tools boost-random MySQL-python27 python27-dateutil 
-   run 'yum -q install -y dialog perl-libwww-perl perl-Switch mysql rng-tools boost-random MySQL-python27'
+   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random'
 fi
 
 
@@ -605,122 +604,6 @@ if [ -f /etc/dshield.ini ] ; then
    run 'chmod 600 /etc/dshield.ini'
    run 'chown root:root /etc/dshield.ini'
 fi
-
-###########################################################
-## MySQL
-###########################################################
-
-nomysql=0
-
-if [ -d /var/lib/mysql ]; then
-   dlog "MySQL dir found (/var/lib/mysql), asking what to do"
-   dialog --title 'Installing MySQL' --yesno "You may already have MySQL installed. Do you want me to re-install MySQL and erase all existing data?" 10 50
-   response=$?
-   case $response in 
-      ${DIALOG_OK}) 
-         dlog "being told by user to (re-) install MySQL"
-         outlog "removing MySQL packages"
-         run 'apt-get -y -q purge mysql-server mysql-server-5.5 mysql-server-core-5.5'
-         ;;
-      ${DIALOG_CANCEL}) 
-         dlog "being told by user not to touch MySQL"
-         nomysql=1
-         ;;
-      ${DIALOG_ESC}) 
-         dlog "User pressed ESC"
-         outlog "Exiting at your request, no MySQL stuff done."
-         exit 5
-         ;;
-   esac
-fi
-
-if [ $nomysql -eq 0 ] ; then
-   # we are allowed to play with MySQL
-   outlog "Installing and configuring MySQL (this can take a LOOONG time)"
-
-   # MySQL root pw
-   mysqlpassword=`head -c10 /dev/random | xxd -p`
-   dlog "MySQL root password: ${mysqlpassword}"
-
-   dlog "setting MySQL server parameters for package manager"
-   echo "mysql-server-5.5 mysql-server/root_password password $mysqlpassword" | debconf-set-selections
-   echo "mysql-server-5.5 mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-   echo "mysql-server mysql-server/root_password password $mysqlpassword" | debconf-set-selections
-   echo "mysql-server mysql-server/root_password_again password $mysqlpassword" | debconf-set-selections
-
-   outlog "Installing MySQL server package"
-   run 'apt-get -q -y install mysql-server'
-
-   outlog "Creating  ~/.my.cnf"
-   cat > ~/.my.cnf <<EOF
-[mysql]
-user=root
-password=$mysqlpassword
-EOF
-   drun 'cat  ~/.my.cnf'
-fi
-
-if [ "${mysqlpassword}" == "" ] ; then
-   outlog "MySQL root password is empty, this won't work"
-   outlog "(perhaps no dshield.conf and not allowed to install MySQL on my own)"
-   dlog "nomysql: ${nomysql}"
-   drun "ls -la /etc/dshield.conf"
-   if [ -f  /root/.my.cnf ] ; then
-      outlog "Trying to get password from /root/.my.cnf"
-      if [ `grep "user=root"  /root/.my.cnf | wc -l ` -eq 1 ] ; then
-         if [ `grep "password="  /root/.my.cnf | wc -l  ` -eq 1 ] ; then
-            drun 'grep "password="  /root/.my.cnf | cut -d "=" -f2' 
-            mysqlpassword=`grep "password="  /root/.my.cnf | cut -d "=" -f2`
-         else
-            # more than one password found
-            dlog "No or multiple lines with 'password=' found in /root/.my.cnf"
-         fi 
-      else
-         dlog "No or multiple lines with 'user=root' found in /root/.my.cnf"
-      fi
-   else 
-      dlog "No /root/.my.cnf found."
-   fi
-fi
-
-if [ "${mysqlpassword}" == "" ] ; then
-   dlog "OK, still no MySQL password for root, aksing user"
-   exec 3>&1
-   mysqlpassword=$(dialog --title 'No MySQL root password found' --form "I wasn't able to find any MySQL root password. If you know it: please provide it here. If not: cancel, restart installation and choose to re-install MySQL." 12 50 0 \
-      "MySQL root password:" 1 2 "$mysqlpassword" 1 24 20 60 2>&1 1>&3)
-   response=${?}
-   exec 3>&-
-   case ${response} in
-      ${DIALOG_OK})
-         ;;
-      ${DIALOG_CANCEL})
-         dlog "User canceled MySQL root pw dialogue."
-         exit 5
-         ;;
-      ${DIALOG_ESC})
-         dlog "User pressed ESC in MySQL root pw dialogue."
-         exit 5
-         ;;
-   esac
-fi
-
-if [ "${mysqlpassword}" == "" ] ; then
-   outlog "Still no MySQL root password. Giving up."
-   exit 5
-fi
-
-outlog "Checking, if the MySQL root account can connect."
-run 'mysql -u root -p$mysqlpassword  -e ";"'
-if [ ${?} -ne 0 ] ; then
-   outlog "The root user can't connect to MySQL server using password $mysqlpassword ."
-   outlog "Perhaps obsolete password in /etc/dshield.conf?"
-   outlog "Perhaps no password at all, even not in /root/.my.cnf?"
-   outlog "Please see logfile for details."
-   exit 9
-else
-   dlog "OK, MySQL root user can connect using password $mysqlpassword ."
-fi
-
 
 # hmmm - this SHOULD NOT happen
 if ! [ -d $TMPDIR ]; then
@@ -1380,8 +1263,6 @@ run 'echo "interface=$interface" >> /etc/dshield.conf'
 run 'echo "localnet=$localnet" >> /etc/dshield.conf'
 run 'echo "localips=$localips" >> /etc/dshield.conf'
 run 'echo "adminports=$adminports" >> /etc/dshield.conf'
-run 'echo "mysqlpassword=$mysqlpassword" >> /etc/dshield.conf'
-run 'echo "mysqluser=root" >> /etc/dshield.conf'
 run 'echo "version=$version" >> /etc/dshield.conf'
 run 'echo "progdir=${DSHIELDDIR}" >> /etc/dshield.conf'
 run 'echo "nofwlogging=$nofwlogging" >> /etc/dshield.conf'
@@ -1485,58 +1366,6 @@ dlog "generating cowrie SSH hostkey"
 run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 
 
-# check if cowrie db schema exists
-dlog "check if cowrie db schema exists"
-dlog running:  mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'
-x=`mysql -uroot -p$mysqlpassword -e 'select count(*) "" from information_Schema.schemata where schema_name="cowrie"'`
-if [ $x -eq 1 ]; then
-   outlog "cowrie mysql database already exists. not touching it."
-else
-   outlog "we create the cowrie database and call the creation script"
-   run "mysql -uroot -p$mysqlpassword -e 'create schema cowrie'"
-   run "mysql -uroot -p$mysqlpassword -e 'source /srv/cowrie/doc/sql/mysql.sql' cowrie"
-fi
-if [ "$cowriepassword" = "" ]; then
-   dlog "no cowrie MySQL password yet, generating"
-   cowriepassword=`head -c10 /dev/random | xxd -p`
-   dlog "cowriepassword: ${cowriepassword}"
-fi
-
-dlog "saving cowriepassword in /etc/dshield.conf"
-run 'echo cowriepassword=$cowriepassword >> /etc/dshield.conf'
-
-outlog "Adding / updating cowrie user in MySQL."
-dlog "running MySQL commands: 
-   mysql -uroot -p$mysqlpassword
-   GRANT USAGE ON *.* TO 'cowrie'@'%' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
-   GRANT USAGE ON *.* TO 'cowrie'@'localhost' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
-   DROP USER 'cowrie'@'%';
-   DROP USER 'cowrie'@'localhost';
-   FLUSH PRIVILEGES;
-   CREATE USER 'cowrie'@'localhost' IDENTIFIED BY '${cowriepassword}';
-   GRANT ALL ON cowrie.* TO 'cowrie'@'localhost';
-"
-
-cat <<EOF | mysql -uroot -p$mysqlpassword
-   GRANT USAGE ON *.* TO 'cowrie'@'%' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
-   GRANT USAGE ON *.* TO 'cowrie'@'localhost' IDENTIFIED BY 'slfdjdsljfkjkjaibvjhabu76r3irbk';
-   DROP USER 'cowrie'@'%';
-   DROP USER 'cowrie'@'localhost';
-   FLUSH PRIVILEGES;
-   CREATE USER 'cowrie'@'localhost' IDENTIFIED BY '${cowriepassword}';
-   GRANT ALL ON cowrie.* TO 'cowrie'@'localhost';
-EOF
-
-
-outlog "Checking, if the MySQL cowrie account can connect."
-run 'mysql -u cowrie -p$cowriepassword  -e ";"'
-if [ ${?} -ne 0 ] ; then
-   outlog "The cowrie user can't connect to MySQL server using password $cowriepassword ."
-   exit 9
-else
-   dlog "OK, MySQL cowrie user can connect using password $cowriepassword ."
-fi
-
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
 do_copy /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg 644
@@ -1545,12 +1374,6 @@ cat >> /srv/cowrie/cowrie.cfg <<EOF
 userid = $uid
 auth_key = $apikey
 batch_size = 1
-[output_mysql]
-host=localhost
-database=cowrie
-username=cowrie
-password=$cowriepassword
-port=3306
 EOF
 
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
@@ -1761,7 +1584,6 @@ outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on gi
 outlog "Please include a sanitized version of /etc/dshield.conf in bug reports"
 outlog "as well as a very carefully sanitized version of the installation log "
 outlog "  (${LOGFILE})."
-outlog "To support logging to MySQL, a MySQL server was installed. The root password is $mysqlpassword"
 outlog
 outlog "IMPORTANT: after rebooting, the Pi's ssh server will listen on port ${SSHDPORT}"
 outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
