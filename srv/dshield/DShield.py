@@ -64,6 +64,7 @@ class DshieldSubmit:
         self.anonymizenet = -1
         self.anonymizenetmask = -1
         self.anonymizemask = -1
+        self.fwlogfile = "/var/log/dshield.log"
         self.readconfig(filename)
 
 
@@ -235,6 +236,7 @@ class DshieldSubmit:
             self.anonymizenet = anonymize[0]
             self.anonymizenetmask = anonymize[1]
             self.anonymizemask = self.ip42long(config.get('DShield', 'anonymizemask'))
+            self.fwlogfile = config.get('DShield','fwlogfile')
         else:
             print "config file %s not found" % filename
             sys.exit()

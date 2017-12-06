@@ -9,9 +9,8 @@ from time import mktime
 from datetime import datetime
 from DShield import DshieldSubmit
 
-logfile = "/var/log/ufw.log"
 pidfile = "/var/run/ufwparser.pid"
-lastcount = ".lastufw"
+lastcount = ".lastfwlog"
 config = "/etc/dshield.ini"
 startdate = 0
 now = datetime.utcnow()
@@ -61,8 +60,8 @@ def parse(logline):
                 return logdata
                 
             
-if os.path.isfile(logfile) is None:
-    sys.exit('Can not find logfile %s ' % logfile)
+if os.path.isfile(d.fwlogfile) is None:
+    sys.exit('Can not find firewall logfile %s ' % d.fwlogfile)
 
 if os.path.isfile(pidfile):
     sys.exit('PID file found. Am I already running?')
@@ -83,8 +82,8 @@ data = []
 lastdate = ''
 if startdate == '':
     startdate = 0
-print "opening %s and starting with %d" % (logfile, startdate)
-with open(logfile, 'r') as f:
+print "opening %s and starting with %d" % (d.fwlogfile, startdate)
+with open(d.fwlogfile, 'r') as f:
     lines = f.readlines()
     for line in lines:
         i += 1
