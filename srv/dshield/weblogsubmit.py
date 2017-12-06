@@ -9,16 +9,8 @@ from datetime import datetime
 import json
 
 # We need to collect the local IP to scrub it from any logs being submitted for anonymity, and to reduce noise/dirty data.
-# To do: turn below into a function and add __name__ to this script so that if we need to import parsing dshield.conf elsewhere, can be done easily.
-# Should also define DSHIELD_CONF as a variable, to allow for flexibility of location.
-iface = ''
-with open('/etc/dshield.conf') as conf:
-    data = conf.readlines()
-    for line in data:
-        if 'interface' in line:
-            iface = line.split('=')[1].replace("\n", "")
 
-ipaddr = os.popen('/sbin/ifconfig ' + iface + ' | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1').read().replace("\n", "")
+ipaddr = os.popen('/bin/hostname -I').read().replace(" \n", "")
 
 pidfile = "/var/run/weblogparser.pid"
 d = DshieldSubmit('')
@@ -55,17 +47,20 @@ starttime=0
 
 if str(maxid[0]) != "None" :
     starttime=float(maxid[0])
-rsx=c.execute("""SELECT date, headers, address, cmd, path, useragent,targetip from requests where date>?""",[starttime]).fetchall()
+rsx=c.execute("""SELECT date, headers, address, cmd, path, useragent, targetip from requests where date>?""",[starttime]).fetchall()
 logs = []
-logdata = {}
 lasttime = starttime
 linecount = 0
 for r in rsx:
+    logdata = {}
     headerdata = {}
     logdata['time']=float(r[0])
     for each in r[1].split('\r\n'): # Header data was stored as a string with extra characters, so some clean-up needed.
         if (each and ipaddr not in each): # scrubbing local IP from data before submission
-            headerdata['header_'+str(each.split(': ')[0])] = each.split(': ')[1]
+            try:
+                headerdata['header_'+str(each.split(': ')[0])] = each.split(': ')[1]
+            except IndexError:
+                headerdata['header_' + str(each.split(':')[0])] = each.split(':')[1]
     logdata['headers']=headerdata # Adding header data as a sub-dictionary
     logdata['sip']=r[2]
     logdata['dip']=r[6]
