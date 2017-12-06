@@ -20,9 +20,7 @@ else
     exit
 fi
 
-if [ ! -d /var/lib/mysql ]; then
-    echo "Incomplete Installation: MySQL not installed
-fi
+
 
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
