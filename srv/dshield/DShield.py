@@ -27,27 +27,6 @@ import struct
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-class OldConfigParser():
-    filename=''
-    config=[]
-    def __init__(self):
-        self.filename=''
-    def read(self,filename):
-            with open(filename,'r') as f:
-                for line in f:
-                    line.rstrip('\n')
-                    parts=line.split('=')
-                    parts[0].strip()
-                    parts[1].strip()
-                    self.config[parts[0]]=parts[1]
-
-    def getint(self,section,item):
-        return int(this.config[item])
-
-    def get(self,section,item):
-        return this.config[item]
-
-
 class DshieldSubmit:
     id = 0
     key = ''
@@ -171,24 +150,6 @@ class DshieldSubmit:
     # convert a bitmask like /24 into a long integer
     def mask42long(self,mask):
         return 2**32-(2**(32-mask))
-
-    def readoldconfig(self, filename):
-        home = os.getenv("HOME")
-        if filename == '':
-            if os.path.isfile(home+'/etc/dshield.conf'):
-                filename = home+'/etc/dshield.conf'
-            elif os.path.isfile('/etc/dshield.conf'):
-                filename = '/etc/dshield.conf'
-            elif os.path.isfile('/etc/dshield/dshield.conf'):
-                filename = '/etc/dshield/dshield.conf'
-        print(filename)
-
-        if os.path.isfile(filename):
-            config = OldConfigParser()
-            config.read(filename)
-
-
-
 
     def readconfig(self, filename):
         home = os.getenv("HOME")
