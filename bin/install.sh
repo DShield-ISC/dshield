@@ -573,31 +573,21 @@ drun "cat /etc/modprobe.d/ipv6.conf"
 ## Handling existing config
 ###########################################################
 
-# legacy config file, still used for most stuff
-if [ -f /etc/dshield.conf ] ; then
-   dlog "dshield.conf found, content follows"
-   drun 'cat /etc/dshield.conf'
-   dlog "securing dshield.conf"
-   run 'chmod 600 /etc/dshield.conf'
-   run 'chown root:root /etc/dshield.conf'
-   outlog "reading old configuration"
-   if grep -q 'uid=<authkey>' /etc/dshield.conf; then
-      dlog "erasing <.*> pattern from dshield.conf"
-      run "sed -i.bak 's/<.*>//' /etc/dshield.conf"
-      dlog "modified content of dshield.conf follows"
-      drun 'cat /etc/dshield.conf'
-   fi
-   dlog "sourcing current dshield.conf but making sure don't overwrite progdir in script ..."
-   progdirold=$progdir
-   dlog "... progdir in script: ${progdir}"
-   . /etc/dshield.conf
-   dlog "... progdir in dshield.conf: ${progdir}"
-   progdir=$progdirold
-   dlog "hanlding of dshield.conf finished"
-fi
-
-# fancy new config file, only used for experimental stuff as of now
 if [ -f /etc/dshield.ini ] ; then
+   dlog "dshield.ini found, content follows"
+   drun 'cat /etc/dshield.ini'
+   dlog "securing dshield.ini"
+   run 'chmod 600 /etc/dshield.ini'
+   run 'chown root:root /etc/dshield.ini'
+   outlog "reading old configuration"
+   if grep -q 'uid=<authkey>' /etc/dshield.ini; then
+      dlog "erasing <.*> pattern from dshield.ini"
+      run "sed -i.bak 's/<.*>//' /etc/dshield.ini"
+      dlog "modified content of dshield.ini follows"
+      drun 'cat /etc/dshield.ini'
+   fi
+   # believe it or not, bash has a built in .ini parser. Just need to remove spaces around "="
+   source <(grep = /etc/dshield.ini | sed 's/ *= */=/g')
    dlog "dshield.ini found, content follows"
    drun 'cat /etc/dshield.ini'
    dlog "securing dshield.ini"
@@ -1203,8 +1193,7 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 #
 
 run "mkdir -p ${DSHIELDDIR}"
-do_copy $progdir/../srv/dshield/dshield.pl ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/pifwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/fwparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
@@ -1222,14 +1211,8 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
-
-# legacy stuff
-if [ ${MATURE} -eq 1 ] ; then
-   echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/dshield.pl" > /etc/cron.d/dshield
-   echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >> /etc/cron.d/dshield 
-else # Johannes' experiments ;-)
-   cat > /etc/cron.d/dshield <<EOF
-$offset1,$offset2 * * * * root ${DSHIELDDIR}/pifwparser.py
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >> /etc/cron.d/dshield 
+echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwparser.py" >> /etc/cron.d/dshield
 EOF
 fi
 
@@ -1252,26 +1235,6 @@ if [ -f /etc/dshield.ini ]; then
    run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
 fi
 
-# legacy config file
-run 'touch /etc/dshield.conf'
-run 'chmod 600 /etc/dshield.conf'
-
-run 'echo "uid=$uid" >> /etc/dshield.conf'
-run 'echo "apikey=$apikey" >> /etc/dshield.conf'
-run 'echo "email=$email" >> /etc/dshield.conf'
-run 'echo "interface=$interface" >> /etc/dshield.conf'
-run 'echo "localnet=$localnet" >> /etc/dshield.conf'
-run 'echo "localips=$localips" >> /etc/dshield.conf'
-run 'echo "adminports=$adminports" >> /etc/dshield.conf'
-run 'echo "version=$version" >> /etc/dshield.conf'
-run 'echo "progdir=${DSHIELDDIR}" >> /etc/dshield.conf'
-run 'echo "nofwlogging=$nofwlogging" >> /etc/dshield.conf'
-run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.conf'
-run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.conf'
-
-dlog "new /etc/dshield.conf follows"
-drun 'cat /etc/dshield.conf'
-
 # new shiny config file
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
@@ -1285,7 +1248,7 @@ run 'echo "honeypotip=" >> /etc/dshield.ini'
 run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
 run 'echo "anonymizeip=" >> /etc/dshield.ini'
 run 'echo "anonymizemask=" >> /etc/dshield.ini'
-
+run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
