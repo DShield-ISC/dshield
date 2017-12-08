@@ -12,14 +12,14 @@ from DShield import DshieldSubmit
 
 
 # main log parsers function
-def parse(logline):
+def parse(logline,logformat,linere):
     logdata = {}
+    fwdata = ''
     m = linere.match(logline)
     if m:
         if logformat == 'pi':
-            logdata['timestamp'] = datetime.fromtimestamp(int(m.group(1)))
-            logdata['time'] = logdata['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-        elif logformat == 'ufw':
+            logdata['time'] = int(m.group(1))
+        elif logformat == 'generic':
             month = strptime(m.group(1), '%b').tm_mon
             if month == 12 and now.month == 1:
                 year = now.year-1
@@ -28,15 +28,16 @@ def parse(logline):
             day = m.group(2)
             ltime = m.group(3)
             date = "%s-%s-%s" % (year, month, day)
+            # parsedate
             logtime = datetime.strptime(date+" "+ltime, '%Y-%m-%d %H:%M:%S')
-            logdata['time'] = logtime
+            # get UTC datetime
+            logdata['time'] = int(logtime.strftime('%s'))
+            fwdata=m.group(4)
 
-            logdata['timestamp'] = datetime.utcfromtimestamp(mktime(logtime.timetuple()))
         else:
             print "Bad format specified: {}".format(logformat)
-
-        if logdata['timestamp'] > startdate:
-            parts = m.group(2).split()
+        if logdata['time'] > startdate:
+            parts = fwdata.split()
             logdata['flags'] = ''
             for part in parts:
                 keyval = part.split('=')
@@ -62,7 +63,7 @@ def parse(logline):
             if isinstance(logdata['proto'], int):
                 return logdata
     else:
-        if debug == 1:
+        if debug > 0:
             print "bad line %s" % logline
 
 
@@ -81,8 +82,8 @@ def checklock(lockfile):
 
 # define paramters
 logfile = "/var/log/dshield.log"
-pidfile = "/var/run/fwparser.pid"
-lastcount = ".lastfwlog"
+pidfile = "/var/run/dshield/fwparser.pid"
+lastcount = "/var/run/dshield/lastfwlog"
 config = "/etc/dshield.ini"
 startdate = 0
 now = datetime.utcnow()
@@ -99,6 +100,8 @@ args = d.getopts(argv)
 debug = 0
 if '-l' in args:  # overwrite log file
     logfile = args['-l']
+if '-p' in args:  # overwrite log file
+    pidfile = args['-p']
 if '-d' in args:  # debug mode
     debug = 1
 if os.path.isfile(logfile) is None:
@@ -111,10 +114,13 @@ f = open(pidfile, 'w')
 f.write(str(os.getpid()))
 f.close()
 
-if os.path.isfile(lastcount) and debug == 0:
+if os.path.isfile(lastcount):
     f = open(lastcount, 'r')
     startdate = float(f.readline())
     f.close()
+if debug > 0:
+    print "Startdate %d file %s" % (startdate,lastcount)
+    
 logs = []
 i = 0
 j = 0
@@ -126,27 +132,25 @@ if startdate == '':
 print "opening %s and starting with %d" % (logfile, startdate)
 with open(logfile, 'r') as f:
     lines = f.readlines()
-    linere = re.compile('^([A-Z][a-z]{2}'') ([0-9 ]{2}) ([0-9:]{8}) \S+ kernel: \[[^\]]+\] \[([^\]]+)\] (.*)')
-    if linere.match(lines[0]) is None:
-        linere = re.compile('^(\d+) \S+ kernel:\[[ 0-9.]+\]\s+DSHIELDINPUT (.*)')
-        if linere.match(lines[0]) is None:
-            logformat = ''
-            print "Can not find a valid log file format"
-        else:
-            logformat = 'ufw'
+    logformat=d.identifylog(lines[0])
+    if logformat == '':
+        print "Can not identify log format"
+        sys.exit('Unable to identify log format')
+    if debug > 0:
+        print "logformat  %s" % logformat
+    linere=re.compile(d.logtypesregex[logformat])
     for line in lines:
         i += 1
-        data = (parse(line))
+        data = (parse(line,logformat,linere))
         if data is not None:
             j += 1
-            data['time'] = data['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-            lastdate = data['timestamp'].strftime('%s')
-            del data['timestamp']
+            lastdate = data['time']
             logs.append(data)
-    print json.dumps(logs)
+    if debug > 1:
+        print json.dumps(logs)
 print "processed %d lines total and %d new lines and ended at %s" % (i, j, data['time'])
 f = open(lastcount, 'w')
-f.write(lastdate)
+f.write(str(lastdate))
 f.close()
 logobject = {'type': 'firewall', 'logs': logs}
 if debug == 0:

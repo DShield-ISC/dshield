@@ -33,6 +33,7 @@ class DshieldSubmit:
     url = 'https://www.dshield.org/submitapi/'
 
     types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest', 'webhoneypot']
+    logtypesregex={'generic': '^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)'}
 
     authheader = ''
 
@@ -45,7 +46,6 @@ class DshieldSubmit:
         self.anonymizemask = -1
         self.fwlogfile = "/var/log/dshield.log"
         self.readconfig(filename)
-
 
     @staticmethod
     def testurl(string):
@@ -224,3 +224,11 @@ class DshieldSubmit:
             return False
         else:
             return True
+
+    def identifylog(self,line):
+        for type in self.logtypesregex:
+            m=re.match(self.logtypesregex[type],line)
+            if m:
+                 return type
+        return ''
+            
