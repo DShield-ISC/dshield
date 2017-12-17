@@ -115,6 +115,8 @@ This script will:
 - logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by ['My Account' -> 'My Reports'](https://www.dshield.org/myreports.html)
 - you can try running the script `/srv/dshield/dshield.pl` manually as root
 - have a look at the output from the status script: `/home/pi/install/dshield/bin/status.sh`
+- if you get strange python / pip errors during installation / updates you may try the following commands as root:
+`pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs -n1 pip install -U`
 
 ## Updates
 
