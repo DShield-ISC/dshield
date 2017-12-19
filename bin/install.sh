@@ -273,7 +273,7 @@ dist=invalid
 
 if [ "$ID" == "ubuntu" ] ; then
    dist='apt'
-   distversion=""
+   distversion="ubuntu"
 fi
 
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ] ; then
@@ -346,6 +346,9 @@ if [ "$dist" == "apt" ]; then
        run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 default-libmysqlclient-dev python-mysqldb'
    else
        run 'apt-get -y -q install build-essential dialog git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 libmysqlclient-dev python-mysqldb'
+   fi
+   if [ "$distversion" == "ubuntu" ]; then
+      run 'apt install -y -q python-pip'
    fi
 fi
 
@@ -481,10 +484,7 @@ outlog "check if pip is already installed"
 run 'pip > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
-   # nice, no pip found
-
    outlog "no pip found, installing pip"
-
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error downloading get-pip, aborting."
@@ -495,7 +495,6 @@ if [ ${?} -gt 0 ] ; then
       outlog "Error running get-pip, aborting."
       exit 9
    fi
-
 else
    # hmmmm ...
    # todo: automatic check if pip is OS managed or not
@@ -515,18 +514,7 @@ else
    # -> potential distro pip found
    if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip | grep -v local | wc -l` -gt 0 ] ; then
       # pip may be distro pip
-
       outlog "Potential distro pip found"
-
-      dialog --title 'NOTE (pip)' --yesno "pip is already installed on the system... and it looks like as being installed as a distro package. If this is true, it can be problematic in the future and cause esoteric errors. You may consider uninstalling all OS packages of Python modules (something like python-*). Proceed nevertheless?" 12 50
-      response=$?
-      case $response in
-         ${DIALOG_CANCEL}) 
-            do_log "Terminated by user in pip dialogue."
-            exit 5
-            ;;
-      esac
-
    else
       outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
    fi
