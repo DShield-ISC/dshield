@@ -16,3 +16,4 @@ bin/db_builder.pyc
 *.pyc
 samplelogs/
 etc/dshield.conf
+.DS_Store
