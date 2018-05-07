@@ -5,7 +5,7 @@
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
-- use of a __dedicated__ device (Raspberry Pi)
+- use of a __dedicated__ device (Raspberry Pi, any model as [per](https://isc.sans.edu/forums/diary/Using+a+Raspberry+Pi+honeypot+to+contribute+data+to+DShieldISC/22680/))
 - current raspbian OS
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
