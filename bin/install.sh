@@ -15,10 +15,16 @@
 ###########################################################
 
 
-readonly version=0.47
+readonly version=0.48
 
 #
 # Major Changes (for details see Github):
+#
+# - V0.48 (Johannes)
+#   - fixed dshield logging in cowrie
+#   - remove MySQL
+#   - made local IP exclusion "wider"
+#   - added email to configuration file for convinience
 #
 # - V0.47
 #   - many small changes, see GitHub
@@ -1272,7 +1278,7 @@ drun 'cat /etc/dshield.ini'
 dlog "installing cowrie"
 
 # step 1 (Install OS dependencies): done
-
+ 
 # step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
@@ -1311,17 +1317,21 @@ run 'virtualenv cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
-run 'pip install -r requirements.txt'
+run 'pip install --upgrade pip'
+run 'pip install --upgrade -r requirements.txt'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
    exit 9
 fi
-dlog "installing dependencies requirements-output.txt"
-run 'pip install -r requirements-output.txt'
-if [ ${?} -ne 0 ] ; then
-   outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
-   exit 9
-fi
+# I don't think we need this as we do not use the special cowrie outputs like mongo and mysql we only 
+# need "requests" for dshield
+run 'pip install requests'
+#dlog "installing dependencies requirements-output.txt"
+# run 'pip install -r requirements-output.txt'
+# if [ ${?} -ne 0 ] ; then
+#    outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+#    exit 9
+# fi
 cd ${OLDDIR}
 
 outlog "Doing further cowrie configuration."
