@@ -16,7 +16,7 @@ fi
 if [ -f /etc/dshield.ini ] ; then
    source <(grep = /etc/dshield.ini | sed 's/ *= */=/g')
 else
-    echo "Bad Installation: No Configuration File Found
+    echo "Bad Installation: No Configuration File Found"
     exit
 fi
 
