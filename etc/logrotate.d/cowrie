@@ -5,6 +5,6 @@
 	missingok
 	compress
 	postrotate
-		/etc/init.d/cowrie restart
+		systemctl restart cowrie.service
 	endscript
 }

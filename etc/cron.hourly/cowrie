@@ -1,8 +1,8 @@
 #!/bin/sh
-sudo -u cowrie /srv/cowrie/bin/cowrie stop > /dev/null
+systemctl stop cowrie.service
 sleep 10
 # delete small logs (likely irrelevant) and logs older then a week
 find /srv/cowrie/log/tty/ -size -1000c -name '*.log' -delete
 find /srv/cowrie/log/tty/ -ctime +7 -name '*.log' -delete
-sudo -u cowrie /srv/cowrie/bin/cowrie start > /dev/null
+systemctl start cowrie.service
 
