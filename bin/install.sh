@@ -1373,8 +1373,7 @@ run 'chown -R cowrie:cowrie /srv/cowrie'
 
 dlog "copying cowrie system files"
 
-# do_copy $progdir/../etc/init.d/cowrie /etc/init.d/cowrie 755
-do_copy /etc/cowrie/doc/systemd/cowrie.service /usr/lib/systemd/system/cowrie/service 644
+do_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
 do_copy $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d 644
 do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
@@ -1383,6 +1382,7 @@ if [ -f /etc/init.d/cowrie ] ; then
     rm -f /etc/init.d/cowrie
 fi
 find /etc/rc?.d -name '*cowrie*' -delete
+run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
 
