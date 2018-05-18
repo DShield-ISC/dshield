@@ -5,6 +5,7 @@ from sys import argv
 import os
 import re
 import json
+import syslog
 from time import strptime
 from time import mktime
 from datetime import datetime
@@ -36,7 +37,8 @@ def parse(logline,logformat,linere):
             fwdata=m.group(4)
 
         else:
-            print "Bad format specified: {}".format(logformat)
+            d.log("Bad format specified: {}".format(logformat))
+            
         if logdata['time'] > startdate:
             parts = fwdata.split()
             logdata['flags'] = ''
@@ -65,7 +67,7 @@ def parse(logline,logformat,linere):
                 return logdata
     else:
         if debug > 0:
-            print "bad line %s" % logline
+            d.log("bad line %s" % logline)
 
 
 # checking if PID in lock file is valid
@@ -124,7 +126,7 @@ if os.path.isfile(lastcount):
     startdate = float(f.readline())
     f.close()
 if debug > 0:
-    print "Startdate %d file %s" % (startdate,lastcount)
+    d.log("Startdate %d file %s" % (startdate,lastcount))
     
 logs = []
 i = 0
@@ -134,15 +136,15 @@ lastdate = ''
 logformat = ''
 if startdate == '':
     startdate = 0
-print "opening %s and starting with %d" % (logfile, startdate)
+d.log("opening %s and starting with %d" % (logfile, startdate))
 with open(logfile, 'r') as f:
     lines = f.readlines()
     logformat=d.identifylog(lines[0])
     if logformat == '':
-        print "Can not identify log format"
+        d.log("Can not identify log format")
         sys.exit('Unable to identify log format')
     if debug > 0:
-        print "logformat  %s" % logformat
+        d.log("logformat  %s" % logformat)
     linere=re.compile(d.logtypesregex[logformat])
     for line in lines:
         i += 1
@@ -152,8 +154,8 @@ with open(logfile, 'r') as f:
             lastdate = data['time']
             logs.append(data)
     if debug > 1:
-        print json.dumps(logs)
-print "processed %d lines total and %d new lines and ended at %s" % (i, j, data['time'])
+        d.log(json.dumps(logs))
+d.log("processed %d lines total and %d new lines and ended at %s" % (i, j, data['time']))
 f = open(lastcount, 'w')
 f.write(str(lastdate))
 f.close()

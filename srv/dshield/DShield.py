@@ -22,7 +22,7 @@ import ConfigParser
 import sys
 import socket
 import struct
-
+import syslog
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -64,19 +64,16 @@ class DshieldSubmit:
                       'X-ISC-Authorization': self.authheader, 'X-ISC-LogType': mydata['type']}
             mydata['authheader'] = self.authheader
             r = requests.post(self.url, json=mydata, headers=header)
-            print(json.dumps(mydata))
             if r.status_code != 200:
-                print 'received status code %d in response' % r.status_code
-            print r.status_code
-            print r.content
+                self.log('received status code %d in response' % r.status_code)
         else:
-            print 'no valid type defined in post'
+            self.log('no valid type defined in post')
 
     def getmyip(self):
         header = {'User-Agent': 'DShield PyLib 0.1'}
         r = requests.get('https://www.dshield.org/api/myip?json', headers=header)
         if r.status_code != 200:
-            print 'received status code %d in response to getmyiprequest' % r.status_code
+            self.log('received status code %d in response to getmyiprequest' % r.status_code)
             return -1
         return r.json()['ip']
 
@@ -162,21 +159,20 @@ class DshieldSubmit:
                 filename = '/etc/dshield/dshield.ini'
             else:
                 filename = home+'/.dshield.ini'
-        print(filename)
 
         if os.path.isfile(filename):
             config = ConfigParser.ConfigParser()
             config.read(filename)
             self.id = config.getint('DShield', 'userid')
             if self.id == 0:
-                print "no userid configured"
+                self.log("no userid configured")
                 sys.exit()
             key = config.get('DShield', 'apikey')
             apikeyre = re.compile('^[a-zA-Z0-9=+/]+$')
             if apikeyre.match(key):
                 self.key = key
             else:
-                print "no api key configured"
+                self.log("no api key configured")
                 sys.exit()
 
             # extract translate internal IP settings
@@ -199,7 +195,7 @@ class DshieldSubmit:
             self.anonymizemask = self.ip42long(config.get('DShield', 'anonymizemask'))
             self.fwlogfile = config.get('DShield','fwlogfile')
         else:
-            print "config file %s not found" % filename
+            self.log("config file %s not found" % filename)
             sys.exit()
         return 1
 
@@ -216,8 +212,6 @@ class DshieldSubmit:
         f=open(pidfile,'r')
         pid=f.readline()
         pid=pid.rstrip('\n')	
-        print pid
-	print pidfile
         try:
             os.kill(int(pid), 0)
         except OSError:
@@ -232,3 +226,7 @@ class DshieldSubmit:
                  return type
         return ''
             
+    def log(self,line):
+        if os.isatty(sys.stdout.fileno()):
+            print line
+        syslog.syslog(syslog.LOG_INFO,line)
