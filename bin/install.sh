@@ -802,6 +802,11 @@ dlog "ipaddr: ${ipaddr}"
 drun "ip route show"
 drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
 localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
+# added most common private subnets. This will help if the Pi is in its
+# own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
+# either way, hits from private IPs are hardly ever log worthy.
+if echo $localnet | grep -q '^10\.'; then localnet='10.0.0.0/8'; fi
+if echo $localnet | grep -q '^192\.168\.'; then localnet='192.168.0.0/16'; fi
 dlog "localnet: ${localnet}"
 
 # additionally we will use any connection to current sshd 
@@ -826,6 +831,7 @@ CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
 CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
+
 
 dlog "Getting local network, further IPs and admin ports from user ..."
 while [ $localnetok -eq  0 ] ; do
@@ -1191,7 +1197,7 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 #
 
 run "mkdir -p ${DSHIELDDIR}"
-do_copy $progdir/../srv/dshield/fwparser.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
@@ -1209,10 +1215,9 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
-echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >> /etc/cron.d/dshield 
-echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwparser.py" >> /etc/cron.d/dshield
-EOF
-fi
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > /etc/cron.d/dshield 
+echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
+
 
 drun 'cat /etc/cron.d/dshield'
 
