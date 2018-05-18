@@ -128,9 +128,9 @@ git pull
 sudo bin/install.sh
 ```
 
-Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.conf`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
+Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
 
-Please make sure to keep special port and network configuration up to date (e.g. manually configure recently added telnet / web ports in firewall config), e.g. no-log config, no-honey config, ... unfortunately this can't be done automagically as of now. If unsure delete respective lines in `/etc/dshield.conf` and re-run the installation script.
+Please make sure to keep special port and network configuration up to date (e.g. manually configure recently added telnet / web ports in firewall config), e.g. no-log config, no-honey config, ... unfortunately this can't be done automagically as of now. If unsure delete respective lines in `/etc/dshield.ini` and re-run the installation script.
 
 Testing of update procedure is normally done (between two releases) as follows:
 - update on Pi 3 from the last version to current

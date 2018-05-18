@@ -41,7 +41,7 @@ fi
 if echo $status | grep -q '<result>ok<\/result>'; then
     echo "API Key configuration ok"
 else
-    echo "API Key may not be configured right. Check /etc/dshield.conf or re-run the install.sh script"
+    echo "API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script"
 fi
 echo E-mail : $email
 echo API Key: $apikey

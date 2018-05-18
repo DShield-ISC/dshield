@@ -67,8 +67,6 @@ readonly version=0.48
 #   - major additions and rewrites (e.g. added logging)
 #
 #
-# TODOs:
-# - ask for additional / new values in dshield.ini
 
 # target directory for server components
 TARGETDIR="/srv"
@@ -832,7 +830,6 @@ fi
 # we present the localnet and the connected IPs to the user
 # so we are sure connection to the device will work after
 # reboot at least for the current remote device
-# (localips is from dshield.conf)
 CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
 CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
@@ -893,8 +890,6 @@ will be allowed for IPs / nets:
 ${localnet} and
 ${CONIPS}" 0 0
 
-# save values for dshield.conf
-# (localnet will be saved directly)
 localips="'${CONIPS}'"
 adminports="'${ADMINPORTS}'"
 
@@ -937,7 +932,7 @@ case ${response} in
       ;;
 esac
 
-# for saving in dshield.conf
+# for saving in dshield.ini
 nofwlogging="'${NOFWLOGGING}'"
 
 dlog "user provided nofwlogging: ${nofwlogging}"
@@ -1231,12 +1226,6 @@ drun 'cat /etc/cron.d/dshield'
 #
 # Update dshield Configuration
 #
-dlog "creating new /etc/dshield.conf"
-if [ -f /etc/dshield.conf ]; then
-   dlog "old dshield.conf follows"
-   drun 'cat /etc/dshield.conf'
-   run 'mv /etc/dshield.conf /etc/dshield.conf.${INSTDATE}'
-fi
 dlog "creating new /etc/dshield.ini"
 if [ -f /etc/dshield.ini ]; then
    dlog "old dshield.ini follows"
@@ -1258,6 +1247,11 @@ run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
 run 'echo "anonymizeip=" >> /etc/dshield.ini'
 run 'echo "anonymizemask=" >> /etc/dshield.ini'
 run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
+run 'echo "nofwlogging=$nofwlogging" >> //etc/dshield.ini'
+run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
+run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
+run 'echo "nohoneyips=$nohoneyips" >> /dev/dshield.ini'
+run 'echo "nohoneports=$nohoneyports" >> /dev/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1558,7 +1552,7 @@ outlog
 outlog "Please reboot your Pi now."
 outlog
 outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
-outlog "Please include a sanitized version of /etc/dshield.conf in bug reports"
+outlog "Please include a sanitized version of /etc/dshield.ini in bug reports"
 outlog "as well as a very carefully sanitized version of the installation log "
 outlog "  (${LOGFILE})."
 outlog

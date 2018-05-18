@@ -2,7 +2,7 @@
 
 /etc/init.d/cowrie stop
 /etc/init.d/mini-httpd stop
-rm /etc/dshield.conf
+rm /etc/dshield.ini
 deluser cowrie
 rm -rf /srv/www
 rm -rf /srv/cowrie
