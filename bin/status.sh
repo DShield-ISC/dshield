@@ -13,14 +13,12 @@ if [ ! "$userid" = "0" ]; then
    exit
 fi
 
-if [ -f /etc/dshield.conf ] ; then
-    . /etc/dshield.conf
+if [ -f /etc/dshield.ini ] ; then
+   source <(grep = /etc/dshield.ini | sed 's/ *= */=/g')
 else
     echo "Bad Installation: No Configuration File Found
     exit
 fi
-
-
 
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
