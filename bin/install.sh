@@ -1546,6 +1546,10 @@ fi
 
 run 'mkdir /var/run/dshield'
 
+# rotate dshield firewall logs
+do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
+
+
 ###########################################################
 ## Done :)
 ###########################################################
@@ -1566,5 +1570,6 @@ outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
 outlog
 outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
+
 
 

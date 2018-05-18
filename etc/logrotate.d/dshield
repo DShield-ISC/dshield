@@ -1,0 +1,15 @@
+/var/log/dshield.log
+{
+	rotate 4
+	daily
+	missingok
+	notifempty
+	compress
+	size 100M
+	prerotate
+		/srv/dshield/fwlogparser.py
+	endscript
+	postrotate
+		invoke-rc.d rsyslog rotate > /dev/null
+	endscript		
+}
