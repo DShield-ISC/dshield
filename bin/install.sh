@@ -1239,6 +1239,7 @@ run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
 
 run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
 run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
