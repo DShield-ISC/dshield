@@ -1,0 +1,21 @@
+[Unit]
+Description=Cowrie SSH and Telnet Honeypot
+Documentation=https://github.com/micheloosterhof/cowrie
+After=network.target
+#Wants=syslog.target
+#Wants=mysql.service
+
+[Service]
+Type=forking
+User=cowrie
+Group=cowrie
+PIDFile=/srv/cowrie/var/run/cowrie.pid
+ExecStart=/srv/cowrie/bin/cowrie start
+ExecStop=/srv/cowrie/bin/cowrie stop
+ExecReload=/srv/cowrie/bin/cowrie stop && sleep 10 && /srv/cowrie/bin/cowrie start
+WorkingDirectory=/srv/cowrie/
+Restart=on-failure
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target
