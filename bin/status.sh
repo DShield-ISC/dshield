@@ -19,7 +19,16 @@ else
     echo "Bad Installation: No Configuration File Found"
     exit
 fi
-
+if [ "$email" == "" ]; then
+   echo "The configuration file '/etc/dshield.ini' does not include your e-mail address"
+   echo "This is likely due to you installing an older version of this software."
+   echo "Please edit the file, and add a line like:"
+   echo "email=myemail@example.com"
+   echo "to the DShield section. "
+   echo
+   echo
+   exit
+fi
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
 # TODO: urlencode($user)
