@@ -1340,6 +1340,7 @@ cat >> /srv/cowrie/cowrie.cfg <<EOF
 userid = $uid
 auth_key = $apikey
 batch_size = 1
+enabled=true
 EOF
 
 drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
