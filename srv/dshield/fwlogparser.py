@@ -19,6 +19,7 @@ def parse(logline,logformat,linere):
     if m:
         if logformat == 'pi':
             logdata['time'] = int(m.group(1))
+            fwdata=m.group(2)
         elif logformat == 'generic':
             month = strptime(m.group(1), '%b').tm_mon
             if month == 12 and now.month == 1:
@@ -79,6 +80,10 @@ def checklock(lockfile):
     else:
         sys.exit('PID file found. Am I already running?')
 
+try:
+    os.stat('/var/run/dshield')
+except:
+    os.mkdir('/var/run/dshield')
 
 # define paramters
 logfile = "/var/log/dshield.log"

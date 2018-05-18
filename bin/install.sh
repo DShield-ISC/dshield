@@ -1540,6 +1540,11 @@ if [ ${GENCERT} -eq 1 ] ; then
    ./makecert.sh
 fi
 
+#
+# creating PID directory
+#
+
+run 'mkdir /var/run/dshield'
 
 ###########################################################
 ## Done :)
