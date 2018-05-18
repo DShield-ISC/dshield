@@ -1337,6 +1337,7 @@ dlog "copying cowrie.cfg and adding entries"
 do_copy /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg 644
 cat >> /srv/cowrie/cowrie.cfg <<EOF
 [output_dshield]
+enabled = true
 userid = $uid
 auth_key = $apikey
 batch_size = 1
