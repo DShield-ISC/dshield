@@ -5,5 +5,6 @@ sleep 10
 find /srv/cowrie/log/tty/ -size -1000c -name '*.log' -delete
 find /srv/cowrie/log/tty/ -ctime +7 -name '*.log' -delete
 find /srv/cowrie/log -name 'cowrie.log.*' -ctime +7 -delete
+find /srv/cowrie/log -name 'cowrie.json.*' -ctime +7 -delete
 systemctl start cowrie.service
 
