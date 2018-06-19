@@ -5,7 +5,7 @@
 	missingok
 	notifempty
 	compress
-	size 100M
+	maxsize 100M
 	prerotate
 		/srv/dshield/fwlogparser.py
 	endscript
