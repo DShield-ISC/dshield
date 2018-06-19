@@ -357,9 +357,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
    fi
    if [ "$distversion" == "ubuntu" ]; then
       run 'apt install -y -q python-pip'
@@ -1254,6 +1254,8 @@ run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
 run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 run 'echo "nohoneyips=$nohoneyips" >> /dev/dshield.ini'
 run 'echo "nohoneports=$nohoneyports" >> /dev/dshield.ini'
+run 'echo "logretention=7" >> /dev/dshield.ini'
+run 'echo "minimumcowriesize=1000" >> /dev/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1340,22 +1342,19 @@ run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
-do_copy /srv/cowrie/cowrie.cfg.dist /srv/cowrie/cowrie.cfg 644
-cat >> /srv/cowrie/cowrie.cfg <<EOF
-[output_dshield]
-enabled = true
-userid = $uid
-auth_key = $apikey
-batch_size = 1
-EOF
-
-drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
-
-dlog "modyfing /srv/cowrie/cowrie.cfg"
-run "sed -i.bak 's/svr04/raspberrypi/' /srv/cowrie/cowrie.cfg"
-run "sed -i.bak 's/^ssh_version_string = .*$/ssh_version_string = SSH-2.0-OpenSSH_6.7p1 Raspbian-5+deb8u1/' /srv/cowrie/cowrie.cfg"
-run "sed -i.back 's/^enabled = false/enabled = true/' /srv/cowrie/cowrie.cfg"
-drun 'cat /srv/cowrie/cowrie.cfg | grep -v "^#" | grep -v "^\$"'
+do_copy ../srv/cowrie/etc/cowrie.cfg /srv/cowrie/cowrie.cfg 644
+# adjust cowrie.cfg
+export hostname=`shuf /usr/share/dict/american-english | head -1 | sed 's/[^a-z]//g'`
+export sensor_name=$uid
+fake1=`shuf -i 1-255 -n 1`
+fake2=`shuf -i 1-255 -n 1`
+fake3=`shuf -i 1-255 -n 1`
+export fake_addr=`printf "10.%d.%d.%d" $fake1 $fake2 $fake3`
+export arch=`arch`
+export kernel_version=`uname -r`
+export kernel_build_string=`uname -v | sed 's/SMP.*/SMP/'`
+export ssh_version=`ssh -V | cut -f1 -d','`
+drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg
 
 # make output of simple text commands more real
 
@@ -1560,7 +1559,7 @@ run 'mkdir /var/run/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
-
+run("mv /etc/cron.daily/logrotate /etc/cron.hourly")
 
 ###########################################################
 ## Done :)
