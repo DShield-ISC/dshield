@@ -1352,7 +1352,7 @@ export fake_addr=`printf "10.%d.%d.%d" $fake1 $fake2 $fake3`
 export arch=`arch`
 export kernel_version=`uname -r`
 export kernel_build_string=`uname -v | sed 's/SMP.*/SMP/'`
-export ssh_version=`ssh -V | cut -f1 -d','`
+export ssh_version=`ssh -V 2>&1 | cut -f1 -d','`
 drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg'
 
 # make output of simple text commands more real
