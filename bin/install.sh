@@ -1342,7 +1342,6 @@ run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
-do_copy ../srv/cowrie/etc/cowrie.cfg /srv/cowrie/cowrie.cfg 644
 # adjust cowrie.cfg
 export hostname=`shuf /usr/share/dict/american-english | head -1 | sed 's/[^a-z]//g'`
 export sensor_name=$uid
@@ -1354,7 +1353,7 @@ export arch=`arch`
 export kernel_version=`uname -r`
 export kernel_build_string=`uname -v | sed 's/SMP.*/SMP/'`
 export ssh_version=`ssh -V | cut -f1 -d','`
-drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg
+drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg'
 
 # make output of simple text commands more real
 
