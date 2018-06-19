@@ -15,10 +15,14 @@
 ###########################################################
 
 
-readonly version=0.48
+readonly version=0.49
 
 #
 # Major Changes (for details see Github):
+#
+# - V0.49 (Johannes)
+#   - new cowrie configuration from scratch vs. using the template
+#     that is included with cowrie
 #
 # - V0.48 (Johannes)
 #   - fixed dshield logging in cowrie
@@ -1344,7 +1348,7 @@ run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 dlog "copying cowrie.cfg and adding entries"
 # adjust cowrie.cfg
 export hostname=`shuf /usr/share/dict/american-english | head -1 | sed 's/[^a-z]//g'`
-export sensor_name=$uid
+export sensor_name=dshield-$uid-$version
 fake1=`shuf -i 1-255 -n 1`
 fake2=`shuf -i 1-255 -n 1`
 fake3=`shuf -i 1-255 -n 1`
