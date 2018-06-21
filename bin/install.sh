@@ -402,46 +402,6 @@ esac
 
 ###########################################################
 ## let the user decide:
-## working stuff vs. experimental
-###########################################################
-
-dlog "Offering user choice of maturity."
-
-exec 3>&1
-VALUES=$(dialog --title 'Installaion Flavour' --radiolist "We offer two different installation flavours: mature (this is known to be working in general) and experimental (new stuff currently in development, don't expect things to work at all). Choose your taste." 0 0 2 \
-   mature "" on \
-   experimental "" off \
-   2>&1 1>&3)
-
-response=$?
-exec 3>&-
-
-case $response in
-   ${DIALOG_CANCEL})
-      dlog "User clicked CANCEL."
-      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
-      outlog "See ${LOGFILE} for details."
-      exit 5
-      ;;
-   ${DIALOG_ESC})
-      dlog "User pressed ESC"
-      outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
-      outlog "See ${LOGFILE} for details."
-      exit 5
-      ;;
-esac
-
-if [ ${VALUES} == "mature" ] ; then
-   MATURE=1
-else
-   MATURE=0
-fi
-
-dlog "MATURE: ${MATURE}"
-
-
-###########################################################
-## let the user decide:
 ## automatic updates OK?
 ###########################################################
 
@@ -1256,10 +1216,11 @@ run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
 run 'echo "nofwlogging=$nofwlogging" >> //etc/dshield.ini'
 run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
 run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
-run 'echo "nohoneyips=$nohoneyips" >> /dev/dshield.ini'
-run 'echo "nohoneports=$nohoneyports" >> /dev/dshield.ini'
-run 'echo "logretention=7" >> /dev/dshield.ini'
-run 'echo "minimumcowriesize=1000" >> /dev/dshield.ini'
+run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
+run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "logretention=7" >> /etc/dshield.ini'
+run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
+run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1562,7 +1523,9 @@ run 'mkdir /var/run/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
-run("mv /etc/cron.daily/logrotate /etc/cron.hourly")
+if [ -f "/etc/cron.daily/logrotate" ]; then
+  run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
+fi 
 
 ###########################################################
 ## Done :)
