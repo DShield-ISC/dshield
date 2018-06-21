@@ -6,8 +6,8 @@
 #
 ####
 
-userid=`id -u`
-if [ ! "$userid" = "0" ]; then
+uid=`id -u`
+if [ ! "$uid" = "0" ]; then
    echo "you have to run this script as root. eg."
    echo "  sudo status.sh"
    exit
@@ -45,7 +45,7 @@ else
 fi
 echo E-mail : $email
 echo API Key: $apikey
-echo User-ID: $uid
+echo User-ID: $userid
 echo -n "Last Web Log Received: "
 echo $status | sed 's/.*<lastweblog>//' | sed 's/<\/lastweblog>.*//'
 echo -n "Last 404 Log Received: "
