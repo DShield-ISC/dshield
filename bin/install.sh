@@ -1308,6 +1308,8 @@ run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
 # adjust cowrie.cfg
+export uid
+export apikey
 export hostname=`shuf /usr/share/dict/american-english | head -1 | sed 's/[^a-z]//g'`
 export sensor_name=dshield-$uid-$version
 fake1=`shuf -i 1-255 -n 1`
