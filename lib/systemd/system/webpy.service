@@ -6,6 +6,9 @@ After=multi-user.target
 Type=idle
 WorkingDirectory=/srv/www/bin
 User=cowrie
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=webpy
 ExecStart=/usr/bin/python /srv/www/bin/web.py
 
 [Install]
