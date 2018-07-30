@@ -14,7 +14,7 @@ Quick summary of iptables runes:
 3. redirect port 22 to port 2222 (cowrie listens on port 2222 for ssh)
 4. redirect port 23 and 2323 to port 2223 (cowrie listens on port 2223 for telnet)
 5. redirect ports 80,8080,7547,5555,9000 to port 8000 (web.py listens on port 8000)
-6. block connections to port 2222,2222 and 8000 directly.
+6. block connections to port 2222, 2223 and 8000 directly.
 7. allow access to port 12222 from the internal network / management IP only. The actual ssh server for remote administration listens on port 12222.
 
 These rules are subject to change. We add/remove redirected ports as needed.
