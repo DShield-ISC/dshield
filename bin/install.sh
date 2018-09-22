@@ -1255,21 +1255,20 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie/archive/master.zip"
+run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie-dev/archive/1.4.1.zip
 run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
 
 if [ ${?} -ne 0 ] ; then
    outlog "Something went wrong downloading cowrie, ZIP corrupt."
    exit 9
 fi
-
 if [ -d ${COWRIEDIR} ]; then
    dlog "old cowrie installation found, moving"
    # TODO: warn user, backup dl etc.
    run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
+run "mv $TMPDIR/cowrie-dev-1.4.1 ${COWRIEDIR}"
 
 # step 4 (Setup Virtual Environment)
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
