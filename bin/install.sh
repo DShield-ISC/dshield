@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ####
 #
 #  Install Script. run to configure various components
@@ -1255,20 +1254,30 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie-dev/archive/1.4.1.zip
-run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
+run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie-dev/archive/1.4.1.zip"
+
 
 if [ ${?} -ne 0 ] ; then
    outlog "Something went wrong downloading cowrie, ZIP corrupt."
    exit 9
 fi
+if [ -f $TMPDIR/cowrie.zip ]; then
+  run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
+else 
+  outlog "Can not find cowrie.zip in $TMPDIR"
+  exit 9
+fi
 if [ -d ${COWRIEDIR} ]; then
    dlog "old cowrie installation found, moving"
-   # TODO: warn user, backup dl etc.
    run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-run "mv $TMPDIR/cowrie-dev-1.4.1 ${COWRIEDIR}"
+if [ -d $TMPDIR/cowrie-dev-1.4.1 ]; then
+ run "mv $TMPDIR/cowrie-dev-1.4.1 ${COWRIEDIR}"
+else
+ outlog "$TMPDIR/cowrie-dev-1.4.1 not found"
+ exit 9
+fi
 
 # step 4 (Setup Virtual Environment)
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
