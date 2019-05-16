@@ -1297,6 +1297,8 @@ fi
 # I don't think we need this as we do not use the special cowrie outputs like mongo and mysql we only 
 # need "requests" for dshield
 run 'pip install requests'
+# cowrie needs bcrypt See bug #126
+run 'pip install bcrypt'
 #dlog "installing dependencies requirements-output.txt"
 # run 'pip install -r requirements-output.txt'
 # if [ ${?} -ne 0 ] ; then
