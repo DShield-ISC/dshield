@@ -1,0 +1,13 @@
+twisted>=17.1.0
+cryptography>=0.9.1
+configparser
+pyopenssl
+pyparsing
+packaging
+appdirs>=1.4.0
+pyasn1_modules
+attrs
+service_identity
+python-dateutil
+tftpy
+bcrypt
