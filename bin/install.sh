@@ -360,9 +360,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican python-twisted'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican python-twisted'
    fi
    if [ "$distversion" == "ubuntu" ]; then
       run 'apt install -y -q python-pip'
@@ -1294,17 +1294,9 @@ if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
    exit 9
 fi
-# I don't think we need this as we do not use the special cowrie outputs like mongo and mysql we only 
-# need "requests" for dshield
-run 'pip install requests'
-# cowrie needs bcrypt See bug #126
-run 'pip install bcrypt'
-#dlog "installing dependencies requirements-output.txt"
-# run 'pip install -r requirements-output.txt'
-# if [ ${?} -ne 0 ] ; then
-#    outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
-#    exit 9
-# fi
+
+# installing python dependencies. Most of these are for cowrie.
+run 'pip install -r requirements.txt'
 cd ${OLDDIR}
 
 outlog "Doing further cowrie configuration."
