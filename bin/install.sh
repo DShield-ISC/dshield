@@ -360,9 +360,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican python-twisted'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican python-twisted'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
    fi
    if [ "$distversion" == "ubuntu" ]; then
       run 'apt install -y -q python-pip'
@@ -1290,8 +1290,12 @@ run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
 run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
+run 'pip install --upgrade bcrypt'
 if [ ${?} -ne 0 ] ; then
-   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
+
+   This part often fails due to timeouts from the servers hosting python packages. Best to try to rerun the install script again. It should remember your settings.
+"
    exit 9
 fi
 
