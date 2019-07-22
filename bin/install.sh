@@ -14,10 +14,13 @@
 ###########################################################
 
 
-readonly version=0.49
+readonly version=0.50
 
 #
 # Major Changes (for details see Github):
+#
+# - V0.50 (Johannes)
+#   - adding support for Raspbian 10 (buster)
 #
 # - V0.49 (Johannes)
 #   - new cowrie configuration from scratch vs. using the template
@@ -301,7 +304,11 @@ fi
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "9" ] ; then
    dist='apt'
    distversion=r9
-   
+fi
+
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ] ; then
+   dist='apt'
+   distversion=r10
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
