@@ -1118,7 +1118,15 @@ drun 'cat /etc/network/iptables'
 
 dlog "Copying /etc/network/if-pre-up.d"
 
-do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 700
+do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
+# for ubuntu, we need to use netpland
+if [ -d /etc/networkd-dispatcher/routable.d ] ; then
+    do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/networkd-dispatcher/routable.d/10-dshield-iptables 775
+fi
+# for Ubuntu, we turn off UFW so it doesn't mess with our firewall rules
+if systemctl | grep ufw ; then
+    run 'systemctl disable ufw'
+fi
 
 
 ###########################################################
@@ -1297,8 +1305,8 @@ run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
 run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
+run 'pip install --upgrade -r requirements-output.txt'
 run 'pip install --upgrade bcrypt'
-run 'pip install --upgrade request'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
