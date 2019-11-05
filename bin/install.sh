@@ -1370,6 +1370,9 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 if [ -f /etc/init.d/cowrie ] ; then
     rm -f /etc/init.d/cowrie
 fi
+run 'mkdir /srv/cowrie/log'
+run 'chmod 755 /srv/cowrie/log'
+run 'chown cowrie:cowrie /srv/cowrie/log'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
