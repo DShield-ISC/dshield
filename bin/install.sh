@@ -1298,6 +1298,7 @@ dlog "installing dependencies: requirements.txt"
 run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
 run 'pip install --upgrade bcrypt'
+run 'pip install --upgrade request'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
