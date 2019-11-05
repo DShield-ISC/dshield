@@ -769,14 +769,14 @@ dlog "Interface: $interface"
 
 dlog "firewall config: figuring out local network"
 
-drun "ip addr show  eth0"
-drun "ip addr show  eth0 | grep 'inet ' |  awk '{print \$2}' | cut -f1 -d'/'"
-ipaddr=`ip addr show  eth0 | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
+drun "ip addr show $interface"
+drun "ip addr show $interface | grep 'inet ' |  awk '{print \$2}' | cut -f1 -d'/'"
+ipaddr=`ip addr show $interface | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'/'`
 dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
-drun "ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '"
-localnet=`ip route show | grep eth0 | grep 'scope link' | cut -f1 -d' '`
+drun "ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '"
+localnet=`ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '`
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
