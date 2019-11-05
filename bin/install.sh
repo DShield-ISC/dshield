@@ -1269,7 +1269,7 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://github.com/micheloosterhof/cowrie-dev/archive/1.4.1.zip"
+run "wget -qO $TMPDIR/cowrie.zip https://www.dshield.org/cowrie.zip"
 
 
 if [ ${?} -ne 0 ] ; then
@@ -1287,10 +1287,10 @@ if [ -d ${COWRIEDIR} ]; then
    run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d $TMPDIR/cowrie-dev-1.4.1 ]; then
- run "mv $TMPDIR/cowrie-dev-1.4.1 ${COWRIEDIR}"
+if [ -d $TMPDIR/cowrie ]; then
+ run "mv $TMPDIR/cowrie ${COWRIEDIR}"
 else
- outlog "$TMPDIR/cowrie-dev-1.4.1 not found"
+ outlog "$TMPDIR/cowrie not found"
  exit 9
 fi
 
