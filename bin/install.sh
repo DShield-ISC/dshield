@@ -19,6 +19,11 @@ readonly version=0.60
 #
 # Major Changes (for details see Github):
 #
+#
+# - V0.61 (Johannes)
+#   - redoing multiline dialogs to be more robust
+#   - adding external honeypot IP to dshield.ini
+#
 # - V0.60 (Johannes)
 #   - fixed a bug that prevented SSH logins to cowrie
 #   - upgraded to cowrie 2.0.2 (latest)
@@ -114,7 +119,7 @@ SSHDPORT="12222"
 DEBUG=1
 
 # delimiter
-LINE="##########################################################################################################"
+LINE="##################################################################################################"
 
 # dialog stuff
 : ${DIALOG_OK=0}
@@ -324,8 +329,8 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Amazon Linux AMI."
-   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04 with experimental support for Amazon AMI Linux."
+   outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
    exit 9
 fi
 
@@ -372,9 +377,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq'
    fi
    if [ "$distversion" == "ubuntu" ]; then
       run 'apt install -y -q python-pip'
@@ -385,7 +390,7 @@ if [ "$ID" == "amzn" ]; then
    outlog "Updating your Operating System"
    run 'yum -q update -y'
    outlog "Installing additional packages"
-   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random'
+   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq'
 fi
 
 
@@ -730,6 +735,9 @@ fi
 drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'"
 validifs=`ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'`
 
+# get honeypot external IPv4 address
+honeypotip=$(curl -s https://www4.dshield.org/api/myip?json  | jq .ip | tr -d '"')
+
 dlog "validifs: ${validifs}"
 
 localnetok=0
@@ -814,27 +822,19 @@ dlog "CONIPS with removed duplicates: ${CONIPS}"
 
 dlog "Getting local network, further IPs and admin ports from user ..."
 while [ $localnetok -eq  0 ] ; do
-
-   exec 3>&1
-   RETVALUES=$(dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
+   dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
       "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
-      2>&1 1>&3)
+   2 > $TMPDIR/dialog.txt
    response=${?}
-   exec 3>&-
 
    case ${response} in
       ${DIALOG_OK})
-         dlog "User input for local network & IPs: ${RETVALUES}"
-
-         localnet=`echo "${RETVALUES}" | cut -d "
-" -f 1`
-         CONIPS=`echo "${RETVALUES}" | cut -d "
-" -f 2`
-         ADMINPORTS=`echo "${RETVALUES}" | cut -d "
-" -f 3`
-
+         dlog "User input for local network & IPs:"
+         localnet=`head -1 $TMPDIR/dialog.txt`
+         CONIPS=`head -2 $TMPDIR/dialog.txt | tail -1`
+         ADMINPORTS=`tail -f $TMPDIR/dialog.txt`
          dlog "user input localnet: ${localnet}"
          dlog "user input further IPs: ${CONIPS}"
          dlog "user input further admin ports: ${ADMINPORTS}"
@@ -941,13 +941,13 @@ dlog "nohoneyports: ${nohoneyports}"
 
 dlog "getting IPs and ports from user"
 
-exec 3>&1
-NOHONEY=$(dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
+
+dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
 12 70 0 \
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
-"Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>&1 1>&3)
+"Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>$TMPDIR/dialog.txt
 response=${?}
-exec 3>&-
+
 
 case ${response} in
    ${DIALOG_OK})
@@ -962,12 +962,10 @@ case ${response} in
       ;;
 esac
 
-dlog "user provided NOHONEY: ${NOHONEY}"
+dlog "user provided NOHONEY:"
 
-NOHONEYIPS=`echo "${NOHONEY}"  | cut -d "
-" -f 1`
-NOHONEYPORTS=`echo "${NOHONEY}"  | cut -d "
-" -f 2`
+NOHONEYIPS=`head -1 $TMPDIR/dialog.txt`
+NOHONEYPORTS=`tail -1 $TMPDIR/dialog.txt`
 
 dlog "NOHONEYIPS: ${NOHONEYIPS}"
 dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
@@ -1227,7 +1225,7 @@ run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
 run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
 run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
-run 'echo "honeypotip=" >> /etc/dshield.ini'
+run 'echo "honeypotip=$honeypotip" >> /etc/dshield.ini'
 run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
 run 'echo "anonymizeip=" >> /etc/dshield.ini'
 run 'echo "anonymizemask=" >> /etc/dshield.ini'
