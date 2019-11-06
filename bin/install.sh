@@ -826,7 +826,7 @@ while [ $localnetok -eq  0 ] ; do
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
       "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
-   2 > $TMPDIR/dialog.txt
+   2> $TMPDIR/dialog.txt
    response=${?}
 
    case ${response} in
