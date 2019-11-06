@@ -834,7 +834,7 @@ while [ $localnetok -eq  0 ] ; do
          dlog "User input for local network & IPs:"
          localnet=`head -1 $TMPDIR/dialog.txt`
          CONIPS=`head -2 $TMPDIR/dialog.txt | tail -1`
-         ADMINPORTS=`tail -f $TMPDIR/dialog.txt`
+         ADMINPORTS=`tail -1 $TMPDIR/dialog.txt`
          dlog "user input localnet: ${localnet}"
          dlog "user input further IPs: ${CONIPS}"
          dlog "user input further admin ports: ${ADMINPORTS}"
