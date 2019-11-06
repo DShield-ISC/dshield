@@ -14,10 +14,15 @@
 ###########################################################
 
 
-readonly version=0.50
+readonly version=0.60
 
 #
 # Major Changes (for details see Github):
+#
+# - V0.60 (Johannes)
+#   - fixed a bug that prevented SSH logins to cowrie
+#   - upgraded to cowrie 2.0.2 (latest)
+#   - improved compatiblity with Ubuntu 18.04
 #
 # - V0.50 (Johannes)
 #   - adding support for Raspbian 10 (buster)
@@ -324,8 +329,8 @@ if [ "$dist" == "invalid" ] ; then
    exit 9
 fi
 
-if [ "$ID" != "raspbian" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian only."
+if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04 only."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
