@@ -46,13 +46,11 @@ fi
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
-echo -n "Last Web Log Received: "
-echo $status | sed 's/.*<lastweblog>//' | sed 's/<\/lastweblog>.*//'
-echo -n "Last 404 Log Received: "
+echo -n "Last 404/Web Log Received: "
 echo $status | sed 's/.*<last404>//' | sed 's/<\/last404>.*//'
-echo -n "Last ssh Log Received: "
+echo -n "Last SSH/Telnet Log Received: "
 echo $status | sed 's/.*<lastssh>//' | sed 's/<\/lastssh>.*//'
-echo -n "Last ssh Firewall Log Received: "
+echo -n "Last Firewall Log Received: "
 echo $status | sed 's/.*<lastreport>//' | sed 's/<\/lastreport>.*//'
 echo -n "Current Time/Date: "
 date +"%F %T"
