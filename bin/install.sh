@@ -328,8 +328,13 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ] ; then
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
-   dist='yum';
+   dist='yum'
    distversion=a201609
+fi
+
+if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ] ; then 
+   dist='yum'
+   distversion=2
 fi
 
 dlog "dist: ${dist}, distversion: ${distversion}"
@@ -396,7 +401,7 @@ if [ "$ID" == "amzn" ]; then
    outlog "Updating your Operating System"
    run 'yum -q update -y'
    outlog "Installing additional packages"
-   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb'
+   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
 fi
 
 
@@ -1140,6 +1145,12 @@ fi
 if systemctl | grep ufw ; then
     run 'systemctl disable ufw'
 fi
+# for Amazon's CentOS version, we use the iptables service
+if [ "$ID" == "amzn" ] ; then
+    run 'rm -f /etc/sysconfig/iptables'
+    run 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
+    run 'systemctl enable iptables.service'
+fi
 
 
 ###########################################################
@@ -1389,7 +1400,6 @@ run 'chown cowrie:cowrie /srv/cowrie/log'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
-
 
 
 
