@@ -396,7 +396,7 @@ if [ "$ID" == "amzn" ]; then
    outlog "Updating your Operating System"
    run 'yum -q update -y'
    outlog "Installing additional packages"
-   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq'
+   run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb'
 fi
 
 
@@ -1016,6 +1016,10 @@ dlog "creating /etc/network/iptables"
 # - allow access to daemon / admin ports only for internal nets (2., 3.)
 # - allow access to honeypot ports (2., 7.)
 # - default policy: DROP (8.)
+
+if [ ! -d /etc/network ]; then
+    run 'mkdir /etc/network'
+fi
 
 cat > /etc/network/iptables <<EOF
 
