@@ -127,7 +127,12 @@ class DshieldSubmit:
     # convert a long integer back to an IP address string
     @staticmethod
     def long2ip4(ip):
-        return socket.inet_ntoa(struct.pack('!I', ip))
+        asciiip='127.0.0.1';
+        try:
+            asciiip=socket.inet_ntoa(struct.pack('!I', ip))
+        except:
+            print ("Error. %s not in range" % (ip) )
+        return asciiip
 
     # convert a network from CIDR notification into two integers for the network IP and the network mask
     def cidr2long(self, ip):
