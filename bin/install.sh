@@ -14,11 +14,17 @@
 ###########################################################
 
 
-readonly version=0.60
+readonly version=0.62
 
 #
 # Major Changes (for details see Github):
 #
+# - V0.62 (Johannes)
+#   - modified fwlogparser.py to work better with large logs
+#     it will now only submit logs up to one day old, and not
+#     submit more than 100,000 lines per run (it should run
+#     twice an house). If there are more log, than it will skip
+#     logs on future runs.
 #
 # - V0.61 (Johannes)
 #   - redoing multiline dialogs to be more robust
