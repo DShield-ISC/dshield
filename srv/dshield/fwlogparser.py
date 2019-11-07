@@ -8,10 +8,11 @@ import json
 import syslog
 from time import strptime
 from time import mktime
+from time import time
 from datetime import datetime
 from DShield import DshieldSubmit
 
-
+maxlines=100000;
 # main log parsers function
 def parse(logline,logformat,linere):
     logdata = {}
@@ -91,6 +92,7 @@ except:
 logfile = "/var/log/dshield.log"
 pidfile = "/var/run/dshield/fwparser.pid"
 lastcount = "/var/run/dshield/lastfwlog"
+skipvalue = "/var/run/dshield/skipvalue"
 config = "/etc/dshield.ini"
 startdate = 0
 now = datetime.utcnow()
@@ -104,7 +106,7 @@ d = DshieldSubmit('')
 
 # check if we run in debug mode
 args = d.getopts(argv)
-debug = 0
+debug = 1
 if '-l' in args:  # overwrite log file
     logfile = args['-l']
 if '-p' in args:  # overwrite log file
@@ -127,6 +129,22 @@ if os.path.isfile(lastcount):
     f.close()
 if debug > 0:
     d.log("Startdate %d file %s" % (startdate,lastcount))
+skip=1
+currenttime=round(time())
+d.log("Current Time %s" % (currenttime))
+if ( startdate<currenttime-86400):
+    startdate=currenttime-86400;
+    d.log("Correcting Startdate to %d" % (startdate) )
+    
+
+if os.path.isfile(skipvalue):
+    f = open(skipvalue, 'r')
+    skip = float(f.readline())
+    f.close()
+if skip<1:
+    skip=1
+if debug > 0:
+    d.log("Skip value is %d file %s" % (skip,skipvalue))    
     
 logs = []
 i = 0
@@ -137,28 +155,41 @@ logformat = ''
 if startdate == '':
     startdate = 0
 d.log("opening %s and starting with %d" % (logfile, startdate))
+i=0
+j=0
 with open(logfile, 'r') as f:
-    lines = f.readlines()
-    logformat=d.identifylog(lines[0])
+    line = f.readline()
+    logformat=d.identifylog(line)
     if logformat == '':
         d.log("Can not identify log format")
         sys.exit('Unable to identify log format')
     if debug > 0:
         d.log("logformat  %s" % logformat)
     linere=re.compile(d.logtypesregex[logformat])
-    for line in lines:
+    while line and j<maxlines:
         i += 1
         data = (parse(line,logformat,linere))
         if data is not None:
             j += 1
             lastdate = data['time']
-            logs.append(data)
+            if (j % skip) == 0:
+                logs.append(data)
+        line = f.readline()
     if debug > 1:
         d.log(json.dumps(logs))
 d.log("processed %d lines total and %d new lines and ended at %s" % (i, j, data['time']))
 f = open(lastcount, 'w')
 f.write(str(lastdate))
 f.close()
+if ( j == maxlines ):
+    d.log("incrementing skip value from %d" % (skip))
+    skip=skip+1
+else:
+    skip=1
+d.log("new skip value is %d" % (skip))
+f = open(skipvalue, 'w')
+f.write(str(skip))
+f.close()    
 logobject = {'type': 'firewall', 'logs': logs}
 if debug == 0:
     d.post(logobject)
