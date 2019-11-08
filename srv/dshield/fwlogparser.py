@@ -22,6 +22,9 @@ def parse(logline,logformat,linere):
         if logformat == 'pi':
             logdata['time'] = int(m.group(1))
             fwdata=m.group(2)
+        if logformat == 'aws':
+            logdata['time'] = int(m.group(1))
+            fwdata=m.group(2)            
         elif logformat == 'generic':
             month = strptime(m.group(1), '%b').tm_mon
             if month == 12 and now.month == 1:
@@ -106,7 +109,7 @@ d = DshieldSubmit('')
 
 # check if we run in debug mode
 args = d.getopts(argv)
-debug = 1
+debug = 0
 if '-l' in args:  # overwrite log file
     logfile = args['-l']
 if '-p' in args:  # overwrite log file
