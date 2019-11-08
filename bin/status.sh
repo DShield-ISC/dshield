@@ -6,6 +6,16 @@
 #
 ####
 
+echo "
+
+#########
+###
+### DShield Sensor Configuration and Status Summary
+###
+#########
+"
+echo -n "Current Time/Date: "
+date +"%F %T"
 uid=`id -u`
 if [ ! "$uid" = "0" ]; then
    echo "you have to run this script as root. eg."
@@ -38,21 +48,76 @@ if [ "$status" = "" ] ; then
    echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
    echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash"
 fi
+
+
+
 if echo $status | grep -q '<result>ok<\/result>'; then
     echo "API Key configuration ok"
 else
     echo "API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script"
 fi
+
+echo "
+###### Configuration Summary ######
+"
+
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
-echo -n "Last Web Log Received: "
-echo $status | sed 's/.*<lastweblog>//' | sed 's/<\/lastweblog>.*//'
-echo -n "Last 404 Log Received: "
+
+echo "
+###### Are My Reports Received? ######
+"
+echo -n "Last 404/Web Logs Received: "
 echo $status | sed 's/.*<last404>//' | sed 's/<\/last404>.*//'
-echo -n "Last ssh Log Received: "
+echo -n "Last SSH/Telnet Log Received: "
 echo $status | sed 's/.*<lastssh>//' | sed 's/<\/lastssh>.*//'
-echo -n "Last ssh Firewall Log Received: "
+echo -n "Last Firewall Log Received: "
 echo $status | sed 's/.*<lastreport>//' | sed 's/<\/lastreport>.*//'
-echo -n "Current Time/Date: "
-date +"%F %T"
+
+echo "
+###### Are the submit scripts running?
+"
+if [ -f /var/run/dshield/lastfwlog ]; then
+    lastlog=`cat /var/run/dshield/lastfwlog`
+    echo -n "Last Firewall Log Processed: "
+    date +"%F %T" -d @$lastlog
+else
+    echo "Looks like you have not run the firewall log submit script yet."
+fi
+
+if [ -f /var/run/dshield/skipvalue ]; then
+    skip=`cat /var/run/dshield/skipvalue`;
+    if [ "$skip" -eq "1" ]; then
+	echo "All Logs are processed. You are not sending too many logs"
+    fi
+    if [ "$skip" -eq "2" ]; then
+	echo "Only every 2nd firewall log line is sent due to the large log size"
+    fi
+    if [ "$skip" -eq "3" ]; then
+	echo "Only every 3rd firewall log line is sent due to the large log size"
+    fi
+    if [ "$skip" -gt "3" ]; then
+	echo "Only every $skip th firewall log line is sent due to the large log size"
+    fi
+fi
+
+echo "
+###### Checking various files
+"
+
+
+
+
+checkfile() {
+    local file="${1}"
+    if [ -f $file ]; then
+	echo "OK: $file"
+    else
+	echo "MISSING: $file"
+    fi
+}
+
+checkfile "/var/log/dshield.log"
+checkfile "/etc/cron.d/dshield"
+checkfile "/etc/dshield.ini"
