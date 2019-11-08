@@ -6,6 +6,11 @@
 #
 ####
 
+RED=`tput setaf 1`
+GREEN=`tput setaf 2`
+NC=`tput sgr0`
+
+
 echo "
 
 #########
@@ -52,15 +57,28 @@ fi
 
 
 if echo $status | grep -q '<result>ok<\/result>'; then
-    echo "API Key configuration ok"
+    echo "${GREEN}API Key configuration ok${NC}"
+    if [ "$version" != "" ]; then
+    currentversion=`echo $status | egrep -o '<version>([0-9\.]+)</version>'  | egrep -o '[0-9\.]+'`
+    if [ "$currentversion" != "$version" ]; then
+	echo "
+${RED}Software Version Mismatch
+Current Version: $currentversion
+You Version: $version
+Datails: https://dshield.org/updatehoneypot.html${NC}
+"
+    else
+	echo "${GREEN}Your software is up to date.${NC}"
+    fi
+    fi
 else
-    echo "API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script"
+    echo "{$RED}API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script{$NC}"
 fi
 
+echo "Honeypot Version: $version"
 echo "
 ###### Configuration Summary ######
 "
-
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
@@ -89,7 +107,7 @@ fi
 if [ -f /var/run/dshield/skipvalue ]; then
     skip=`cat /var/run/dshield/skipvalue`;
     if [ "$skip" -eq "1" ]; then
-	echo "All Logs are processed. You are not sending too many logs"
+	echo "${GREEN}All Logs are processed. You are not sending too many logs${NC}"
     fi
     if [ "$skip" -eq "2" ]; then
 	echo "Only every 2nd firewall log line is sent due to the large log size"
@@ -112,9 +130,9 @@ echo "
 checkfile() {
     local file="${1}"
     if [ -f $file ]; then
-	echo "OK: $file"
+	echo "${GREEN}OK${NC}: $file"
     else
-	echo "MISSING: $file"
+	echo "${RED}MISSING${NC}: $file"
     fi
 }
 

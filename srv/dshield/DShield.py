@@ -34,7 +34,8 @@ class DshieldSubmit:
 
     types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest', 'webhoneypot']
     logtypesregex={'generic': '^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
-                   'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
+                   'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                   'aws': '(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
     authheader = ''
 
     def __init__(self, filename):
@@ -127,7 +128,12 @@ class DshieldSubmit:
     # convert a long integer back to an IP address string
     @staticmethod
     def long2ip4(ip):
-        return socket.inet_ntoa(struct.pack('!I', ip))
+        asciiip='127.0.0.1';
+        try:
+            asciiip=socket.inet_ntoa(struct.pack('!I', ip))
+        except:
+            print ("Error. %s not in range" % (ip) )
+        return asciiip
 
     # convert a network from CIDR notification into two integers for the network IP and the network mask
     def cidr2long(self, ip):

@@ -3,7 +3,7 @@ default_ca	= CA_default		# The default ca section
 
 [ CA_default ]
 
-dir = /home/dshield/dshield/bin//../etc/CA
+dir = /home/pi/install/dshield/bin//../etc/CA
 certs		= $dir/certs		# Where the issued certs are kept
 crl_dir = $dir/crls
 database	= $dir/index.txt	# database index file.
