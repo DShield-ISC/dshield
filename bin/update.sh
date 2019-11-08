@@ -33,8 +33,16 @@ fi
 
 echo Currently configured for $email userid $userid
 echo Version installed: $version
+user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
+nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash
-newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
+newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep '<result>ok</result>' | egrep -o '<version>[^<]+</version>' | egrep -o '[0-9\.]+'`
 echo Current Version: $newversion
 
+if [ "$newversion" -gt "$version" ]; then
+  echo "Update"
+  git pull
+  ./install.sh --update
+else
+    echo "No Update Required"
+fi
