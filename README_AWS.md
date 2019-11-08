@@ -9,3 +9,19 @@ git clone https://github.com/DShield-ISC/dshield.git
 sudo dshield/bin/install.sh
 sudo reboot
 ```
+
+To update the honeypot software, run 
+```
+cd ~/dshield/bin
+git pull
+sudo ./install.sh --udpate
+```
+
+If you very recently installed or updated the honeypot (within a few days):
+```
+cd ~/dshield/bin
+git pull
+sudo ./install.sh --update --fast
+```
+
+the "--fast" mode will skip someo of the updates, package installation and security checks. If you get errors, try it without the --fast switch
