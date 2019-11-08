@@ -16,30 +16,6 @@
 
 readonly myversion=63
 
-INTERACTIVE=1
-FAST=0
-
-for arg in "$@"; do
-    case $arg in
-	"--update")
-	    if [ -f /etc/dshield.ini ]; then
-		echo "Non Interactive Update Mode"
-		INTERACTIVE=0
-	    else
-		echo "Update mode requires a /etc/dshield.ini file"
-		exit 9
-	    fi
-	    ;;
-	"--fast")
-	    FAST=1
-	    echo "Fast mode enabled. This will skip some dependency checks and OS updates"
-	    ;;
-    esac
-done    
-
-
-
-
 #
 # Major Changes (for details see Github):
 #
@@ -117,6 +93,29 @@ done
 #   - major additions and rewrites (e.g. added logging)
 #
 #
+
+INTERACTIVE=1
+FAST=0
+
+# parse command line arguments
+
+for arg in "$@"; do
+    case $arg in
+	"--update")
+	    if [ -f /etc/dshield.ini ]; then
+		echo "Non Interactive Update Mode"
+		INTERACTIVE=0
+	    else
+		echo "Update mode requires a /etc/dshield.ini file"
+		exit 9
+	    fi
+	    ;;
+	"--fast")
+	    FAST=1
+	    echo "Fast mode enabled. This will skip some dependency checks and OS updates"
+	    ;;
+    esac
+done    
 
 # target directory for server components
 TARGETDIR="/srv"
