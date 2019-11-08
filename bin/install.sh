@@ -14,10 +14,38 @@
 ###########################################################
 
 
-readonly version=0.62
+readonly myversion=63
+
+INTERACTIVE=1
+FAST=0
+
+for arg in "$@"; do
+    case $arg in
+	"--update")
+	    if [ -f /etc/dshield.ini ]; then
+		echo "Non Interactive Update Mode"
+		INTERACTIVE=0
+	    else
+		echo "Update mode requires a /etc/dshield.ini file"
+		exit 9
+	    fi
+	    ;;
+	"--fast")
+	    FAST=1
+	    echo "Fast mode enabled. This will skip some dependency checks and OS updates"
+	    ;;
+    esac
+done    
+
+
+
 
 #
 # Major Changes (for details see Github):
+#
+# - V63 (Johannes)
+#   - changed to integer versions for easier handling
+#   - added "update" mode for non-interactive updates
 #
 # - V0.62 (Johannes)
 #   - modified fwlogparser.py to work better with large logs
@@ -122,7 +150,7 @@ SSHDPORT="12222"
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
-DEBUG=1
+DEBUG=0
 
 # delimiter
 LINE="#############################################################################"
@@ -259,7 +287,7 @@ else
    do_log "Check OK: User-ID is ${userid}."
 fi
 
-dlog "This is ${0} V${version}"
+dlog "This is ${0} V${myversion}"
 
 dlog "parent process: $(ps -o comm= $PPID)"
 
@@ -363,7 +391,7 @@ dlog "TMPDIR: ${TMPDIR}"
 dlog "setting trap"
 # trap "rm -r $TMPDIR" 0 1 2 5 15
 run 'trap "echo Log: ${LOGFILE} && rm -r $TMPDIR" 0 1 2 5 15'
-
+if [ "$FAST" == 0 ]; then
 outlog "Basic security checks"
 
 dlog "making sure default password was changed"
@@ -376,12 +404,12 @@ if [ "$dist" == "apt" ]; then
       outlog "Change it NOW ..."
       exit 9
    fi
-   outlog "Updating your Installation (this can take a LOOONG time)"
 
-   drun 'dpkg --list'
 
-   run 'apt-get update'
-   run 'apt-get -y -q upgrade'
+       outlog "Updating your Installation (this can take a LOOONG time)"
+       drun 'dpkg --list'
+       run 'apt-get update'
+       run 'apt-get -y -q upgrade'
 
    outlog "Installing additional packages"
    # OS packages: no python modules
@@ -405,11 +433,16 @@ if [ "$ID" == "amzn" ]; then
    run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
 fi
 
+else
+    outlog "Skipping OS Update / Package install and security check in FAST mode"
+fi
+
+
 
 ###########################################################
 ## last chance to escape before hurting the system ...
 ###########################################################
-
+if [ "$INTERACTIVE" == 1 ] ; then
 dlog "Offering user last chance to quit with a nearly untouched system."
 dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
@@ -427,6 +460,7 @@ case $response in
       exit 5
       ;;
 esac
+
 
 ###########################################################
 ## let the user decide:
@@ -468,10 +502,14 @@ fi
 dlog "MANUPDATES: ${MANUPDATES}"
 
 
+clear
+
+fi
+
 ###########################################################
 ## Stopping Cowrie if already installed
 ###########################################################
-clear
+
 if [ -x /etc/init.d/cowrie ] ; then
    outlog "Existing cowrie startup file found, stopping cowrie."
    run '/etc/init.d/cowrie stop'
@@ -481,6 +519,8 @@ if [ -x /etc/init.d/cowrie ] ; then
 fi
 # in case systemd is used
 systemctl stop cowrie
+
+if [ "$FAST" == "0" ] ; then
 
 ###########################################################
 ## PIP
@@ -529,7 +569,9 @@ else
 fi
 
 drun 'pip list --format=legacy'
-
+else
+    outlog "Skipping PIP check in FAST mode"
+fi
 
 ###########################################################
 ## Random number generator
@@ -595,7 +637,21 @@ if ! [ -d $TMPDIR ]; then
    outlog "${TMPDIR} not found, aborting."
    exit 9
 fi
-
+if [ "$INTERACTIVE" == "0" ]; then
+    MANUPDATES=$manualupdates
+    uid=$userid
+    echo "check $userid $apikey"
+    if [ "$userid" == "" ]; then
+	echo "For interactive mode, dshield.ini has to contain a userid."
+	exit 9
+    fi
+    if [ "$apikey" == "" ]; then
+	echo "For interactive mode, dshield.ini has to contain an apikey."
+	exit 9
+    fi
+fi
+echo "userid" $userid
+exit
 
 ###########################################################
 ## DShield Account
@@ -609,7 +665,7 @@ fi
 
 return_value=$DIALOG_OK
 return=1
-
+if [ "$INTERACTIVE" == 1 ] ; then
 if [ $return_value -eq  $DIALOG_OK ]; then
    if [ $return = "1" ] ; then
       dlog "use existing dhield account"
@@ -679,7 +735,7 @@ fi # dialogue not aborted
 # echo $uid
 
 dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next. ' 7 40
-
+fi # interactive mode
 
 ###########################################################
 ## Firewall Configuration
@@ -753,7 +809,7 @@ honeypotip=$(curl -s https://www4.dshield.org/api/myip?json  | jq .ip | tr -d '"
 dlog "validifs: ${validifs}"
 
 localnetok=0
-
+if [ "$INTERACTIVE" == 1 ] ; then
 while [ $localnetok -eq  0 ] ; do
    dlog "asking user for default interface"
    exec 3>&1
@@ -785,7 +841,7 @@ while [ $localnetok -eq  0 ] ; do
          ;;
    esac
 done # while interface not OK
-
+fi # interactive mode
 dlog "Interface: $interface"
 
 ##---------------------------------------------------------
@@ -831,7 +887,7 @@ dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
 CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
 
-
+if [ "$INTERACTIVE" == 1 ] ; then
 dlog "Getting local network, further IPs and admin ports from user ..."
 while [ $localnetok -eq  0 ] ; do
    dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
@@ -877,6 +933,7 @@ ${ADMINPORTS}
 will be allowed for IPs / nets:
 ${localnet} and
 ${CONIPS}" 0 0
+fi # interactive mode
 
 localips="'${CONIPS}'"
 adminports="'${ADMINPORTS}'"
@@ -896,7 +953,7 @@ if [ "${nofwlogging}" == "" ] ; then
 fi
 
 dlog "nofwlogging: ${nofwlogging}"
-
+if [ "$INTERACTIVE" == 1 ] ; then
 dlog "getting IPs from user ..."
 
 exec 3>&1
@@ -932,7 +989,7 @@ else
    dialog --title 'Firewall Logging Exceptions' --cr-wrap --msgbox "The firewall logging exceptions will be installed for IPs
 ${NOFWLOGGING}" 0 0
 fi
-
+fi # interactive mode
 ##---------------------------------------------------------
 ## disable honepot for nets / IPs
 ##---------------------------------------------------------
@@ -953,7 +1010,7 @@ dlog "nohoneyports: ${nohoneyports}"
 
 dlog "getting IPs and ports from user"
 
-
+if [ "$INTERACTIVE" == 1 ] ; then
 dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
 12 70 0 \
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
@@ -1001,15 +1058,16 @@ dlog "final values: "
 dlog "NOHONEYIPS: ${NOHONEYIPS} / NOHONEYPORTS: ${NOHONEYPORTS}"
 dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 
-
+fi # interactive mode
 ##---------------------------------------------------------
 ## create actual firewall rule set
 ##---------------------------------------------------------
 #
 # Firewall Layout: see beginning of firewall section
 #
-
-clear
+if [ "$INTERACTIVE" == 1 ] ; then
+    clear
+fi
 
 outlog "Doing further configuration"
 
@@ -1025,6 +1083,10 @@ dlog "creating /etc/network/iptables"
 
 if [ ! -d /etc/network ]; then
     run 'mkdir /etc/network'
+fi
+
+if [ -f /etc/network/iptables ]; then
+    run "mv /etc/network/iptables /etc/network/iptables.${INSTDATE}"
 fi
 
 cat > /etc/network/iptables <<EOF
@@ -1158,7 +1220,7 @@ fi
 ## Change real SSHD port
 ###########################################################
 
-
+if [ "$INTERACTIVE" == 1 ] ; then
 dlog "changing port for sshd"
 
 run "sed -i.bak 's/^[#\s]*Port 22\s*$/Port "${SSHDPORT}"/' /etc/ssh/sshd_config"
@@ -1178,7 +1240,7 @@ Please clean up and either
 else
    dlog "check successful, port change to ${SSHDPORT} in sshd_config"
 fi
-
+fi # interactive
 ###########################################################
 ## Modifying syslog config
 ###########################################################
@@ -1207,7 +1269,8 @@ do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
 # check: automatic updates allowed?
-if [ ${MANUPDATES} -eq 0 ]; then
+
+if [ "$MANUPDATES" -eq  "0" ]; then
    dlog "automatic updates OK, configuring"
    run 'touch ${DSHIELDDIR}/auto-update-ok'
 fi
@@ -1240,9 +1303,8 @@ fi
 # new shiny config file
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
-
 run 'echo "[DShield]" >> /etc/dshield.ini'
-run 'echo "version=$version" >> /etc/dshield.ini'
+run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
@@ -1263,7 +1325,7 @@ run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
-
+exit
 
 ###########################################################
 ## Installation of cowrie
@@ -1539,7 +1601,8 @@ GENCERT=1
 drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
 
 if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
-   dlog "CERTs may already be there, asking user"
+    if [ "$INTERACTIVE" == 1 ] ; then
+    dlog "CERTs may already be there, asking user"
    dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
    response=$?
    case $response in
@@ -1561,6 +1624,9 @@ if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
          exit 5
          ;;
    esac
+    else
+        GENCERT=0
+   fi #interactive
 fi
 
 if [ ${GENCERT} -eq 1 ] ; then
