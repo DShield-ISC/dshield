@@ -175,6 +175,16 @@ outlog () {
    do_log "${*}"
 }
 
+quotespace() {
+    local line="${*}"
+    if echo $line | egrep -q ' '; then
+	if ! echo $line | egrep -q "'"; then
+	    line="'${line}'"
+	fi
+    fi
+    echo "$line"
+}
+
 # write log
 do_log () {
    if [ ! -d ${LOGDIR} ] ; then
@@ -649,8 +659,6 @@ if [ "$INTERACTIVE" == "0" ]; then
 	exit 9
     fi
 fi
-echo "userid" $userid
-exit
 
 ###########################################################
 ## DShield Account
@@ -1314,10 +1322,15 @@ run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
 run 'echo "anonymizeip=" >> /etc/dshield.ini'
 run 'echo "anonymizemask=" >> /etc/dshield.ini'
 run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
+nofwlogging=$(quotespace $nofwlogging)
 run 'echo "nofwlogging=$nofwlogging" >> //etc/dshield.ini'
+CONIPS="$(quotespace $CONIPS)"
 run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
+ADMINPORTS=$(quotespace $ADMINPORTS)
 run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
+nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
+nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "logretention=7" >> /etc/dshield.ini'
 run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
