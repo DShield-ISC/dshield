@@ -125,7 +125,7 @@ SSHDPORT="12222"
 DEBUG=1
 
 # delimiter
-LINE="##################################################################################################"
+LINE="#############################################################################"
 
 # dialog stuff
 : ${DIALOG_OK=0}
@@ -253,6 +253,7 @@ if [ ! "$userid" = "0" ]; then
    echo "You have to run this script as root. eg."
    echo "  sudo bin/install.sh"
    echo "Exiting."
+   echo ${LINE}
    exit 9
 else
    do_log "Check OK: User-ID is ${userid}."
@@ -1241,6 +1242,7 @@ run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
 
 run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "version=$version" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'

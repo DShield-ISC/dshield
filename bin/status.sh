@@ -53,9 +53,26 @@ fi
 
 if echo $status | grep -q '<result>ok<\/result>'; then
     echo "API Key configuration ok"
+    currentversion=`echo $status | egrep  '<version>([0-9\.]+)</version>'  | egrep -o '[0-9\.]+'`
+    if [ "$currentversion" -gt "$version" ]; then
+	echo "Consider updating your honeypot.
+Current Version: $currentversion
+You Version: $version
+Datails: https://dshield.org/updatehoneypot.html
+"
+    else
+	echo "Your software is up to date."
+    fi
+
 else
     echo "API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script"
 fi
+
+
+
+
+
+echo "Honeypot Version: $version"
 
 echo "
 ###### Configuration Summary ######
