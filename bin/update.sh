@@ -27,6 +27,14 @@ fi
 
 source <(grep = $inifile)
 
+if [ "$1" == "--cron" ]; then
+    if [ "$manualupdates" == 1 ]; then
+	exit
+    fi
+fi
+
+
+
 if [ "$version" == "" ]; then
     version=0;
 fi
@@ -36,7 +44,7 @@ echo Version installed: $version
 user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep '<result>ok</result>' | egrep -o '<version>[^<]+</version>' | egrep -o '[0-9\.]+'`
+newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version | grep '<result>ok</result>' | egrep -o '<version>[^<]+</version>' | egrep -o '[0-9\.]+'`
 echo Current Version: $newversion
 
 if [ "$newversion" -gt "$version" ]; then
