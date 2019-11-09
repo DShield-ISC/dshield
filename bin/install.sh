@@ -1343,7 +1343,7 @@ run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
-exit
+
 
 ###########################################################
 ## Installation of cowrie
@@ -1454,6 +1454,8 @@ drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg'
 # make output of simple text commands more real
 
 dlog "creating output for text commands"
+run 'mkdir -p /srv/cowrie/txtcmds/bin'
+run 'mkdir -p /srv/cowrie/txtcmds/usr/bin'
 run 'df > /srv/cowrie/txtcmds/bin/df'
 run 'dmesg > /srv/cowrie/txtcmds/bin/dmesg'
 run 'mount > /srv/cowrie/txtcmds/bin/mount'
