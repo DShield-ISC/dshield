@@ -1343,7 +1343,7 @@ run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
-exit
+
 
 ###########################################################
 ## Installation of cowrie
