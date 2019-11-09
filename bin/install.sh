@@ -124,6 +124,7 @@ done
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
+TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
 WEBDIR="${TARGETDIR}/www"
 INSTDATE="`date +'%Y-%m-%d_%H%M%S'`"
@@ -152,7 +153,7 @@ SSHDPORT="12222"
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
-DEBUG=0
+DEBUG=1
 
 # delimiter
 LINE="#############################################################################"
@@ -429,9 +430,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq libmariadb-dev-compat'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq libmariadb-dev-compat'
    fi
    if [ "$distversion" == "ubuntu" ]; then
       run 'apt install -y -q python-pip'
@@ -1366,7 +1367,7 @@ dlog "installing cowrie"
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
    dlog "... no, creating"
-   run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+   run "adduser --gecos 'Honeypot,A113,555-1212,555-1212' --disabled-password --quiet --home ${COWRIEDIR} --no-create-home cowrie"
    outlog "Added user 'cowrie'"
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
@@ -1430,7 +1431,7 @@ outlog "Doing further cowrie configuration."
 
 # step 6 (Generate a DSA key)
 dlog "generating cowrie SSH hostkey"
-run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/data/ssh_host_dsa_key "
+run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/var/lib/cowrie/ssh_host_dsa_key "
 
 
 # step 5 (Install configuration file)
@@ -1449,22 +1450,23 @@ export kernel_version=`uname -r`
 export kernel_build_string=`uname -v | sed 's/SMP.*/SMP/'`
 export ssh_version=`ssh -V 2>&1 | cut -f1 -d','`
 export ttylog='false'
-drun 'cat ../srv/cowrie/cowrie.cfg | envsubst > /srv/cowrie/cowrie.cfg'
+drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
 
 dlog "creating output for text commands"
-run 'mkdir -p /srv/cowrie/txtcmds/bin'
-run 'mkdir -p /srv/cowrie/txtcmds/usr/bin'
-run 'df > /srv/cowrie/txtcmds/bin/df'
-run 'dmesg > /srv/cowrie/txtcmds/bin/dmesg'
-run 'mount > /srv/cowrie/txtcmds/bin/mount'
-run 'ulimit > /srv/cowrie/txtcmds/bin/ulimit'
-run 'lscpu > /srv/cowrie/txtcmds/usr/bin/lscpu'
-run "echo '-bash: emacs: command not found' > /srv/cowrie/txtcmds/usr/bin/emacs"
-run "echo '-bash: locate: command not found' > /srv/cowrie/txtcmds/usr/bin/locate"
 
-run 'chown -R cowrie:cowrie /srv/cowrie'
+run "mkdir -p ${TXTCMDS}/bin"
+run "mkdir -p ${TXTCMDS}/usr/bin"
+run "df > ${TXTCMDS}/bin/df"
+run "dmesg > ${TXTCMDS}/bin/dmesg"
+run "mount > ${TXTCMDS}/bin/mount"
+run "ulimit > ${TXTCMDS}/bin/ulimit"
+run "lscpu > ${TXTCMDS}/usr/bin/lscpu"
+run "echo '-bash: emacs: command not found' > ${TXTCMDS}/usr/bin/emacs"
+run "echo '-bash: locate: command not found' > ${TXTCMDS}/usr/bin/locate"
+
+run 'chown -R cowrie:cowrie ${COWRIEDIR}'
 
 # echo "###########  $progdir  ###########"
 
@@ -1478,9 +1480,9 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 if [ -f /etc/init.d/cowrie ] ; then
     rm -f /etc/init.d/cowrie
 fi
-run 'mkdir /srv/cowrie/log'
-run 'chmod 755 /srv/cowrie/log'
-run 'chown cowrie:cowrie /srv/cowrie/log'
+run 'mkdir ${COWRIEDIR}/log'
+run 'chmod 755 ${COWRIEDIR}/log'
+run 'chown cowrie:cowrie ${COWRIEDIR}/log'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
@@ -1557,21 +1559,32 @@ run 'update-rc.d cowrie defaults'
 
 #
 # installing postfix as an MTA
+# TODO: AWS/Yum based install
 #
-outlog "Installing and configuring postfix."
-dlog "uninstalling postfix"
-run 'apt-get -y -q purge postfix'
-dlog "preparing installation of postfix"
-echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
-echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
-echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
-echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
 
-outlog "package configuration for postfix"
-run 'debconf-get-selections | grep postfix'
-dlog "installing postfix"
-run 'apt-get -y -q install postfix'
 
+if [ "$dist" == "apt" ]; then
+    outlog "Installing and configuring postfix."
+    dlog "uninstalling postfix"
+    run 'apt-get -y -q purge postfix'
+    dlog "preparing installation of postfix"
+    echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
+    echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
+    echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
+    echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
+    outlog "package configuration for postfix"
+    run 'debconf-get-selections | grep postfix'
+    dlog "installing postfix"
+    run 'apt-get -y -q install postfix'
+fi
+
+###########################################################
+## Apt Cleanup
+###########################################################
+
+if [ "$dist" == "apt" ]; then
+    run 'apt autoremove -y'
+fi
 
 ###########################################################
 ## Configuring MOTD
@@ -1617,9 +1630,10 @@ drun "cat /etc/motd"
 dlog "checking / generating certs"
 
 GENCERT=1
-
+if [ ! -f ../etc/CA/ca.serial ]; then
+    echo 01 > ../etc/CA/ca.serial
+fi
 drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
-
 if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
     if [ "$INTERACTIVE" == 1 ] ; then
     dlog "CERTs may already be there, asking user"
