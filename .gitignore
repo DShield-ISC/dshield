@@ -5,7 +5,6 @@
 .crt
 .key
 .keypin
-/etc/CA/
 DB/*
 DB/webserver.sqlite
 server.crt
@@ -17,5 +16,3 @@ bin/db_builder.pyc
 samplelogs/
 etc/dshield.conf
 .DS_Store
-etc/CA
-/etc/openssl.cnf
