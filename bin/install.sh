@@ -104,7 +104,7 @@ FAST=0
 
 for arg in "$@"; do
     case $arg in
-	"--update")
+	"--update" | "--upgrade")
 	    if [ -f /etc/dshield.ini ]; then
 		echo "Non Interactive Update Mode"
 		INTERACTIVE=0
@@ -153,7 +153,7 @@ SSHDPORT="12222"
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
-DEBUG=1
+DEBUG=0
 
 # delimiter
 LINE="#############################################################################"

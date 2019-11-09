@@ -139,3 +139,6 @@ checkfile() {
 checkfile "/var/log/dshield.log"
 checkfile "/etc/cron.d/dshield"
 checkfile "/etc/dshield.ini"
+checkfile "/srv/cowrie/cowrie.cfg"
+checkfile "/etc/cron.d/dshield"
+checkfile "/etc/rsyslog.d/dshield.conf"

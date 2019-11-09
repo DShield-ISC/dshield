@@ -10,6 +10,8 @@ fi
 
 systemctl stop cowrie
 
+for b in `ps -ef | grep '^cowrie' | awk '{print $2}'`; do kill -9 $b; done
+
 rm -rf /srv/*
 rm -rf /etc/dshield.ini.*
 mv /etc/dshield.ini /etc/dshield.ini.backup
