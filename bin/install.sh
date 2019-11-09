@@ -14,10 +14,13 @@
 ###########################################################
 
 
-readonly myversion=63
+readonly myversion=64
 
 #
 # Major Changes (for details see Github):
+#
+# - V64 (Johannes)
+#   - cleanup / typos
 #
 # - V63 (Johannes)
 #   - changed to integer versions for easier handling
