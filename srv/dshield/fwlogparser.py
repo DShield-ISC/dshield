@@ -22,7 +22,7 @@ def parse(logline,logformat,linere):
         if logformat == 'pi':
             logdata['time'] = int(m.group(1))
             fwdata=m.group(2)
-        if logformat == 'aws':
+        elif logformat == 'aws':
             logdata['time'] = int(m.group(1))
             fwdata=m.group(2)            
         elif logformat == 'generic':
