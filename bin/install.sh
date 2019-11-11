@@ -1299,6 +1299,9 @@ echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/c
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * cd ${progdir}/bin; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
+offset1=`shuf -i0-60 -n1`
+offset2=`shuf -i0-23 -n1`
+echo "${offset1} ${offset2} * * * reboot"
 
 
 drun 'cat /etc/cron.d/dshield'
