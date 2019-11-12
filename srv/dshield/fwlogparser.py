@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# version 2019-11-12-01
+
 import sys
 from sys import argv
 import os
@@ -17,6 +19,7 @@ maxlines=100000;
 def parse(logline,logformat,linere):
     logdata = {}
     fwdata = ''
+    logline.strip("\000")
     m = linere.match(logline)
     if m:
         if logformat == 'pi':
