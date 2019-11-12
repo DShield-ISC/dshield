@@ -1,3 +1,4 @@
+# version 2019-11-12
 /var/log/dshield.log
 {
 	rotate 4
@@ -10,6 +11,6 @@
 		/srv/dshield/fwlogparser.py
 	endscript
 	postrotate
-		invoke-rc.d rsyslog rotate > /dev/null
+		/usr/lib/rsyslog/rsyslog-rotate
 	endscript		
 }
