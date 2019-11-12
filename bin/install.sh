@@ -430,12 +430,12 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq libmariadb-dev-compat'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python-urllib3 zip wamerican jq libmariadb-dev-compat'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv'
    fi
    if [ "$distversion" == "ubuntu" ]; then
-      run 'apt install -y -q python-pip'
+       run 'apt install -y -q python-pip python3-pip'
    fi
 fi
 
@@ -552,9 +552,14 @@ if [ ${?} -gt 0 ] ; then
    fi
    run 'python $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
-      outlog "Error running get-pip, aborting."
+      outlog "Error running get-pip2, aborting."
       exit 9
    fi
+   run 'python3 $TMPDIR/get-pip.py'
+   if [ ${?} -ne 0 ] ; then
+      outlog "Error running get-pip3, aborting."
+      exit 9
+   fi   
 else
    # hmmmm ...
    # todo: automatic check if pip is OS managed or not
@@ -1298,7 +1303,7 @@ echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > 
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * cd ${progdir}/bin; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * reboot"
@@ -1417,6 +1422,10 @@ run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
 run 'pip install --upgrade -r requirements-output.txt'
 run 'pip install --upgrade bcrypt'
+run 'pip3 install --upgrade pip3'
+run 'pip3 install --upgrade -r requirements.txt'
+run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade bcrypt'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
