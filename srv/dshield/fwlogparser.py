@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# version 2019-11-12-01
+# version 2019-11-12-02
 
 import sys
 from sys import argv
@@ -19,7 +19,7 @@ maxlines=100000;
 def parse(logline,logformat,linere):
     logdata = {}
     fwdata = ''
-    logline.strip("\000")
+    logline=logline.strip("\000")
     m = linere.match(logline)
     if m:
         if logformat == 'pi':
@@ -131,7 +131,11 @@ f.close()
 
 if os.path.isfile(lastcount):
     f = open(lastcount, 'r')
-    startdate = float(f.readline())
+    try: 
+        startdate = float(f.readline())
+    except:
+        d.log("New Startdate")
+        startdate = 0
     f.close()
 if debug > 0:
     d.log("Startdate %d file %s" % (startdate,lastcount))
@@ -155,11 +159,10 @@ if debug > 0:
 logs = []
 i = 0
 j = 0
-data = {}
-lastdate = ''
-logformat = ''
+data = {"time": 0}
 if startdate == '':
     startdate = 0
+lastdate = startdate
 d.log("opening %s and starting with %d" % (logfile, startdate))
 i=0
 j=0
@@ -183,7 +186,11 @@ with open(logfile, 'r') as f:
         line = f.readline()
     if debug > 1:
         d.log(json.dumps(logs))
-d.log("processed %d lines total and %d new lines and ended at %s" % (i, j, data['time']))
+if j == 0:
+    d.log("processed %d lines total and no new lines. Last date: %d" % (i, lastdate) )
+else:
+    d.log("processed %d lines total and %d new lines and ended at %s" % (i, j, lastdate))
+
 f = open(lastcount, 'w')
 f.write(str(lastdate))
 f.close()
@@ -198,5 +205,10 @@ f.write(str(skip))
 f.close()    
 logobject = {'type': 'firewall', 'logs': logs}
 if debug == 0:
-    d.post(logobject)
+    if j>0:
+        d.post(logobject)
+    else:
+        d.log("nothing to post")
+else:
+    d.log("skipping posting logs in debug mode.")
 os.remove(pidfile)
