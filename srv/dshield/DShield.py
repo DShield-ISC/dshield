@@ -1,4 +1,6 @@
 """
+version 2019-11-12-02
+
 A class to interact with DShield
 
    Methods defined:
@@ -233,6 +235,7 @@ class DshieldSubmit:
         return ''
             
     def log(self,line):
+        line=line.strip("\000")        
         if os.isatty(sys.stdout.fileno()):
             print line
         syslog.syslog(syslog.LOG_INFO,line)
