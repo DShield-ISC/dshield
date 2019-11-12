@@ -13,11 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
+# version 2019/11/12 01
 
-readonly myversion=64
+readonly myversion=65
 
 #
 # Major Changes (for details see Github):
+#
+# - V65 (Johannes)
+#   - bug fixes, in particular in fwlogparser
+#   - enabled debug logging in install.sh
 #
 # - V64 (Johannes)
 #   - cleanup / typos
@@ -153,7 +158,7 @@ SSHDPORT="12222"
 # Debug Flag
 # 1 = debug logging, debug commands
 # 0 = normal logging, no extra commands
-DEBUG=0
+DEBUG=1
 
 # delimiter
 LINE="#############################################################################"
