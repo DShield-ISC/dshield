@@ -435,9 +435,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv'
+       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
    fi
    if [ "$distversion" == "ubuntu" ]; then
        run 'apt install -y -q python-pip python3-pip'
