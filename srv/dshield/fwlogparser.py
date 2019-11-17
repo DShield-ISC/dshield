@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# version 2019-11-12-02
+# version 2019-11-13-01
 
 import sys
 from sys import argv
@@ -89,16 +89,11 @@ def checklock(lockfile):
     else:
         sys.exit('PID file found. Am I already running?')
 
-try:
-    os.stat('/var/run/dshield')
-except:
-    os.mkdir('/var/run/dshield')
+
 
 # define paramters
 logfile = "/var/log/dshield.log"
-pidfile = "/var/run/dshield/fwparser.pid"
-lastcount = "/var/run/dshield/lastfwlog"
-skipvalue = "/var/run/dshield/skipvalue"
+piddir="/var/run/dshield/"
 config = "/etc/dshield.ini"
 startdate = 0
 now = datetime.utcnow()
@@ -113,12 +108,26 @@ d = DshieldSubmit('')
 # check if we run in debug mode
 args = d.getopts(argv)
 debug = 0
+
 if '-l' in args:  # overwrite log file
     logfile = args['-l']
 if '-p' in args:  # overwrite log file
-    pidfile = args['-p']
+    piddir = args['-p']
 if '-d' in args:  # debug mode
     debug = 1
+if '-c' in args:  # alternate config file
+    print("Alternate config file: %s" % s)
+    config = args['-c']
+
+try:
+    os.stat(piddir)
+except:
+    os.mkdir(piddir)
+
+pidfile = piddir+"fwparser.pid"
+lastcount = piddir+"lastfwlog"
+skipvalue = piddir+"skipvalue"
+    
 if os.path.isfile(logfile) is None:
     sys.exit('Can not find logfile %s ' % logfile)
 if os.path.isfile(pidfile):
