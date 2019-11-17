@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # submit logs to DShield 404 project
 
-# version 2019-11-13-01
+# version 2019-11-17-01
 
 import os
 import sys

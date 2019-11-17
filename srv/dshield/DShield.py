@@ -1,5 +1,5 @@
 """
-version 2019-11-12-02
+version 2019-11-17-01
 
 A class to interact with DShield
 
