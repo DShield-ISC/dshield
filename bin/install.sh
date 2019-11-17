@@ -1490,7 +1490,6 @@ run 'chown -R cowrie:cowrie ${COWRIEDIR}'
 dlog "copying cowrie system files"
 
 do_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
-do_copy $progdir/../etc/logrotate.d/cowrie /etc/logrotate.d 644
 do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 # make sure to remove old cowrie start if they exist
