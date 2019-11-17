@@ -489,8 +489,8 @@ dlog "Offering user choice if automatic updates are OK."
 
 exec 3>&1
 VALUES=$(dialog --title 'Automatic Updates' --radiolist "In future versions automatic updates of this distribution may be conducted. Please choose if you want them or if you want to keep up your dshield stuff up-to-date manually." 0 0 2 \
-   manual "" on \
-   automatic "" off \
+   manual "" off \
+   automatic "" on \
    2>&1 1>&3)
 
 response=$?
