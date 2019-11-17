@@ -27,7 +27,6 @@ import struct
 import syslog
 
 
-
 class DshieldSubmit:
     id = 0
     key = ''
@@ -87,6 +86,8 @@ class DshieldSubmit:
         return header
 
     def translateip4(self, ip):
+        if self.replacehoneypotip == -1:
+            return ip
         ip = self.ip42long(ip)
         if self.honeypotmask and self.honeypotnet and self.replacehoneypotip:
             if (ip & self.honeypotmask) == self.honeypotnet:
