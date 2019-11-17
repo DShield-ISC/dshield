@@ -20,14 +20,12 @@ import hashlib
 import base64
 import requests
 import json
-import ConfigParser
+import configparser
 import sys
 import socket
 import struct
 import syslog
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 class DshieldSubmit:
     id = 0
@@ -88,6 +86,8 @@ class DshieldSubmit:
         return header
 
     def translateip4(self, ip):
+        if self.replacehoneypotip == -1:
+            return ip
         ip = self.ip42long(ip)
         if self.honeypotmask and self.honeypotnet and self.replacehoneypotip:
             if (ip & self.honeypotmask) == self.honeypotnet:
@@ -169,7 +169,7 @@ class DshieldSubmit:
                 filename = home+'/.dshield.ini'
 
         if os.path.isfile(filename):
-            config = ConfigParser.ConfigParser()
+            config = configparser.ConfigParser()
             config.read(filename)
             self.id = config.getint('DShield', 'userid')
             if self.id == 0:
@@ -237,5 +237,5 @@ class DshieldSubmit:
     def log(self,line):
         line=line.strip("\000")        
         if os.isatty(sys.stdout.fileno()):
-            print line
+            print(line)
         syslog.syslog(syslog.LOG_INFO,line)
