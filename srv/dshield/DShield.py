@@ -80,7 +80,7 @@ class DshieldSubmit:
 
     def makeauthheader(self):
         nonce = base64.b64encode(os.urandom(8))
-        myhash = hmac.new(nonce + str(self.id), msg=self.key, digestmod=hashlib.sha256).digest()
+        myhash = hmac.new((str(nonce)+str(self.id)).encode('utf-8'), msg=self.key.encode('utf-8'), digestmod=hashlib.sha256).digest()
         hash64 = base64.b64encode(myhash)
         header = 'ISC-HMAC-SHA256 Credentials=%s Userid=%s Nonce=%s' % (hash64, self.id, nonce.rstrip())
         return header
