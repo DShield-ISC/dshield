@@ -20,14 +20,13 @@ import hashlib
 import base64
 import requests
 import json
-import ConfigParser
+import configparser
 import sys
 import socket
 import struct
 import syslog
 
-reload(sys)
-sys.setdefaultencoding('utf8')
+
 
 class DshieldSubmit:
     id = 0
@@ -169,7 +168,7 @@ class DshieldSubmit:
                 filename = home+'/.dshield.ini'
 
         if os.path.isfile(filename):
-            config = ConfigParser.ConfigParser()
+            config = configparser.ConfigParser()
             config.read(filename)
             self.id = config.getint('DShield', 'userid')
             if self.id == 0:
@@ -237,5 +236,5 @@ class DshieldSubmit:
     def log(self,line):
         line=line.strip("\000")        
         if os.isatty(sys.stdout.fileno()):
-            print line
+            print(line)
         syslog.syslog(syslog.LOG_INFO,line)
