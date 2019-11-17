@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # submit logs to DShield 404 project
 
 import os
@@ -18,7 +18,7 @@ if os.path.isfile(pidfile):
     if d.check_pid(pidfile):
         sys.exit('PID file found. Am I already running?')
     else: 
-	print "stale lock file."
+        print("stale lock file.")
         os.remove(pidfile)
 
 
@@ -38,8 +38,8 @@ try :
           ''')
 
     maxid = c.execute("""SELECT max(timestamp) from submissions""").fetchone()
-except sqlite3.Error, e:
-    print "Error %s:" % e.args[0]
+except (sqlite3.Error, e):
+    print("Error %s:" % e.args[0])
     os.remove(pidfile)
     sys.exit(1)
 
@@ -78,8 +78,8 @@ try:
     c.execute("INSERT INTO submissions (timestamp,linessent) VALUES (?,?)",(lasttime,linecount))
     conn.commit()
     conn.close()
-except sqlite3.Error, e:
-    print "Error %s:" % e.args[0]
+except (sqlite3.Error, e):
+    print("Error %s:" % e.args[0])
     os.remove(pidfile)
     sys.exit(1)
 
