@@ -1308,10 +1308,10 @@ echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > 
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * reboot" >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root reboot" >> /etc/cron.d/dshield
 
 
 drun 'cat /etc/cron.d/dshield'
@@ -1431,6 +1431,7 @@ run 'pip3 install --upgrade pip3'
 run 'pip3 install --upgrade -r requirements.txt'
 run 'pip3 install --upgrade -r requirements-output.txt'
 run 'pip3 install --upgrade bcrypt'
+run 'pip3 install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
