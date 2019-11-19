@@ -1427,11 +1427,11 @@ run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
 run 'pip install --upgrade -r requirements-output.txt'
 run 'pip install --upgrade bcrypt'
-run 'pip3 install --upgrade pip3'
-run 'pip3 install --upgrade -r requirements.txt'
-run 'pip3 install --upgrade -r requirements-output.txt'
-run 'pip3 install --upgrade bcrypt'
-run 'pip3 install --upgrade requests'
+run 'pip install --upgrade pip'
+run 'pip install --upgrade -r requirements.txt'
+run 'pip install --upgrade -r requirements-output.txt'
+run 'pip install --upgrade bcrypt'
+run 'pip install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
