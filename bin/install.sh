@@ -1523,6 +1523,7 @@ run "mkdir -p ${WEBDIR}"
 do_copy $progdir/../srv/www ${WEBDIR}/../
 do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
 run "systemctl enable webpy.service"
+run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 run "systemctl daemon-reload"
 
 # change ownership for web databases to cowrie as we will run the
