@@ -1,6 +1,7 @@
 [Unit]
 Description=DShield Web Honeypot
-After=multi-user.target
+After=systemd-networkd-wait-online.service
+Wants=systemd-networkd-wait-online.service
 
 [Service]
 Type=idle
