@@ -13,9 +13,9 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2019/11/17 01
+# version 2019/11/20 01
 
-readonly myversion=67
+readonly myversion=68
 
 #
 # Major Changes (for details see Github):
