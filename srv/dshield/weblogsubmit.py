@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # submit logs to DShield 404 project
 
-# version 2019-11-13-01
+# version 2019-11-17-01
 
 import os
 import sys
@@ -19,7 +19,7 @@ d = DshieldSubmit('')
 if os.path.isfile(pidfile):
     if d.check_pid(pidfile):
         sys.exit('PID file found. Am I already running?')
-    else: 
+    else:
         print("stale lock file.")
         os.remove(pidfile)
 
@@ -40,7 +40,7 @@ try :
           ''')
 
     maxid = c.execute("""SELECT max(timestamp) from submissions""").fetchone()
-except (sqlite3.Error, e):
+except sqlite3.Error as e:
     print("Error %s:" % e.args[0])
     os.remove(pidfile)
     sys.exit(1)
@@ -80,7 +80,7 @@ try:
     c.execute("INSERT INTO submissions (timestamp,linessent) VALUES (?,?)",(lasttime,linecount))
     conn.commit()
     conn.close()
-except (sqlite3.Error, e):
+except sqlite3.Error as e:
     print("Error %s:" % e.args[0])
     os.remove(pidfile)
     sys.exit(1)
@@ -93,5 +93,4 @@ try:
     os.popen("systemctl restart webpy")  # Web.py seems to hang periodically, so to bandaid this situation, we restart web.py twice an hour
 except:
     pass
-
 

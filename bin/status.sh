@@ -142,3 +142,8 @@ checkfile "/etc/dshield.ini"
 checkfile "/srv/cowrie/cowrie.cfg"
 checkfile "/etc/cron.d/dshield"
 checkfile "/etc/rsyslog.d/dshield.conf"
+if iptables -L -n -t nat  | grep -q DSHIELDINPUT; then
+    echo "${GREEN}OK${NC}: firewall rules"
+else
+    echo "${GREEN}MISSING${NC}: firewall rules"
+fi

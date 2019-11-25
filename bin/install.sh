@@ -13,9 +13,9 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2019/11/12 01
+# version 2019/11/20 01
 
-readonly myversion=65
+readonly myversion=68
 
 #
 # Major Changes (for details see Github):
@@ -489,8 +489,8 @@ dlog "Offering user choice if automatic updates are OK."
 
 exec 3>&1
 VALUES=$(dialog --title 'Automatic Updates' --radiolist "In future versions automatic updates of this distribution may be conducted. Please choose if you want them or if you want to keep up your dshield stuff up-to-date manually." 0 0 2 \
-   manual "" on \
-   automatic "" off \
+   manual "" off \
+   automatic "" on \
    2>&1 1>&3)
 
 response=$?
@@ -1308,10 +1308,10 @@ echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > 
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
 offset1=`shuf -i0-60 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * reboot" >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root reboot" >> /etc/cron.d/dshield
 
 
 drun 'cat /etc/cron.d/dshield'
@@ -1427,10 +1427,11 @@ run 'pip install --upgrade pip'
 run 'pip install --upgrade -r requirements.txt'
 run 'pip install --upgrade -r requirements-output.txt'
 run 'pip install --upgrade bcrypt'
-run 'pip3 install --upgrade pip3'
-run 'pip3 install --upgrade -r requirements.txt'
-run 'pip3 install --upgrade -r requirements-output.txt'
-run 'pip3 install --upgrade bcrypt'
+run 'pip install --upgrade pip'
+run 'pip install --upgrade -r requirements.txt'
+run 'pip install --upgrade -r requirements-output.txt'
+run 'pip install --upgrade bcrypt'
+run 'pip install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
@@ -1522,6 +1523,7 @@ run "mkdir -p ${WEBDIR}"
 do_copy $progdir/../srv/www ${WEBDIR}/../
 do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
 run "systemctl enable webpy.service"
+run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 run "systemctl daemon-reload"
 
 # change ownership for web databases to cowrie as we will run the
