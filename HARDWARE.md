@@ -8,7 +8,7 @@ Raspberry Pi will work.
 I do recommend that you are using a wired network connection for reliability.
 
 Just to allow for some future growth, I recommend the following hardware configuration:
-- Raspberry Pi 3
+- Raspberry Pi 3 (or virtual machine)
 - 1 GB RAM
 - 16 GB SDCard
 
