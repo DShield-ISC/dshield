@@ -1331,6 +1331,7 @@ fi
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
 run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "interface=$interface" >> /etc/dshield.ini'
 run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
