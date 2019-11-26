@@ -816,8 +816,8 @@ drun 'ip link show'
 if [ "$interface" == "" ] ; then
    dlog "Trying to figure out interface"
    # we don't expect a honeypot connected by WLAN ... but the user can change this of course
-   drun "ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan"
-   interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan`
+   drun "ip -4 route show| grep '^default ' | cut -f5 -d' '"
+   interface=`ip -4 route show| grep '^default ' | cut -f5 -d' '`
 fi
 
 # list of valid interfaces
