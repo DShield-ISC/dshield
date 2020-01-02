@@ -816,8 +816,8 @@ drun 'ip link show'
 if [ "$interface" == "" ] ; then
    dlog "Trying to figure out interface"
    # we don't expect a honeypot connected by WLAN ... but the user can change this of course
-   drun "ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan"
-   interface=`ip link show | egrep '^[0-9]+: ' | cut -f 2 -d':' | tr -d ' ' | grep -v lo | grep -v wlan`
+   drun "ip -4 route show| grep '^default ' | cut -f5 -d' '"
+   interface=`ip -4 route show| grep '^default ' | cut -f5 -d' '`
 fi
 
 # list of valid interfaces
@@ -1331,6 +1331,7 @@ fi
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
 run 'echo "[DShield]" >> /etc/dshield.ini'
+run 'echo "interface=$interface" >> /etc/dshield.ini'
 run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
