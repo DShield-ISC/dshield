@@ -15,7 +15,7 @@
 
 # version 2019/11/20 01
 
-readonly myversion=68
+readonly myversion=69
 
 #
 # Major Changes (for details see Github):
@@ -1306,10 +1306,10 @@ offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
 echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > /etc/cron.d/dshield 
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
-offset1=`shuf -i0-60 -n1`
+offset1=`shuf -i0-59 -n1`
 offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
-offset1=`shuf -i0-60 -n1`
+offset1=`shuf -i0-59 -n1`
 offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * root reboot" >> /etc/cron.d/dshield
 
