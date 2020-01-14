@@ -4,11 +4,11 @@ The DShield honeypot implements a medium interaction honeypot with the ability t
 
 Currently, two different servers are used to respond to requests:
 * Cowrie is used to respond to telnet and ssh requests
-* web.py is used to respond to http requests
+* web.py is used to respond to HTTP requests
 
 We use iptables firewall rules to redirect traffic to the honeypot, and to log all incoming new connections.
 
-Quick summary of iptables runes:
+A quick summary of iptables rules:
 1. Do not log or modify traffic from the internal network or the administrative IPs. This is configured during setup.
 2. Log everything (we do this in the "PREROUTING" chain, before NAT to log the actual destination port)
 3. redirect port 22 to port 2222 (cowrie listens on port 2222 for ssh)
@@ -21,10 +21,9 @@ These rules are subject to change. We add/remove redirected ports as needed.
 
 Firewall logs end up in /var/log/dshield.log
 
-Logs are reported to dshield once an hour. This is done by a cron job in /etc/cron.d/dshield. It launches two scripts:
+Logs are reported to Dshield once an hour. This is done by a cron job in /etc/cron.d/dshield. It launches two scripts:
 - weblogsubmit.py . This script reports web logs. 
-- fwlogparser.py . This script parses logs from /var/log/dshield.log and submits them to dshield.
+- fwlogparser.py . This script parses logs from /var/log/dshield.log and submits them to Dshield.
 
-The ammount of bandwidth consumed by the honeypot varries widely with the traffic it receives. But as a rough guess,
-the honeypot will use a couple megabytes or less per day if it receives traffic for a single IP address.
-
+The amount of bandwidth consumed by the honeypot varies widely with the traffic it receives. But as a rough guess,
+the honeypot will use a couple of megabytes or less per day if it receives traffic for a single IP address.
