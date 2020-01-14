@@ -1,5 +1,5 @@
 Support for AWS AMI Linux is still work in progress. Please report issues.
-As of last testing, you may loose ssh access.
+As of the last testing, you may lose ssh access.
 Please note that you need to open port 12222 using an appropriate security policy. 
 
 ```
@@ -24,4 +24,4 @@ git pull
 sudo ./install.sh --update --fast
 ```
 
-the "--fast" mode will skip someo of the updates, package installation and security checks. If you get errors, try it without the --fast switch
+The "--fast" mode will skip some of the updates, package installation and security checks. If you get errors, try it without the --fast switch
