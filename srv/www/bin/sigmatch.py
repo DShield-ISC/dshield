@@ -39,9 +39,9 @@ def sigmatch(self, pattern, module):
                 response = c.execute(
                     """SELECT * FROM """ + str(db_ref[0]) + """ WHERE SigID=?""", [str(SigID[0])]).fetchall()
             except:
-                print 'Error detecting response DB.'
-                print SigID[0]
-                print db_ref[0]
+                print ('Error detecting response DB.')
+                print ('SigID[0]')
+                print ('db_ref[0]')
             if module == 'lfi':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
