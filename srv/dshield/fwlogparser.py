@@ -116,7 +116,7 @@ if '-p' in args:  # overwrite log file
 if '-d' in args:  # debug mode
     debug = 1
 if '-c' in args:  # alternate config file
-    print("Alternate config file: %s" % s)
+    print("Alternate config file: %s" % args['-c'])
     config = args['-c']
 
 try:
