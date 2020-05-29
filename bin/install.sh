@@ -1311,7 +1311,7 @@ offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >> /etc/cron.d/dshield
 offset1=`shuf -i0-59 -n1`
 offset2=`shuf -i0-23 -n1`
-echo "${offset1} ${offset2} * * * root reboot" >> /etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root /sbin/reboot" >> /etc/cron.d/dshield
 
 
 drun 'cat /etc/cron.d/dshield'
