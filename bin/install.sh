@@ -13,12 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2019/11/20 01
+# version 2020/06/18 01
 
-readonly myversion=69
+readonly myversion=70
 
 #
 # Major Changes (for details see Github):
+#
+# - V70 (Johannes)
+#   - added prep.sh
+#   - Ubuntu 20.04 support
 #
 # - V65 (Johannes)
 #   - bug fixes, in particular in fwlogparser
@@ -343,7 +347,6 @@ dlog "sourcing /etc/os-release"
 
 dist=invalid
 
-
 if [ "$ID" == "ubuntu" ] ; then
    dist='apt'
    distversion="ubuntu"
@@ -387,13 +390,13 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04 with experimental support for Amazon AMI Linux."
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 20.04 with experimental support for Amazon AMI Linux."
    outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
    exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04 only."
+if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "20.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 20.04 only."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
