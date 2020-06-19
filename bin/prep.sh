@@ -18,7 +18,7 @@ fi
 
 apt update
 apt -y -q dist-upgrade
-apt install -y -q python-pip python3-pip install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services 
+apt install -y -q python3-pip build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python3-requests python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 dialog rng-tools jq 
 
 pip install --upgrade pip
 pip install --upgrade bcrypt
