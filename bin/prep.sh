@@ -20,7 +20,7 @@ apt update
 apt -y -q dist-upgrade
 apt install -y -q python3-pip build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python3-virtualenv authbind python3-requests python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 dialog rng-tools jq 
 
-pip install --upgrade pip
+pip3 install --upgrade pip
 pip install --upgrade bcrypt
 pip install --upgrade requests
 pip install --upgrade -r requirements.txt
