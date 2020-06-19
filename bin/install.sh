@@ -438,9 +438,9 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
+       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
+       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
    fi
    if [ "$distversion" == "ubuntu" ]; then
        run 'apt install -y -q python-pip python3-pip'
@@ -880,13 +880,16 @@ ipaddr=`ip addr show $interface | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'
 dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
-drun "ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '"
+drun "ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' '"
 localnet=`ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '`
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
 if echo $localnet | grep -q '^10\.'; then localnet='10.0.0.0/8'; fi
 if echo $localnet | grep -q '^192\.168\.'; then localnet='192.168.0.0/16'; fi
+if echo $localnet | grep -q '^172\.1[6-9]\.'; then localnet='172.16.0.0/12'; fi
+if echo $localnet | grep -q '^172\.2[0-9]\.'; then localnet='172.16.0.0/12'; fi
+if echo $localnet | grep -q '^172\.3[0-1]\.'; then localnet='172.16.0.0/12'; fi
 dlog "localnet: ${localnet}"
 
 # additionally we will use any connection to current sshd 
