@@ -5,7 +5,7 @@ pyopenssl
 pyparsing
 packaging
 appdirs>=1.4.0
-pyasn1_modules
+# pyasn1_modules
 attrs
 service_identity
 python-dateutil
