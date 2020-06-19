@@ -14,3 +14,17 @@ bcrypt
 requests
 s3transfer
 awscli
+csirtgsdk>=0.0.0a17 # Specify version because pip won't install pre-release versions by default
+requests
+elasticsearch
+hpfeeds
+hpfeeds3
+mysqlclient
+pymongo
+rethinkdb
+botocore
+slackclient
+influxdb
+afkak
+python-snappy
+wokkel==18.0.0rc5
