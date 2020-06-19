@@ -10,7 +10,7 @@
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
    echo "You have to run this script as root. eg."
-   echo "  sudo ./prep.sh
+   echo "  sudo ./prep.sh"
    echo "Exiting."
    echo ${LINE}
    exit 9
