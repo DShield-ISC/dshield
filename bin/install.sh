@@ -395,8 +395,8 @@ if [ "$dist" == "invalid" ] ; then
    exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "20.04" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 20.04 only."
+if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "18.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04/20.04 only."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
