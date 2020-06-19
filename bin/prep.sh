@@ -24,4 +24,4 @@ pip3 install --upgrade pip
 pip install --upgrade bcrypt
 pip install --upgrade requests
 pip install --upgrade -r requirements.txt
-pip install --upgrade -r requirements-output.txt
+
