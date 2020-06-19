@@ -157,7 +157,7 @@ class DshieldSubmit:
         return 2**32-(2**(32-mask))
 
     def readconfig(self, filename):
-        home = os.getenv("HOME")
+        home = os.getenv("HOME", "")
         if filename == '':
             if os.path.isfile(home+'/etc/dshield.ini'):
                 filename = home+'/etc/dshield.ini'
