@@ -54,8 +54,6 @@ if [ "$status" = "" ] ; then
    echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash"
 fi
 
-
-
 if echo $status | grep -q '<result>ok<\/result>'; then
     echo "${GREEN}API Key configuration ok${NC}"
     if [ "$version" != "" ]; then
@@ -145,5 +143,11 @@ checkfile "/etc/rsyslog.d/dshield.conf"
 if iptables -L -n -t nat  | grep -q DSHIELDINPUT; then
     echo "${GREEN}OK${NC}: firewall rules"
 else
-    echo "${GREEN}MISSING${NC}: firewall rules"
+    echo "${RED}MISSING${NC}: firewall rules"
+fi
+port=$(curl -s 'https://isc.sans.edu/api/portcheck?json' | jq .port80|tr -d '"')
+if [[ "$port" == "open" ]]; then
+    echo "${GREEN}OK${NC}: webserver exposed"
+else
+    echo "${RED}ERROR${ND}: webserver not exposed. check network fireall"
 fi
