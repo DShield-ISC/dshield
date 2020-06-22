@@ -1202,8 +1202,22 @@ if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
 fi
 
 cat >> /etc/network/iptables <<EOF
-# log all traffic with original ports
--A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
+# log all traffic with original ports, but exclude traffic from unused/prive IPs.
+-N DSHIELDLOG
+-A DSHIELDLOG -s 10.0.0.0/8 -j RETURN
+-A DSHIELDLOG -s 100.64.0.0/10 -j RETURN
+-A DSHIELDLOG -s 127.0.0.0/8 -j RETURN
+-A DSHIELDLOG -s 169.254.0.0/16 -j RETURN
+-A DSHIELDLOG -s 172.16.0.0/12 -j RETURN
+-A DSHIELDLOG -s 192.0.0.0/24 -j RETURN
+-A DSHIELDLOG -s 192.0.2.0/24 -j RETURN
+-A DSHIELDLOG -s 192.168.0.0/16 -j RETURN
+-A DSHIELDLOG -s 224.0.0.0/4 -j RETURN
+-A DSHIELDLOG -s 240.0.0.0/4 -j RETURN
+-A DSHIELDLOG -s 255.255.255.255/32 -j RETURN
+-A DSHIELDLOG -j LOG --log-prefix " DSHIELDINPUT "
+-A DSHIELDLOG -j RETURN
+-A PREROUTING -i $interface -m state --state NEW,INVALID -j DSHIELDLOG
 # redirect honeypot ports
 EOF
 
