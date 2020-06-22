@@ -25,3 +25,12 @@ pip install --upgrade bcrypt
 pip install --upgrade requests
 pip install --upgrade -r requirements.txt
 
+echo
+echo Please verify that the date and time below are "close" to the current time
+echo
+date
+echo
+echo If they are not: set the current time on the system and try to
+echo run this script again.
+echo set the time (if required) using this command:
+echo sudo date --set='2020-06-23 15:00:00' +'%Y-%m-%d %H:%M:%S'
