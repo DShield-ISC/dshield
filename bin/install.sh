@@ -13,12 +13,17 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/06/18 01
+# version 2020/06/22 01
 
-readonly myversion=70
+readonly myversion=71
 
 #
 # Major Changes (for details see Github):
+#
+# - V71 (Johannes)
+#   - upgraded cowrie version
+#   - moved to smaller cowrie zip file
+#   - updated prep.sh to match new cowrie version
 #
 # - V70 (Johannes)
 #   - added prep.sh
