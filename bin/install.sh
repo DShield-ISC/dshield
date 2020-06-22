@@ -1414,7 +1414,7 @@ if [ -d ${COWRIEDIR} ]; then
    run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d $TMPDIR/cowrie ]; then
+if [ -d $TMPDIR/cowrie-master ]; then
  run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
 else
  outlog "$TMPDIR/cowrie not found"
