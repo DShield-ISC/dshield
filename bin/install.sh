@@ -15,10 +15,13 @@
 
 # version 2020/06/22 01
 
-readonly myversion=71
+readonly myversion=72
 
 #
 # Major Changes (for details see Github):
+#
+# - V72 (Johannes)
+#   - version incremented for tech tuesday
 #
 # - V71 (Johannes)
 #   - upgraded cowrie version
