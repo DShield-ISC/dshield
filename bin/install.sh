@@ -1621,7 +1621,9 @@ if [ "$dist" == "apt" ]; then
     dlog "installing postfix"
     run 'apt-get -y -q install postfix'
 fi
-
+if grep -q 'inet_protocols = all' /etc/postfix/main.cf ; then
+    sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
+fi
 ###########################################################
 ## Apt Cleanup
 ###########################################################
