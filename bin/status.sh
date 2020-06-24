@@ -62,7 +62,7 @@ if echo $status | grep -q '<result>ok<\/result>'; then
 	echo "
 ${RED}Software Version Mismatch
 Current Version: $currentversion
-You Version: $version
+Your Version: $version
 Details: https://dshield.org/updatehoneypot.html${NC}
 "
     else
