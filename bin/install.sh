@@ -727,7 +727,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	       # TODO: urlencode($user)
 	       user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
                dlog "Checking API key ..."
-	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi'
+	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion > $TMPDIR/checkapi'
    
                dlog "Curl return code is ${?}"
    
