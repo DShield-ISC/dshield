@@ -48,9 +48,10 @@ newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash
 echo Current Version: $newversion
 
 if [ "$newversion" -gt "$version" ]; then
-  echo "Update"
-  git pull
-  ./install.sh --update
+    echo "Update"
+    git checkout main
+    git pull
+    ./install.sh --update
 else
     echo "No Update Required"
 fi
