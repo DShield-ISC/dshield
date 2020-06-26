@@ -451,6 +451,8 @@ if [ "$dist" == "apt" ]; then
        run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
    fi
    if [ "$distversion" == "ubuntu" ]; then
+       # installing python2 as ubuntu 20.04 on AWS doesn't have it installed
+       run 'apt install -y -q python2'
        run 'apt install -y -q python-pip python3-pip'
    fi
 fi
@@ -1529,6 +1531,9 @@ fi
 run 'mkdir ${COWRIEDIR}/log'
 run 'chmod 755 ${COWRIEDIR}/log'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log'
+run 'mkdir ${COWRIEDIR}/log/tty'
+run 'chmod 755 ${COWRIEDIR}/log/tty'
+run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'

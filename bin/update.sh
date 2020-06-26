@@ -50,8 +50,6 @@ checkapikey=$(wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$ha
 if echo $checkapikey | grep -q '<result>ok</result>'; then
     echo "API Key OK"
     newversion=$(echo $checkapikey | egrep -o '<version>[^<]+</version>'|egrep -o '[0-9]+')
-    echo "NEWVER $newversion"
-    echo $checkapikey
 else
     echo "Bad API Key. check API key in /etc/dshield.ini"
     exit
