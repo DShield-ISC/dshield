@@ -6,21 +6,21 @@ This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi, any model as [per](https://isc.sans.edu/forums/diary/Using+a+Raspberry+Pi+honeypot+to+contribute+data+to+DShieldISC/22680/))
-- current raspbian OS
+- current Raspberry Pi OS ("Lite" version will suffice)
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is only tested on Raspbian, not on other distros, sorry.
+The current version is only tested on Raspberry Pi OS and Ubuntu 20.04 LTS Server, not on other distros, sorry.
 If there is the need for other distros, "someone" has to check and maintain the installation script.
 
 ## Installation
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
-- get [Raspbian Stretch Lite](https://www.raspberrypi.org/downloads/raspbian/)
+- get [Raspberry Pi OS Lite](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
 - put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
 - if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. __IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE__.
 - boot the pi from the SD card and log into the console using an USB keyboard
@@ -51,7 +51,7 @@ passwd
    ```
    sudo touch /boot/ssh
    ```
-   - make sure the root file system of the Pi is properly expanded
+   - make sure the root file system of the Pi is properly expanded (not needed on newer "Raspberry Pi OS" versions)
    ```
      sudo raspi-config --expand-rootfs
    ```

@@ -48,13 +48,11 @@ nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
 # TODO: urlencode($user)
 user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
-status=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash`
+status=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version`
 if [ "$status" = "" ] ; then
    echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
    echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash"
 fi
-
-
 
 if echo $status | grep -q '<result>ok<\/result>'; then
     echo "${GREEN}API Key configuration ok${NC}"
@@ -64,7 +62,7 @@ if echo $status | grep -q '<result>ok<\/result>'; then
 	echo "
 ${RED}Software Version Mismatch
 Current Version: $currentversion
-You Version: $version
+Your Version: $version
 Details: https://dshield.org/updatehoneypot.html${NC}
 "
     else
@@ -145,5 +143,11 @@ checkfile "/etc/rsyslog.d/dshield.conf"
 if iptables -L -n -t nat  | grep -q DSHIELDINPUT; then
     echo "${GREEN}OK${NC}: firewall rules"
 else
-    echo "${GREEN}MISSING${NC}: firewall rules"
+    echo "${RED}MISSING${NC}: firewall rules"
+fi
+port=$(curl -s 'https://isc.sans.edu/api/portcheck?json' | jq .port80|tr -d '"')
+if [[ "$port" == "open" ]]; then
+    echo "${GREEN}OK${NC}: webserver exposed"
+else
+    echo "${RED}ERROR${ND}: webserver not exposed. check network fireall"
 fi

@@ -7,5 +7,3 @@ This software should still be considered "beta". We offer support for the latest
 ## Reporting a Vulnerability
 
 Report vulnerabilities to jullrich@sans.edu or via https://isc.sans.edu/contact.html . You can find PGPKEYS here: https://isc.sans.edu/PGPKEYS
-
-

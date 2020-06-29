@@ -13,12 +13,24 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2019/11/20 01
+# version 2020/06/22 01
 
-readonly myversion=69
+readonly myversion=72
 
 #
 # Major Changes (for details see Github):
+#
+# - V72 (Johannes)
+#   - version incremented for tech tuesday
+#
+# - V71 (Johannes)
+#   - upgraded cowrie version
+#   - moved to smaller cowrie zip file
+#   - updated prep.sh to match new cowrie version
+#
+# - V70 (Johannes)
+#   - added prep.sh
+#   - Ubuntu 20.04 support
 #
 # - V65 (Johannes)
 #   - bug fixes, in particular in fwlogparser
@@ -343,7 +355,6 @@ dlog "sourcing /etc/os-release"
 
 dist=invalid
 
-
 if [ "$ID" == "ubuntu" ] ; then
    dist='apt'
    distversion="ubuntu"
@@ -387,13 +398,13 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04 with experimental support for Amazon AMI Linux."
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 20.04 with experimental support for Amazon AMI Linux."
    outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
    exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04 only."
+if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "18.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04/20.04 only."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
@@ -435,11 +446,13 @@ if [ "$dist" == "apt" ]; then
 
 # distinguishing between rpi versions 
    if [ "$distversion" == "r9" ]; then
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
+       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
    else
-       run 'apt-get -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3'
+       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
    fi
    if [ "$distversion" == "ubuntu" ]; then
+       # installing python2 as ubuntu 20.04 on AWS doesn't have it installed
+       run 'apt install -y -q python2'
        run 'apt install -y -q python-pip python3-pip'
    fi
 fi
@@ -716,7 +729,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	       # TODO: urlencode($user)
 	       user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
                dlog "Checking API key ..."
-	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi'
+	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion > $TMPDIR/checkapi'
    
                dlog "Curl return code is ${?}"
    
@@ -877,13 +890,16 @@ ipaddr=`ip addr show $interface | grep 'inet ' |  awk '{print $2}' | cut -f1 -d'
 dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
-drun "ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '"
+drun "ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' '"
 localnet=`ip route show | grep $interface | grep 'scope link' | cut -f1 -d' '`
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
 if echo $localnet | grep -q '^10\.'; then localnet='10.0.0.0/8'; fi
 if echo $localnet | grep -q '^192\.168\.'; then localnet='192.168.0.0/16'; fi
+if echo $localnet | grep -q '^172\.1[6-9]\.'; then localnet='172.16.0.0/12'; fi
+if echo $localnet | grep -q '^172\.2[0-9]\.'; then localnet='172.16.0.0/12'; fi
+if echo $localnet | grep -q '^172\.3[0-1]\.'; then localnet='172.16.0.0/12'; fi
 dlog "localnet: ${localnet}"
 
 # additionally we will use any connection to current sshd 
@@ -905,7 +921,7 @@ fi
 # reboot at least for the current remote device
 CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
-CONIPS=`echo ${CONIPS} | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/ $//'`
+CONIPS=`echo ${CONIPS} | tr ' ' '\n' | grep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
 
 if [ "$INTERACTIVE" == 1 ] ; then
@@ -1191,8 +1207,22 @@ if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ] ; then
 fi
 
 cat >> /etc/network/iptables <<EOF
-# log all traffic with original ports
--A PREROUTING -i $interface -m state --state NEW,INVALID -j LOG --log-prefix " DSHIELDINPUT "
+# log all traffic with original ports, but exclude traffic from unused/prive IPs.
+-N DSHIELDLOG
+-A DSHIELDLOG -s 10.0.0.0/8 -j RETURN
+-A DSHIELDLOG -s 100.64.0.0/10 -j RETURN
+-A DSHIELDLOG -s 127.0.0.0/8 -j RETURN
+-A DSHIELDLOG -s 169.254.0.0/16 -j RETURN
+-A DSHIELDLOG -s 172.16.0.0/12 -j RETURN
+-A DSHIELDLOG -s 192.0.0.0/24 -j RETURN
+-A DSHIELDLOG -s 192.0.2.0/24 -j RETURN
+-A DSHIELDLOG -s 192.168.0.0/16 -j RETURN
+-A DSHIELDLOG -s 224.0.0.0/4 -j RETURN
+-A DSHIELDLOG -s 240.0.0.0/4 -j RETURN
+-A DSHIELDLOG -s 255.255.255.255/32 -j RETURN
+-A DSHIELDLOG -j LOG --log-prefix " DSHIELDINPUT "
+-A DSHIELDLOG -j RETURN
+-A PREROUTING -i $interface -m state --state NEW,INVALID -j DSHIELDLOG
 # redirect honeypot ports
 EOF
 
@@ -1408,8 +1438,8 @@ if [ -d ${COWRIEDIR} ]; then
    run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d $TMPDIR/cowrie ]; then
- run "mv $TMPDIR/cowrie ${COWRIEDIR}"
+if [ -d $TMPDIR/cowrie-master ]; then
+ run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
 else
  outlog "$TMPDIR/cowrie not found"
  exit 9
@@ -1501,6 +1531,9 @@ fi
 run 'mkdir ${COWRIEDIR}/log'
 run 'chmod 755 ${COWRIEDIR}/log'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log'
+run 'mkdir ${COWRIEDIR}/log/tty'
+run 'chmod 755 ${COWRIEDIR}/log/tty'
+run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
@@ -1596,7 +1629,9 @@ if [ "$dist" == "apt" ]; then
     dlog "installing postfix"
     run 'apt-get -y -q install postfix'
 fi
-
+if grep -q 'inet_protocols = all' /etc/postfix/main.cf ; then
+    sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
+fi
 ###########################################################
 ## Apt Cleanup
 ###########################################################
