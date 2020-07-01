@@ -473,7 +473,7 @@ fi
 ###########################################################
 if [ "$INTERACTIVE" == 1 ] ; then
 dlog "Offering user last chance to quit with a nearly untouched system."
-dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
+dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall. If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
@@ -617,28 +617,6 @@ fi
 
 dlog "Changing random number generator settings."
 run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
-
-
-###########################################################
-## Disable IPv6
-###########################################################
-
-dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
-run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
-cat > /etc/modprobe.d/ipv6.conf <<EOF
-# Don't load ipv6 by default
-alias net-pf-10 off
-# uncommented
-alias ipv6 off
-# added
-options ipv6 disable_ipv6=1
-# this is needed for not loading ipv6 driver
-blacklist ipv6
-EOF
-run "chmod 644 /etc/modprobe.d/ipv6.conf"
-drun "cat /etc/modprobe.d/ipv6.conf.bak"
-drun "cat /etc/modprobe.d/ipv6.conf"
-
 
 ###########################################################
 ## Handling existing config
