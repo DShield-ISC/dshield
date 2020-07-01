@@ -568,7 +568,7 @@ if [ ${?} -gt 0 ] ; then
       outlog "Error downloading get-pip, aborting."
       exit 9
    fi
-   run 'python $TMPDIR/get-pip.py'
+   run 'python2 $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error running get-pip2, aborting."
       exit 9
