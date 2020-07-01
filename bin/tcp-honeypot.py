@@ -117,6 +117,8 @@ import traceback
 import binascii
 import struct
 import inspect
+import json
+
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
@@ -445,7 +447,7 @@ def SplitIfRequested(dListener, data):
 
 class ConnectionThread(threading.Thread):
     global dListeners
-
+    print(json.dumps(dListeners))
     def __init__(self, oSocket, oOutput, options):
         threading.Thread.__init__(self)
         self.oSocket = oSocket
