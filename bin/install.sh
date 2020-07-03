@@ -438,7 +438,7 @@ if [ "$dist" == "apt" ]; then
        outlog "Updating your Installation (this can take a LOOONG time)"
        drun 'dpkg --list'
        run 'apt update'
-       run 'apt -y -q upgrade'
+       run 'apt -y -q dist-upgrade'
 
    outlog "Installing additional packages"
    # OS packages: no python modules
