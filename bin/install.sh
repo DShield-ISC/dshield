@@ -437,24 +437,17 @@ if [ "$dist" == "apt" ]; then
 
        outlog "Updating your Installation (this can take a LOOONG time)"
        drun 'dpkg --list'
-       run 'apt-get update'
-       run 'apt-get -y -q upgrade'
+       run 'apt update'
+       run 'apt -y -q upgrade'
 
    outlog "Installing additional packages"
    # OS packages: no python modules
    # 2017-05-17: added python-virtualenv authbind for cowrie
+   # 2020-07-03: turned this into a loop to make it more reliable
 
-# distinguishing between rpi versions 
-   if [ "$distversion" == "r9" ]; then
-       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
-   else
-       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
-   fi
-   if [ "$distversion" == "ubuntu" ]; then
-       # installing python2 as ubuntu 20.04 on AWS doesn't have it installed
-       run 'apt install -y -q python2'
-       run 'apt install -y -q python-pip python3-pip'
-   fi
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-pip python-requests python-urllib3 python-virtualenv python2 python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+       run "apt -y -q install $b"
+   done
 fi
 
 if [ "$ID" == "amzn" ]; then
@@ -1618,7 +1611,7 @@ run 'update-rc.d cowrie defaults'
 if [ "$dist" == "apt" ]; then
     outlog "Installing and configuring postfix."
     dlog "uninstalling postfix"
-    run 'apt-get -y -q purge postfix'
+    run 'apt -y -q purge postfix'
     dlog "preparing installation of postfix"
     echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
     echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
@@ -1627,7 +1620,7 @@ if [ "$dist" == "apt" ]; then
     outlog "package configuration for postfix"
     run 'debconf-get-selections | grep postfix'
     dlog "installing postfix"
-    run 'apt-get -y -q install postfix'
+    run 'apt -y -q install postfix'
 fi
 if grep -q 'inet_protocols = all' /etc/postfix/main.cf ; then
     sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
