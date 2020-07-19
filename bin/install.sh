@@ -1747,6 +1747,11 @@ outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
 outlog
 outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
+outlog "To check if all is working right:"
+outlog "   Run the script 'status.sh' "
+outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
+outlog
+outlog " for help, check our slack channel: https://isc.sans.edu/slack "
 
 
 
