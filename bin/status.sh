@@ -152,6 +152,6 @@ else
     echo "${RED}ERROR${ND}: webserver not exposed. check network fireall"
 fi
 echo
-echo "also check https://isc.sans.edu/myreports.html (after logging in"
+echo "also check https://isc.sans.edu/myreports.html (after logging in)"
 echo "to see that your reports arrive."
 echo "It may take an hour for new reports to show up."
