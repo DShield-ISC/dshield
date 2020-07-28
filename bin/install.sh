@@ -355,10 +355,6 @@ dlog "sourcing /etc/os-release"
 
 dist=invalid
 
-if [ "$ID" == "ubuntu" ] ; then
-   dist='apt'
-   distversion="ubuntu"
-fi
 
 if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "8" ] ; then
    dist='apt'
@@ -385,10 +381,16 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ] ; then
    distversion=r10
 fi
 
-if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
-   dist='yum'
-   distversion=a201609
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ] ; then 
+   dist='apt'
+   distversion='u18'
 fi
+
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ] ; then
+   dist='apt'
+   distversion='u20'
+fi
+
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ] ; then 
    dist='yum'
@@ -398,7 +400,7 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 20.04 with experimental support for Amazon AMI Linux."
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04/20.04 with experimental support for Amazon AMI Linux."
    outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
    exit 9
 fi
@@ -426,7 +428,8 @@ outlog "Basic security checks"
 dlog "making sure default password was changed"
 
 if [ "$dist" == "apt" ]; then
-
+    dlog "repair any package issues just in case"
+    run 'dpkg --configure -a' 
    dlog "we are on pi and should check if password for user pi has been changed"
    if $progdir/passwordtest.pl | grep -q 1; then
       outlog "You have not yet changed the default password for the 'pi' user"
@@ -435,10 +438,10 @@ if [ "$dist" == "apt" ]; then
    fi
 
 
-       outlog "Updating your Installation (this can take a LOOONG time)"
-       drun 'dpkg --list'
-       run 'apt update'
-       run 'apt -y -q dist-upgrade'
+   outlog "Updating your Installation (this can take a LOOONG time)"
+   drun 'dpkg --list'
+   run 'apt update'
+   run 'apt -y -q dist-upgrade'
 
    outlog "Installing additional packages"
    # OS packages: no python modules
@@ -447,6 +450,14 @@ if [ "$dist" == "apt" ]; then
 
    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-pip python-requests python-urllib3 python-virtualenv python2 python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
        run "apt -y -q install $b"
+       if ! dpkg -l $b >/dev/null 2>/dev/null; then
+	   outlog "I was unable to install the $b package via apt"
+	   outlog "This may be a temporary network issue. You may"
+	   outlog "try and run this installer again. Or run this"
+	   outlog "command as root to see if it works/returns errors"
+	   outlog "apt -y install $b"
+	   exit 9
+       fi
    done
 fi
 
