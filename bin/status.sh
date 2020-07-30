@@ -10,6 +10,7 @@ RED=`tput setaf 1`
 GREEN=`tput setaf 2`
 NC=`tput sgr0`
 
+myip=$(netstat -nt  | grep ESTABLISHED | awk '{print $4}' | cut -f1 -d':' | head -1)
 
 echo "
 
@@ -80,6 +81,7 @@ echo "
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
+echo My IP: $myip
 
 echo "
 ###### Are My Reports Received? ######
