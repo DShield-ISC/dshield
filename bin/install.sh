@@ -13,12 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/06/22 01
+# version 2020/08/30 01
 
-readonly myversion=72
+readonly myversion=73
 
 #
 # Major Changes (for details see Github):
+#
+#
+# - V73 (Johannes)
+#   - misc improvements to installer and documentation
 #
 # - V72 (Johannes)
 #   - version incremented for tech tuesday
