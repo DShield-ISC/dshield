@@ -81,7 +81,8 @@ echo "
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
-echo My IP: $myip
+echo My Internal IP: $myip
+echo My External IP: $honeypotip
 
 echo "
 ###### Are My Reports Received? ######
