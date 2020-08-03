@@ -1584,8 +1584,11 @@ run "chown cowrie ${WEBDIR}/DB/*"
 ###########################################################
 
 dlog "copying further system files"
-
-do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+# no longer needed. now done bu /etc/cron.d/dshield
+# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+if [ -f /etc/cron.hourly/dshield ]; do
+    run "rm /etc/cron.hourly/dshield"
+fi
 # do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
 # do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
 
