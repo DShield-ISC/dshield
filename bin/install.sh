@@ -451,8 +451,12 @@ if [ "$dist" == "apt" ]; then
    # OS packages: no python modules
    # 2017-05-17: added python-virtualenv authbind for cowrie
    # 2020-07-03: turned this into a loop to make it more reliable
-
-   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-pip python-requests python-urllib3 python-virtualenv python2 python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+   # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
+   #             these two installs may fail depending on ubuntu flavor
+   run 'apt -y -q install python2'
+   run 'apt -y -q install python'
+   
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-pip python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
 	   outlog "I was unable to install the $b package via apt"
