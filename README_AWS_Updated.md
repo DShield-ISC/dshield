@@ -1,4 +1,4 @@
-Use the following guide to deploy DShield honeypot onto the free compute tier (https://aws.amazon.com/ec2/?did=ft_card&trk=ft_card). This guide uses Ubuntu as Amazon has deprecated AWS Linux AMI (https://aws.amazon.com/amazon-linux-ami/#:~:text=The%20Amazon%20Linux%20AMI%20will,long%20term%20support%20through%202023.)
+Use the following guide to deploy DShield honeypot using the free compute tier (https://aws.amazon.com/ec2/?did=ft_card&trk=ft_card). This guide uses Ubuntu as Amazon has deprecated AWS Linux AMI (https://aws.amazon.com/amazon-linux-ami/#:~:text=The%20Amazon%20Linux%20AMI%20will,long%20term%20support%20through%202023.)
 
 
 
