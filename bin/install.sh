@@ -455,8 +455,9 @@ if [ "$dist" == "apt" ]; then
    #             these two installs may fail depending on ubuntu flavor
    run 'apt -y -q install python2'
    run 'apt -y -q install python'
+   run 'apt -y -q install python-pip'   
    
-   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-pip python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-pip python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
 	   outlog "I was unable to install the $b package via apt"
