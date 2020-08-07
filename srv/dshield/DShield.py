@@ -58,6 +58,14 @@ class DshieldSubmit:
             return 1
         return 0
 
+    def get(self, url):
+        self.authheader = self.makeauthheader()
+        header = {'User-Agent': 'DShield PyLib 0.1',
+                  'X-ISC-Authorization': self.authheader
+                  }
+        r = requests.post(self.url, json=mydata, headers=header)        
+        return r.content
+        
     def post(self, mydata):
         if mydata['type'] in self.types:
             self.authheader = self.makeauthheader()
