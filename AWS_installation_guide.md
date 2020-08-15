@@ -41,9 +41,7 @@ You may refer: https://linuxize.com/post/how-to-install-pip-on-ubuntu-20.04/ or 
 
 It is advisable to be in the home directory when carrying out the following commands. (cd ~)
 ```
-sudo apt update && sudo apt install python2 && sudo apt install git
-curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
-sudo python2 get-pip.py
+cd ~ && sudo apt update && sudo apt full-upgrade -y && sudo apt install python-pip -y && sudo apt install python3-pip -y && sudo apt update && sudo apt install python2.7 -y  && sudo apt install git -y && curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py && sudo python2 get-pip.py && sudo python3 get-pip.py
 ```
 
 9. **Follow installation steps from Readme.md**
