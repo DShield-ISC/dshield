@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from http.server import BaseHTTPRequestHandler,HTTPServer
 import ssl
 import socket
-import urlparse
+from urllib.parse import urlparse
 import db_builder
 import sigmatch
 import os
@@ -24,7 +24,7 @@ PORT_NUMBER = 8000
 logfile = '..' + os.path.sep + 'var' + os.path.sep + 'log'
 logdir = '..' + os.path.sep + 'var'
 if not os.path.exists(logdir):
-    print 'var directory not found creating directory.'
+    print('var directory not found creating directory.')
     os.makedirs(logdir)
 stderr = open (logfile, 'w')
 '''
@@ -53,7 +53,7 @@ else:
 def build_db():
     DBPath = '..' + os.path.sep + 'DB'
     if not os.path.exists(DBPath):
-        print 'DB directory not found creating directory.'
+        print('DB directory not found creating directory.')
         os.makedirs(DBPath)
     db_builder.build_DB()
 
@@ -122,9 +122,9 @@ class MyHandler(BaseHTTPRequestHandler):
                 #self.send_header('Date', self.date_time_string(time.time()))
                 #self.end_headers()
             else:
-                print self.client_address[
+                print(self.client_address[
                           0
-                      ] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
+                      ] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -193,8 +193,8 @@ class MyHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.server_version='Apache/3.2.3'
         self.end_headers()
-        print self.client_address[
-                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy."
+        print(self.client_address[
+                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy.")
 
     def do_CONNECT(self):
         if not _USE_SSL:
@@ -204,8 +204,8 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_header('Server', 'Apache/2.0.1')
             self.server_version='Apache/3.2.3'
             self.end_headers()
-            print self.client_address[
-                      0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy."
+            print(self.client_address[
+                      0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy.")
 
     def do_POST(self):
         # Parse the form data posted
@@ -236,8 +236,8 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
             else:
-                print self.client_address[
-                          0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
+                print(self.client_address[
+                          0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -367,11 +367,11 @@ if __name__ == "__main__":
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
                                             certfile=certpath, server_side=True)
-            print "using SSL"
+            print("using SSL")
 
-        print 'Started httpserver on port ', PORT_NUMBER
+        print('Started httpserver on port ', PORT_NUMBER)
         # Wait forever for incoming http requests
         server.serve_forever()
 
     except KeyboardInterrupt:
-        print '^C received, shutting down the web server'
+        print('^C received, shutting down the web server')

@@ -13,13 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/08/30 01
+# version 2020/09/21 01
 
-readonly myversion=73
+readonly myversion=74
 
 #
 # Major Changes (for details see Github):
 #
+#
+# - V74 (Freek)
+#   - webpy port to Python3 and bug fix
 #
 # - V73 (Johannes)
 #   - misc improvements to installer and documentation
@@ -453,14 +456,16 @@ if [ "$dist" == "apt" ]; then
    # 2020-07-03: turned this into a loop to make it more reliable
    # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
    #             these two installs may fail depending on ubuntu flavor
-   run 'apt -y -q install python2'
-   run 'apt -y -q install python'
-   run 'apt -y -q install python-pip'
+   # 2020-09-21: remove python2
+   run 'apt -y -q remove python2'
+   run 'apt -y -q remove python'
+   run 'apt -y -q remove python-pip'
    run 'apt -y -q install python3-pip'      
    run 'apt -y -q install python3-requests'
-   run 'apt -y -q install python-requests'   
+   run 'apt -y -q remove python-requests'   
    
-   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+#   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
 	   outlog "I was unable to install the $b package via apt"
@@ -573,20 +578,15 @@ if [ "$FAST" == "0" ] ; then
 ## PIP
 ###########################################################
 
-outlog "check if pip is already installed"
+outlog "check if pip3 is already installed"
 
-run 'pip > /dev/null'
+run 'pip3 > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
-   outlog "no pip found, installing pip"
+   outlog "no pip3 found, installing pip3"
    run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error downloading get-pip, aborting."
-      exit 9
-   fi
-   run 'python $TMPDIR/get-pip.py'
-   if [ ${?} -ne 0 ] ; then
-      outlog "Error running get-pip2, aborting."
       exit 9
    fi
    run 'python3 $TMPDIR/get-pip.py'
@@ -596,31 +596,30 @@ if [ ${?} -gt 0 ] ; then
    fi   
 else
    # hmmmm ...
-   # todo: automatic check if pip is OS managed or not
+   # todo: automatic check if pip3 is OS managed or not
    # check ... already done :)
 
-   outlog "pip found .... Checking which pip is installed...."
+   outlog "pip3 found .... Checking which pip3 is installed...."
 
-   drun 'pip -V'
-   drun 'pip  -V | cut -d " " -f 4 | cut -d "/" -f 3'
-   drun 'find /usr -name pip'
-   drun 'find /usr -name pip | grep -v local'
+   drun 'pip3 -V'
+   drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
+   drun 'find /usr -name pip3'
+   drun 'find /usr -name pip3 | grep -v local'
 
    # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
-   # - no local in pip -V output 
+   # - no local in pip3 -V output 
    #   OR
-   # - pip below /usr without local
-   # -> potential distro pip found
-   if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip | grep -v local | wc -l` -gt 0 ] ; then
-      # pip may be distro pip
-      outlog "Potential distro pip found"
+   # - pip3 below /usr without local
+   # -> potential distro pip3 found
+   if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
+      # pip3 may be distro pip3
+      outlog "Potential distro pip3 found"
    else
-      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
+      outlog "pip3 found which doesn't seem to be installed as a distro package. Looks ok to me."
    fi
 
 fi
 
-drun 'pip list --format=legacy'
 else
     outlog "Skipping PIP check in FAST mode"
 fi
@@ -757,7 +756,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
    
                drun "cat ${TMPDIR}/checkapi"
    
-               dlog "Excamining result of API key check ..."
+               dlog "Examining result of API key check ..."
    
                if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
                   apikeyok=1;
@@ -1044,7 +1043,7 @@ ${NOFWLOGGING}" 0 0
 fi
 fi # interactive mode
 ##---------------------------------------------------------
-## disable honepot for nets / IPs
+## disable honeypot for nets / IPs
 ##---------------------------------------------------------
 
 dlog "firewall config: IPs and ports to disable honeypot for"
@@ -1398,7 +1397,7 @@ run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "logretention=7" >> /etc/dshield.ini'
 run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
@@ -1470,15 +1469,15 @@ run 'virtualenv cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
-run 'pip install --upgrade pip'
-run 'pip install --upgrade -r requirements.txt'
-run 'pip install --upgrade -r requirements-output.txt'
-run 'pip install --upgrade bcrypt'
-run 'pip install --upgrade pip'
-run 'pip install --upgrade -r requirements.txt'
-run 'pip install --upgrade -r requirements-output.txt'
-run 'pip install --upgrade bcrypt'
-run 'pip install --upgrade requests'
+run 'pip3 install --upgrade pip3'
+run 'pip3 install --upgrade -r requirements.txt'
+run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade bcrypt'
+run 'pip3 install --upgrade pip3'
+run 'pip3 install --upgrade -r requirements.txt'
+run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade bcrypt'
+run 'pip3 install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
@@ -1488,7 +1487,7 @@ if [ ${?} -ne 0 ] ; then
 fi
 
 # installing python dependencies. Most of these are for cowrie.
-run 'pip install -r requirements.txt'
+run 'pip3 install -r requirements.txt'
 cd ${OLDDIR}
 
 outlog "Doing further cowrie configuration."
