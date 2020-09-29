@@ -58,7 +58,7 @@ for r in rsx:
     headerdata = {}
     logdata['time']=float(r[0])
     for each in r[1].split('\r\n'): # Header data was stored as a string with extra characters, so some clean-up needed.
-        if (each and ipaddr not in each): # scrubbing local IP from data before submission
+        if (each and ipaddr in each): # scrubbing local IP from data before submission
             try:
                 headerdata['header_'+str(each.split(': ')[0])] = each.split(': ')[1]
             except IndexError:
