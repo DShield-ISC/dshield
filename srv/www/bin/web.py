@@ -12,32 +12,21 @@ import time
 import cgi
 import re
 import requests
-#from sys import stderr
+
 
 # Default port - feel free to change
 PORT_NUMBER = 8000
 
-# Global Variables - bummer need to fix :(
-# configure config SQLLite DB and log directory
-# hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-'''# not using at this time - but will
-logfile = '..' + os.path.sep + 'var' + os.path.sep + 'log'
-logdir = '..' + os.path.sep + 'var'
-if not os.path.exists(logdir):
-    print('var directory not found creating directory.')
-    os.makedirs(logdir)
-stderr = open (logfile, 'w')
-'''
+
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
-# webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
 # will be if user sets up SSL cert and key
 certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
-local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = False)
+local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
@@ -51,15 +40,15 @@ else:
 
     
 def build_db():
-    DBPath = '..' + os.path.sep + 'DB'
-    if not os.path.exists(DBPath):
+    dbpath = '..' + os.path.sep + 'DB'
+    if not os.path.exists(dbpath):
         print('DB directory not found creating directory.')
-        os.makedirs(DBPath)
+        os.makedirs(dbpath)
     db_builder.build_DB()
 
 class SecureHTTPServer(HTTPServer):
-    def __init__(self, server_address, HandlerClass):
-        HTTPServer.__init__(self, server_address, MyHandler)
+    def __init__(self, server_address, handlerclass):
+        HTTPServer.__init__(self, server_address, myhandler)
         ctx = ssl.Context(ssl.SSLv23_METHOD)
         # server.pem's location (containing the server private key and
         # the server certificate).
@@ -72,7 +61,7 @@ class SecureHTTPServer(HTTPServer):
 
 # This class will handles any incoming request from
 # the browser
-class MyHandler(BaseHTTPRequestHandler):
+class myhandler(BaseHTTPRequestHandler):
     ''' #not using this but will
     log_file = open(logfile, 'w')
     def log_message(self, format, *args):
@@ -362,7 +351,7 @@ if __name__ == "__main__":
         build_db()
         conn = sqlite3.connect(config)
         c = conn.cursor()
-        server = HTTPServer(('', PORT_NUMBER), MyHandler)
+        server = HTTPServer(('', PORT_NUMBER), myhandler)
         server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
