@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # linked to schema for web.py
 
-from xml.etree import ElementTree
+import xml.etree.ElementTree as ElementTree
 import os
 import sqlite3
 
