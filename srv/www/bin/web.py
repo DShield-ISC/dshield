@@ -16,6 +16,7 @@ import requests
 
 # Default port - feel free to change
 PORT_NUMBER = 8000
+PRODSTRING = 'Apache/3.2.3'
 
 
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
@@ -121,12 +122,12 @@ class myhandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin','*')
             self.send_header('Content-type', 'text/html')
-            self.server_version='Apache/3.2.3'
+            self.server_version=PRODSTRING
             self.end_headers()
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.server_version='Apache/3.2.3'
+        self.server_version=PRODSTRING
         self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
@@ -180,7 +181,7 @@ class myhandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.server_version='Apache/3.2.3'
+        self.server_version=PRODSTRING
         self.end_headers()
         print(self.client_address[
                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy.")
@@ -190,8 +191,8 @@ class myhandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'Apache/2.0.1')
-            self.server_version='Apache/3.2.3'
+            self.send_header('Server', PRODSTRING')
+            self.server_version=PRODSTRING
             self.end_headers()
             print(self.client_address[
                       0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy.")
@@ -243,7 +244,6 @@ class myhandler(BaseHTTPRequestHandler):
         # Signatures identification section - will eventually
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
         match = 0
-        pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         conn.commit()
         sigmatch.sigmatch(self, path, 'lfi')
         sigmatch.sigmatch(self, path, 'robots')
@@ -311,9 +311,9 @@ class myhandler(BaseHTTPRequestHandler):
         line = self.rfile.readline()
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line)
-        dir(fn)
-        if not fn:
-            return False, "Can't find out file name..."
+        dfn=dir(fn)
+        if not dfn:
+            return False, "Can't find our file name..."
         # TODO: is translate path ever defined?
         path = self.translate_path(self.path)
         fn = os.path.join(path, fn[0])
