@@ -19,7 +19,6 @@ import hmac
 import hashlib
 import base64
 import requests
-import json
 import configparser
 import sys
 import socket
@@ -130,7 +129,7 @@ class DshieldSubmit:
     # convert a long integer back to an IP address string
     @staticmethod
     def long2ip4(ip):
-        asciiip='127.0.0.1';
+        asciiip='127.0.0.1'
         try:
             asciiip=socket.inet_ntoa(struct.pack('!I', ip))
         except:
@@ -217,9 +216,9 @@ class DshieldSubmit:
 
     def check_pid(self,pidfile):        
         """ Check For the existence of a unix pid. """
-        f=open(pidfile,'r')
-        pid=f.readline()
-        pid=pid.rstrip('\n')	
+        with open(pidfile, 'r') as file:
+            pid = file.readline()
+            pid = pid.rstrip('\n')
         try:
             os.kill(int(pid), 0)
         except OSError:
@@ -231,7 +230,7 @@ class DshieldSubmit:
         for type in self.logtypesregex:
             m=re.match(self.logtypesregex[type],line)
             if m:
-                 return type
+                return type
         return ''
             
     def log(self,line):
