@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from http.server import BaseHTTPRequestHandler,HTTPServer
 import ssl
@@ -191,7 +191,7 @@ class myhandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Content-type', 'text/html')
-            self.send_header('Server', PRODSTRING')
+            self.send_header('Server',PRODSTRING)
             self.server_version=PRODSTRING
             self.end_headers()
             print(self.client_address[
