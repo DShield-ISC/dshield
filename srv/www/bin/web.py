@@ -12,7 +12,7 @@ import time
 import cgi
 import re
 import requests
-
+import sys
 
 # Default port - feel free to change
 PORT_NUMBER = 8000
@@ -27,7 +27,11 @@ certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
-local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
+try: 
+  local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
+except requests.exceptions.RequestException as e:
+    raise SystemExit(e)
+print("My IP Address %s" % (local_pub_IP.json()['ip'],))
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
@@ -191,7 +195,7 @@ class myhandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Content-type', 'text/html')
-            self.send_header('Server',PRODSTRING)
+            self.send_header('Server', PRODSTRING)
             self.server_version=PRODSTRING
             self.end_headers()
             print(self.client_address[
@@ -351,7 +355,11 @@ if __name__ == "__main__":
         build_db()
         conn = sqlite3.connect(config)
         c = conn.cursor()
-        server = HTTPServer(('', PORT_NUMBER), myhandler)
+        try:
+          server = HTTPServer(('', PORT_NUMBER), myhandler)
+        except OSError as e:
+            print("Something is already listening on port %s" % (PORT_NUMBER,))
+            sys.exit()
         server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
