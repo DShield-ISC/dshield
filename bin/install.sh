@@ -123,6 +123,7 @@ readonly myversion=74
 
 INTERACTIVE=1
 FAST=0
+BETA=1
 
 # parse command line arguments
 
@@ -584,7 +585,7 @@ run 'pip3 > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
    outlog "no pip3 found, installing pip3"
-   run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   run 'curl -s https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error downloading get-pip, aborting."
       exit 9
@@ -1435,7 +1436,11 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://www.dshield.org/cowrie.zip"
+if [ "$BETA" == 1 ] ; then    
+    run "curl -s https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
+else
+    run "curl -s https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
+fi
 
 
 if [ ${?} -ne 0 ] ; then
