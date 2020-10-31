@@ -13,13 +13,18 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/09/21 01
+# version 2020/10/30 01
 
-readonly myversion=74
+readonly myversion=75
 
 #
 # Major Changes (for details see Github):
 #
+#
+# - V75 (Freek)
+#   - added support for openSUSE
+#   - added dshield.sslca to save ca parameters
+#   - some cleanup
 #
 # - V74 (Freek)
 #   - webpy port to Python3 and bug fix
@@ -128,19 +133,19 @@ FAST=0
 
 for arg in "$@"; do
     case $arg in
-	"--update" | "--upgrade")
-	    if [ -f /etc/dshield.ini ]; then
-		echo "Non Interactive Update Mode"
-		INTERACTIVE=0
-	    else
-		echo "Update mode requires a /etc/dshield.ini file"
-		exit 9
-	    fi
-	    ;;
-	"--fast")
-	    FAST=1
-	    echo "Fast mode enabled. This will skip some dependency checks and OS updates"
-	    ;;
+       "--update" | "--upgrade")
+           if [ -f /etc/dshield.ini ]; then
+               echo "Non Interactive Update Mode"
+               INTERACTIVE=0
+           else
+               echo "Update mode requires a /etc/dshield.ini file"
+               exit 9
+           fi
+           ;;
+       "--fast")
+           FAST=1
+           echo "Fast mode enabled. This will skip some dependency checks and OS updates"
+           ;;
     esac
 done    
 
@@ -206,9 +211,9 @@ outlog () {
 quotespace() {
     local line="${*}"
     if echo $line | egrep -q ' '; then
-	if ! echo $line | egrep -q "'"; then
-	    line="'${line}'"
-	fi
+       if ! echo $line | egrep -q "'"; then
+           line="'${line}'"
+       fi
     fi
     echo "$line"
 }
@@ -348,7 +353,7 @@ dlog "progdir: ${progdir}"
 cd $progdir
 
 if [ ! -f /etc/os-release ] ; then
-  outlog "I can not fine the /etc/os-release file. You are likely not running a supported operating systems"
+  outlog "I can not find the /etc/os-release file. You are likely not running a supported operating system"
   outlog "please email info@dshield.org for help."
   exit 9
 fi
@@ -399,27 +404,45 @@ if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ] ; then
 fi
 
 
-if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ] ; then 
+if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ] ; then
    dist='yum'
    distversion=2
+fi
+
+if [ "$ID" == "opensuse-tumbleweed" ] ; then
+   ID="opensuse"
+   dist='yum'
+   distversion=Tumbleweed
+fi
+
+if [ "$ID" == "opensuse-leap" ] ; then
+   ID="opensuse"
+   dist='yum'
+   distversion=Leap
 fi
 
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04/20.04 with experimental support for Amazon AMI Linux."
-   outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
+   outlog "You are not running a supported operating system. Right now, this script only works for Raspbian,"
+   outlog "openSUSE Tumbleweed/Leap and Amazon Linux AMI."
+   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
    exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "18.04" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04/20.04 only."
+if [ "$ID" != "raspbian" -o "$ID" != "opensuse" ] || [ "$ID" = "raspbian" -a "$VERSION_ID" != "18.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04"
+   outlog "and openSUSE Tumbleweed/Leap only."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
 fi
 
-outlog "using apt to install packages"
+if [ "$ID" == "opensuse" ] ; then
+   outlog "using zypper to install packages"
+else
+   outlog "using apt to install packages"
+fi
 
 dlog "creating a temporary directory"
 
@@ -434,46 +457,53 @@ outlog "Basic security checks"
 
 dlog "making sure default password was changed"
 
+if [ "$ID" == "openSUSE" ]; then
+   if $progdir/passwordtest-opensuse.pl | grep -q 1; then
+       outlog "You have not yet changed the default password for the 'root' user"
+       outlog "Change it NOW ..."
+       exit 9
+    fi
+
 if [ "$dist" == "apt" ]; then
     dlog "repair any package issues just in case"
-    run 'dpkg --configure -a' 
-   dlog "we are on pi and should check if password for user pi has been changed"
-   if $progdir/passwordtest.pl | grep -q 1; then
-      outlog "You have not yet changed the default password for the 'pi' user"
-      outlog "Change it NOW ..."
-      exit 9
-   fi
+    run 'dpkg --configure -a'
+    dlog "we are on pi and should check if password for user pi has been changed"
+    if $progdir/passwordtest.pl | grep -q 1; then
+       outlog "You have not yet changed the default password for the 'pi' user"
+       outlog "Change it NOW ..."
+       exit 9
+    fi
 
 
-   outlog "Updating your Installation (this can take a LOOONG time)"
-   drun 'dpkg --list'
-   run 'apt update'
-   run 'apt -y -q dist-upgrade'
+    outlog "Updating your Installation (this can take a LOOONG time)"
+    drun 'dpkg --list'
+    run 'apt update'
+    run 'apt -y -q dist-upgrade'
 
-   outlog "Installing additional packages"
-   # OS packages: no python modules
-   # 2017-05-17: added python-virtualenv authbind for cowrie
-   # 2020-07-03: turned this into a loop to make it more reliable
-   # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
-   #             these two installs may fail depending on ubuntu flavor
-   # 2020-09-21: remove python2
-   run 'apt -y -q remove python2'
-   run 'apt -y -q remove python'
-   run 'apt -y -q remove python-pip'
-   run 'apt -y -q install python3-pip'      
-   run 'apt -y -q install python3-requests'
-   run 'apt -y -q remove python-requests'   
+    outlog "Installing additional packages"
+    # OS packages: no python modules
+    # 2017-05-17: added python-virtualenv authbind for cowrie
+    # 2020-07-03: turned this into a loop to make it more reliable
+    # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
+    #             these two installs may fail depending on ubuntu flavor
+    # 2020-09-21: remove python2
+    run 'apt -y -q remove python2'
+    run 'apt -y -q remove python'
+    run 'apt -y -q remove python-pip'
+    run 'apt -y -q install python3-pip'      
+    run 'apt -y -q install python3-requests'
+    run 'apt -y -q remove python-requests'   
    
 #   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
-   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
-	   outlog "I was unable to install the $b package via apt"
-	   outlog "This may be a temporary network issue. You may"
-	   outlog "try and run this installer again. Or run this"
-	   outlog "command as root to see if it works/returns errors"
-	   outlog "apt -y install $b"
-	   exit 9
+          outlog "I was unable to install the $b package via apt"
+          outlog "This may be a temporary network issue. You may"
+          outlog "try and run this installer again. Or run this"
+          outlog "command as root to see if it works/returns errors"
+          outlog "apt -y install $b"
+          exit 9
        fi
    done
 fi
@@ -485,6 +515,22 @@ if [ "$ID" == "amzn" ]; then
    run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
 fi
 
+if [ "$ID" == "opensuse" ]; then
+   outlog "Updating your openSUSE Operating System will now be done. SKIPPED FOR NOW"
+   #[ "$distversion" = "Tumbleweed" ] run 'zypper --non-interactive dup --no-recommends'
+   #[ "$distversion" = "Leap" ] run 'zypper --non-interactive up --no-recommends'
+   outlog "Installing additional packages"
+   run 'zypper --non-interactive remove systemd-logger'
+   run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
+   run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
+   run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
+   run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip logrotate'
+   run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
+   run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
+# opensuse does not have packet wamerican so copy it
+   mkdir -p /usr/share/dict
+   cp $progdir/../dict/american-english /usr/share/dict/
+fi
 else
     outlog "Skipping OS Update / Package install and security check in FAST mode"
 fi
@@ -500,20 +546,20 @@ dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Ra
 response=$?
 case $response in
    ${DIALOG_CANCEL}) 
+      clear
       dlog "User clicked CANCEL"
       outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
       outlog "See ${LOGFILE} for details."
       exit 5
       ;;
    ${DIALOG_ESC})
+      clear
       dlog "User pressed ESC"
       outlog "Terminating installation by your command. The system shouldn't have been hurt too much yet ..."
       outlog "See ${LOGFILE} for details."
       exit 5
       ;;
 esac
-
-
 ###########################################################
 ## let the user decide:
 ## automatic updates OK?
@@ -551,9 +597,12 @@ else
    MANUPDATES=0
 fi
 
+if [ "$ID" == "opensuse" ] ; then
+   MANUPDATES=1
+   dlog "Only manual updates on openSUSE"
+fi
+
 dlog "MANUPDATES: ${MANUPDATES}"
-
-
 clear
 
 fi
@@ -593,33 +642,42 @@ if [ ${?} -gt 0 ] ; then
    if [ ${?} -ne 0 ] ; then
       outlog "Error running get-pip3, aborting."
       exit 9
-   fi   
+   fi
 else
    # hmmmm ...
    # todo: automatic check if pip3 is OS managed or not
    # check ... already done :)
 
-   outlog "pip3 found .... Checking which pip3 is installed...."
+   if [ "$ID" != "opensuse" ] ; then
+      outlog "pip3 found .... Checking which pip3 is installed...."
 
-   drun 'pip3 -V'
-   drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
-   drun 'find /usr -name pip3'
-   drun 'find /usr -name pip3 | grep -v local'
+      drun 'pip3 -V'
+      drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
+      drun 'find /usr -name pip3'
+      drun 'find /usr -name pip3 | grep -v local'
 
-   # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
-   # - no local in pip3 -V output 
-   #   OR
-   # - pip3 below /usr without local
-   # -> potential distro pip3 found
-   if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
-      # pip3 may be distro pip3
-      outlog "Potential distro pip3 found"
-   else
-      outlog "pip3 found which doesn't seem to be installed as a distro package. Looks ok to me."
+      # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
+      # - no local in pip3 -V output 
+      #   OR
+      # - pip3 below /usr without local
+      # -> potential distro pip3 found
+      if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
+         # pip3 may be distro pip3
+         outlog "Potential distro pip3 found"
+      else
+         outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
+      fi
+   else   # there is no difference in pip installed on openSUSE
+      dlog 'pip is available in openSUSE (pip3 will be used)'
    fi
-
 fi
 
+
+if [ "$ID" != "opensuse" ] ; then
+   drun 'pip3 list --format=legacy'
+else
+   drun 'pip3 list --format=columns'
+fi
 else
     outlog "Skipping PIP check in FAST mode"
 fi
@@ -640,9 +698,10 @@ run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
 ## Disable IPv6
 ###########################################################
 
-dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
-run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
-cat > /etc/modprobe.d/ipv6.conf <<EOF
+if [ "$ID" != "opensuse" ] ; then
+   dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
+   run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
+   cat > /etc/modprobe.d/ipv6.conf <<EOF
 # Don't load ipv6 by default
 alias net-pf-10 off
 # uncommented
@@ -652,10 +711,20 @@ options ipv6 disable_ipv6=1
 # this is needed for not loading ipv6 driver
 blacklist ipv6
 EOF
-run "chmod 644 /etc/modprobe.d/ipv6.conf"
-drun "cat /etc/modprobe.d/ipv6.conf.bak"
-drun "cat /etc/modprobe.d/ipv6.conf"
-
+   run "chmod 644 /etc/modprobe.d/ipv6.conf"
+   drun "cat /etc/modprobe.d/ipv6.conf.bak"
+   drun "cat /etc/modprobe.d/ipv6.conf"
+else    # in openSUSE
+   run "grep -q 'ipv6.conf' /etc/sysctl.conf"
+   if [ ${?} -ne 0 ] ; then
+      dlog "Disabling IPv6 in /etc/sysctl.conf"
+      drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf'
+      drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.conf'
+      drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.conf'
+   else
+      dlog "IPv6 already disabled in /etc/sysctl.conf"
+   fi
+fi
 
 ###########################################################
 ## Handling existing config
@@ -693,12 +762,12 @@ if [ "$INTERACTIVE" == "0" ]; then
     uid=$userid
     echo "check $userid $apikey"
     if [ "$userid" == "" ]; then
-	echo "For interactive mode, dshield.ini has to contain a userid."
-	exit 9
+       echo "For interactive mode, dshield.ini has to contain a userid."
+       exit 9
     fi
     if [ "$apikey" == "" ]; then
-	echo "For interactive mode, dshield.ini has to contain an apikey."
-	exit 9
+       echo "For interactive mode, dshield.ini has to contain an apikey."
+       exit 9
     fi
 fi
 
@@ -776,6 +845,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
                exit 5
                ;;
          esac;
+         clear
       done # while API not OK
 
    fi # use existing account or create new one
@@ -813,7 +883,8 @@ fi # interactive mode
 # 6. honeyport services don't run on official ports 
 #    (redirect official ports to honeypot ports)
 # 7. redirected honeypot ports can be accessed from untrusted nets
-# 8. secure default 
+# 8. secure default
+# 9. allow pings from local network
 #
 # Firewall Layout:
 #
@@ -830,6 +901,7 @@ fi # interactive mode
 # - disable access to honeypot ports for internal nets (5.)
 # - allow access to daemon / admin ports only for internal nets (2., 3.)
 # - allow access to honeypot ports (2., 7.)
+# - allow pings from local network (9.)
 # - default policy: DROP (8.)
 
 ##---------------------------------------------------------
@@ -918,10 +990,12 @@ if echo $localnet | grep -q '^172\.3[0-1]\.'; then localnet='172.16.0.0/12'; fi
 dlog "localnet: ${localnet}"
 
 # additionally we will use any connection to current sshd 
-# (ignroing config and using real connections)
+# (ignoring config and using real connections)
 # as trusted / local IP (just to make sure we include routed networks)
 drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
 CURSSHDPORT=`grep '^Port' /etc/ssh/sshd_config | awk '{print $2}'`
+# current ssh port already known
+adminports=$CURSSHDPORT
 drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'"
 CONIPS=`netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'`
 
@@ -930,6 +1004,8 @@ ADMINPORTS=$adminports
 if [ "${ADMINPORTS}" == "" ] ; then
    # default: sshd (after reboot)
    ADMINPORTS="${SSHDPORT}"
+else
+   SSHDPORT=${ADMINPORTS}
 fi
 # we present the localnet and the connected IPs to the user
 # so we are sure connection to the device will work after
@@ -946,7 +1022,7 @@ while [ $localnetok -eq  0 ] ; do
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
       "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
-   2> $TMPDIR/dialog.txt
+      2> $TMPDIR/dialog.txt
    response=${?}
 
    case ${response} in
@@ -971,13 +1047,16 @@ while [ $localnetok -eq  0 ] ; do
       ;;
       ${DIALOG_CANCEL})
          dlog "User canceled local network access dialogue."
+         clear
          exit 5
          ;;
       ${DIALOG_ESC})
          dlog "User pressed ESC in local network access dialogue."
+         clear
          exit 5
          ;;
    esac
+   clear
 done
 
 dialog --title 'Admin Access' --cr-wrap --msgbox "Admin access to ports:
@@ -1068,8 +1147,6 @@ dialog --title 'IPs / Ports to disable Honeypot for'  --form "IPs and nets to di
 "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100  \
 "Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>$TMPDIR/dialog.txt
 response=${?}
-
-
 case ${response} in
    ${DIALOG_OK})
       ;;
@@ -1110,7 +1187,9 @@ dlog "final values: "
 dlog "NOHONEYIPS: ${NOHONEYIPS} / NOHONEYPORTS: ${NOHONEYPORTS}"
 dlog "nohoneyips: ${nohoneyips} / nohoneyports: ${nohoneyports}"
 
+
 fi # interactive mode
+
 ##---------------------------------------------------------
 ## create actual firewall rule set
 ##---------------------------------------------------------
@@ -1157,6 +1236,10 @@ cat > /etc/network/iptables <<EOF
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 EOF
 
+# allow pings from localnet
+echo "# allow ping from local network" >> /etc/network/iptables
+echo "-A INPUT -i $interface -s ${localnet} -p icmp -m icmp --icmp-type 8 -j ACCEPT" >> /etc/network/iptables
+
 # insert IPs and ports for which honeypot has to be disabled
 # as soon as possible
 if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ] ; then
@@ -1181,7 +1264,7 @@ for PORT in ${ADMINPORTS} ; do
 done
 echo "# END: allow access to admin ports for local IPs"  >> /etc/network/iptables
 
-# allow access to noneypot ports
+# allow access to honeypot ports
 if [ "${HONEYPORTS}" != "" ] ; then
    echo "# START: Ports honeypot should be enabled for"  >> /etc/network/iptables
    for HONEYPORT in ${HONEYPORTS} ; do
@@ -1263,6 +1346,7 @@ run 'chmod 700 /etc/network/iptables'
 dlog "/etc/network/iptables follows"
 drun 'cat /etc/network/iptables'
 
+if [ "$ID" != "opensuse" ] ; then
 dlog "Copying /etc/network/if-pre-up.d"
 
 do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
@@ -1280,7 +1364,15 @@ if [ "$ID" == "amzn" ] ; then
     run 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
     run 'systemctl enable iptables.service'
 fi
-
+else   # openSUSE stuff
+   dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshiedfirewall*.service"
+   do_copy $progdir/../etc/network/iptables-init /etc/network/iptables-init 600
+   do_copy $progdir/../etc/network/iptables-stop /etc/network/iptables-stop 600
+   do_copy $progdir/../lib/systemd/system/dshieldfirewall_init.service /usr/lib/systemd/system/dshieldfirewall_init.service 644
+   do_copy $progdir/../lib/systemd/system/dshieldfirewall.service /usr/lib/systemd/system/dshieldfirewall.service 644
+   run 'systemctl enable dshieldfirewall.service'
+   run "systemctl daemon-reload"
+fi
 
 ###########################################################
 ## Change real SSHD port
@@ -1300,6 +1392,7 @@ Please clean up and either
      in  /etc/ssh/sshd_config    OR
   - clean up the firewall rules and
      other stuff reflecting YOUR PORT" 13 50
+   clear
 
    dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
    drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
@@ -1349,7 +1442,12 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=`shuf -i0-29 -n1`
 offset2=$((offset1+30));
-echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > /etc/cron.d/dshield 
+if [ "$ID" != "opensuse" ] ; then
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" > /etc/cron.d/dshield
+else
+   do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
+   echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" > /etc/cron.d/dshield
+fi
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >> /etc/cron.d/dshield
 offset1=`shuf -i0-59 -n1`
 offset2=`shuf -i0-23 -n1`
@@ -1389,7 +1487,7 @@ run 'echo "anonymizeip=" >> /etc/dshield.ini'
 run 'echo "anonymizemask=" >> /etc/dshield.ini'
 run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
 nofwlogging=$(quotespace $nofwlogging)
-run 'echo "nofwlogging=$nofwlogging" >> //etc/dshield.ini'
+run 'echo "nofwlogging=$nofwlogging" >> /etc/dshield.ini'
 CONIPS="$(quotespace $CONIPS)"
 run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
 ADMINPORTS=$(quotespace $ADMINPORTS)
@@ -1397,10 +1495,7 @@ run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
-run 'echo "logretention=7" >> /etc/dshield.ini'
-run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
-run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
+run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1421,12 +1516,16 @@ drun 'cat /etc/dshield.ini'
 dlog "installing cowrie"
 
 # step 1 (Install OS dependencies): done
- 
+
 # step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
    dlog "... no, creating"
-   run "adduser --gecos 'Honeypot,A113,555-1212,555-1212' --disabled-password --quiet --home ${COWRIEDIR} --no-create-home cowrie"
+   if [ "$ID" != "opensuse" ] ; then
+      run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+    else
+      run 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
+   fi
    outlog "Added user 'cowrie'"
 else
    outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
@@ -1456,7 +1555,7 @@ dlog "moving extracted cowrie to ${COWRIEDIR}"
 if [ -d $TMPDIR/cowrie-master ]; then
  run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
 else
- outlog "$TMPDIR/cowrie not found"
+ outlog "$TMPDIR/cowrie-master not found"
  exit 9
 fi
 
@@ -1469,25 +1568,22 @@ run 'virtualenv cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
-run 'pip3 install --upgrade pip3'
-run 'pip3 install --upgrade -r requirements.txt'
-run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade pip'
 run 'pip3 install --upgrade bcrypt'
-run 'pip3 install --upgrade pip3'
 run 'pip3 install --upgrade -r requirements.txt'
-run 'pip3 install --upgrade -r requirements-output.txt'
-run 'pip3 install --upgrade bcrypt'
-run 'pip3 install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
-   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
-
-   This part often fails due to timeouts from the servers hosting python packages. Best to try to rerun the install script again. It should remember your settings.
-"
+   outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
    exit 9
 fi
-
-# installing python dependencies. Most of these are for cowrie.
-run 'pip3 install -r requirements.txt'
+# I don't think we need this as we do not use the special cowrie outputs like mongo and mysql we only 
+# need "requests" for dshield
+run 'pip3 install --upgrade requests'
+dlog "installing dependencies requirements-output.txt"
+run 'pip3 install --upgrade -r requirements-output.txt'
+if [ ${?} -ne 0 ] ; then
+    outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+    exit 9
+ fi
 cd ${OLDDIR}
 
 outlog "Doing further cowrie configuration."
@@ -1536,7 +1632,12 @@ run 'chown -R cowrie:cowrie ${COWRIEDIR}'
 
 dlog "copying cowrie system files"
 
-do_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
+if [ "$ID" != "opensuse" ] ; then
+   systemdpref=""
+else # openSUSE
+   systemdpref="/usr"
+fi
+do_copy $progdir/../lib/systemd/system/cowrie.service ${systemdpref}/lib/systemd/system/cowrie.service 644
 do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 # make sure to remove old cowrie start if they exist
@@ -1570,10 +1671,10 @@ fi
 run "mkdir -p ${WEBDIR}"
 
 do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service /lib/systemd/system/ 644
-run "systemctl enable webpy.service"
-run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
+do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
 run "systemctl daemon-reload"
+run "systemctl enable webpy.service"
+[ "$ID" != "openSUSE" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
 # change ownership for web databases to cowrie as we will run the
 # web honeypot as cowrie
@@ -1587,11 +1688,8 @@ run "chown cowrie ${WEBDIR}/DB/*"
 ###########################################################
 
 dlog "copying further system files"
-# no longer needed. now done bu /etc/cron.d/dshield
-# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
-if [ -f /etc/cron.hourly/dshield ]; then
-    run "rm /etc/cron.hourly/dshield"
-fi
+
+do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
 # do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
 # do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
 
@@ -1632,30 +1730,39 @@ run 'update-rc.d cowrie defaults'
 # TODO: AWS/Yum based install
 #
 
-
 if [ "$dist" == "apt" ]; then
-    outlog "Installing and configuring postfix."
-    dlog "uninstalling postfix"
-    run 'apt -y -q purge postfix'
-    dlog "preparing installation of postfix"
-    echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
-    echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
-    echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
-    echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
-    outlog "package configuration for postfix"
-    run 'debconf-get-selections | grep postfix'
-    dlog "installing postfix"
-    run 'apt -y -q install postfix'
-fi
+   outlog "Installing and configuring postfix."
+   dlog "uninstalling postfix"
+   run 'apt -y -q purge postfix'
+   dlog "preparing installation of postfix"
+   echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
+   echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
+   echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
+   echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
+   outlog "package configuration for postfix"
+   run 'debconf-get-selections | grep postfix'
+   dlog "installing postfix"
+   run 'apt -y -q install postfix'
 if grep -q 'inet_protocols = all' /etc/postfix/main.cf ; then
     sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
 fi
+fi # end "$dist" == "apt" 
 ###########################################################
 ## Apt Cleanup
 ###########################################################
-
 if [ "$dist" == "apt" ]; then
     run 'apt autoremove -y'
+fi
+if [ "$ID" == "opensuse" ] ; then
+   dlog "uninstalling postfix if installed"
+   zypper search -i --match-exact postfix
+   if [ $? -eq 0 ] ; then
+      # postfix installed
+      run 'zypper -non-interactive remove postfix'
+   fi
+   run 'zypper --non-interactive install --no-recommends postfix'
+   # postfix is already enabled
+   # standard configuration only allows local mail
 fi
 
 ###########################################################
@@ -1667,7 +1774,8 @@ fi
 #
 
 dlog "installing /etc/motd"
-cat > $TMPDIR/motd <<EOF
+if [ "$ID" != "opensuse" ] ; then
+   cat > $TMPDIR/motd <<EOF
 
 The programs included with the Debian GNU/Linux system are free software;
 the exact distribution terms for each program are described in the
@@ -1681,6 +1789,23 @@ permitted by applicable law.
 ***
 
 EOF
+else  # openSUSE
+   hostname="$(cat /etc/hostname)"
+   cat > $TMPDIR/motd <<EOF
+
+The programs included with the openSUSE GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+openSUSE GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+
+***
+***    DShield Honeypot $hostname
+***
+
+EOF
+fi
 
 run "mv $TMPDIR/motd /etc/motd"
 run "chmod 644 /etc/motd"
@@ -1708,7 +1833,7 @@ fi
 drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
 if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
     if [ "$INTERACTIVE" == 1 ] ; then
-    dlog "CERTs may already be there, asking user"
+   dlog "CERTs may already be there, asking user"
    dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
    response=$?
    case $response in
@@ -1727,6 +1852,7 @@ if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
          ;;
       ${DIALOG_ESC}) 
          dlog "user pressed ESC, aborting"
+         clear
          exit 5
          ;;
    esac
@@ -1734,10 +1860,16 @@ if [ `ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l ` -gt 0 ]; then
         GENCERT=0
    fi #interactive
 fi
+clear
 
 if [ ${GENCERT} -eq 1 ] ; then
+  if [ "$ID" != "opensuse" ] ; then
    dlog "generating new CERTs using ./makecert.sh"
    ./makecert.sh
+  else
+   dlog "generating new CERTs using ./makecert-opensuse.sh"
+   ./makecert-opensuse.sh
+  fi
 fi
 
 #
@@ -1748,9 +1880,10 @@ run 'mkdir /var/run/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
+[ "$ID" = "opensuse" ] && sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
 if [ -f "/etc/cron.daily/logrotate" ]; then
   run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
-fi 
+fi
 
 ###########################################################
 ## Done :)
@@ -1777,6 +1910,4 @@ outlog "   Run the script 'status.sh' "
 outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
 outlog
 outlog " for help, check our slack channel: https://isc.sans.edu/slack "
-
-
 
