@@ -27,11 +27,13 @@ certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
+
 try: 
   local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
 except requests.exceptions.RequestException as e:
     raise SystemExit(e)
 print("My IP Address %s" % (local_pub_IP.json()['ip'],))
+
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
