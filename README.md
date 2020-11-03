@@ -76,10 +76,8 @@ sudo reboot
 ```
 sudo apt-get -y install git
 ```
-- make install directory and get GIT repository
+- clone the GIT repository (which will create the "dshield" directory)
 ```
-mkdir install
-cd install
 git clone https://github.com/DShield-ISC/dshield.git
 ```
 - run the installation script

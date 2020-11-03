@@ -24,7 +24,7 @@ nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
 # TODO: urlencode($user)
 user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
-newversion=`wget -q -O - https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
+newversion=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
 majornewversion=`echo $newversion | cut -f1 -d'.'`
 majoroldversion=`echo $version | cut -f1 -d'.'`
 minornewversion=`echo $newversion | cut -f2 -d'.'`

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from http.server import BaseHTTPRequestHandler,HTTPServer
 import ssl
@@ -12,7 +12,7 @@ import time
 import cgi
 import re
 import requests
-
+import sys
 
 # Default port - feel free to change
 PORT_NUMBER = 8000
@@ -28,7 +28,11 @@ keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
 
-local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json')
+try: 
+  local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
+except requests.exceptions.RequestException as e:
+    raise SystemExit(e)
+print("My IP Address %s" % (local_pub_IP.json()['ip'],))
 
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
@@ -353,7 +357,11 @@ if __name__ == "__main__":
         build_db()
         conn = sqlite3.connect(config)
         c = conn.cursor()
-        server = HTTPServer(('', PORT_NUMBER), myhandler)
+        try:
+          server = HTTPServer(('', PORT_NUMBER), myhandler)
+        except OSError as e:
+            print("Something is already listening on port %s" % (PORT_NUMBER,))
+            sys.exit()
         server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
