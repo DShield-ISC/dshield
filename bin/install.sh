@@ -470,8 +470,8 @@ if [ "$dist" == "apt" ]; then
    run 'apt -y -q install python3-requests'
    run 'apt -y -q remove python-requests'   
    
-#   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
-   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip libsnappy-dev; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
 	   outlog "I was unable to install the $b package via apt"
@@ -1636,8 +1636,8 @@ fi
 
 
 # setting up services
-dlog "setting up services: cowrie"
-run 'update-rc.d cowrie defaults'
+# dlog "setting up services: cowrie"
+# run 'update-rc.d cowrie defaults'
 # run 'update-rc.d mini-httpd defaults'
 
 
