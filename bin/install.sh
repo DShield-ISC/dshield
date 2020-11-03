@@ -13,12 +13,24 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/06/22 01
+# version 2020/09/21 01
 
-readonly myversion=72
+readonly myversion=75
 
 #
 # Major Changes (for details see Github):
+#
+#
+# - V75 (Johannes)
+#   - fixes for Pythong3 (web.py)
+#   - added a piid
+#   - updated cowrie
+#
+# - V74 (Freek)
+#   - webpy port to Python3 and bug fix
+#
+# - V73 (Johannes)
+#   - misc improvements to installer and documentation
 #
 # - V72 (Johannes)
 #   - version incremented for tech tuesday
@@ -116,6 +128,7 @@ readonly myversion=72
 
 INTERACTIVE=1
 FAST=0
+BETA=0
 
 # parse command line arguments
 
@@ -355,10 +368,6 @@ dlog "sourcing /etc/os-release"
 
 dist=invalid
 
-if [ "$ID" == "ubuntu" ] ; then
-   dist='apt'
-   distversion="ubuntu"
-fi
 
 if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "8" ] ; then
    dist='apt'
@@ -385,10 +394,16 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ] ; then
    distversion=r10
 fi
 
-if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2016.09" ] ; then 
-   dist='yum'
-   distversion=a201609
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ] ; then 
+   dist='apt'
+   distversion='u18'
 fi
+
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ] ; then
+   dist='apt'
+   distversion='u20'
+fi
+
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ] ; then 
    dist='yum'
@@ -398,7 +413,7 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ] ; then
-   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 20.04 with experimental support for Amazon AMI Linux."
+   outlog "You are not running a supported operating systems. Right now, this script only works for Raspbian and Ubuntu 18.04/20.04 with experimental support for Amazon AMI Linux."
    outlog "Please ask info@dshield.org for help to add support for your flavor of Linux. Include the /etc/os-release file."
    exit 9
 fi
@@ -426,7 +441,8 @@ outlog "Basic security checks"
 dlog "making sure default password was changed"
 
 if [ "$dist" == "apt" ]; then
-
+    dlog "repair any package issues just in case"
+    run 'dpkg --configure -a' 
    dlog "we are on pi and should check if password for user pi has been changed"
    if $progdir/passwordtest.pl | grep -q 1; then
       outlog "You have not yet changed the default password for the 'pi' user"
@@ -435,24 +451,37 @@ if [ "$dist" == "apt" ]; then
    fi
 
 
-       outlog "Updating your Installation (this can take a LOOONG time)"
-       drun 'dpkg --list'
-       run 'apt-get update'
-       run 'apt-get -y -q upgrade'
+   outlog "Updating your Installation (this can take a LOOONG time)"
+   drun 'dpkg --list'
+   run 'apt update'
+   run 'apt -y -q dist-upgrade'
 
    outlog "Installing additional packages"
    # OS packages: no python modules
    # 2017-05-17: added python-virtualenv authbind for cowrie
+   # 2020-07-03: turned this into a loop to make it more reliable
+   # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
+   #             these two installs may fail depending on ubuntu flavor
+   # 2020-09-21: remove python2
+   run 'apt -y -q remove python2'
+   run 'apt -y -q remove python'
+   run 'apt -y -q remove python-pip'
+   run 'apt -y -q install python3-pip'      
+   run 'apt -y -q install python3-requests'
+   run 'apt -y -q remove python-requests'   
+   
 
-# distinguishing between rpi versions 
-   if [ "$distversion" == "r9" ]; then
-       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
-   else
-       run 'apt -y -q install build-essential curl dialog gcc git libffi-dev libmpc-dev libmpfr-dev libpython-dev libswitch-perl libwww-perl python-dev python2.7-minimal python3-minimal randomsound rng-tools unzip libssl-dev python-virtualenv authbind python-requests python3-requests python-urllib3 python3-urllib3 zip wamerican jq libmariadb-dev-compat python3-virtualenv sqlite3 net-tools'
-   fi
-   if [ "$distversion" == "ubuntu" ]; then
-       run 'apt install -y -q python-pip python3-pip'
-   fi
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip libsnappy-dev; do
+       run "apt -y -q install $b"
+       if ! dpkg -l $b >/dev/null 2>/dev/null; then
+	   outlog "I was unable to install the $b package via apt"
+	   outlog "This may be a temporary network issue. You may"
+	   outlog "try and run this installer again. Or run this"
+	   outlog "command as root to see if it works/returns errors"
+	   outlog "apt -y install $b"
+	   exit 9
+       fi
+   done
 fi
 
 if [ "$ID" == "amzn" ]; then
@@ -555,22 +584,19 @@ if [ "$FAST" == "0" ] ; then
 ## PIP
 ###########################################################
 
-outlog "check if pip is already installed"
+outlog "check if pip3 is already installed"
 
-run 'pip > /dev/null'
+run 'pip3 > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
-   outlog "no pip found, installing pip"
-   run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   outlog "no pip3 found, installing pip3"
+   run 'curl -s https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error downloading get-pip, aborting."
       exit 9
    fi
-   run 'python2 $TMPDIR/get-pip.py'
-   if [ ${?} -ne 0 ] ; then
-      outlog "Error running get-pip2, aborting."
-      exit 9
-   fi
+
+
    run 'python3 $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error running get-pip3, aborting."
@@ -578,31 +604,30 @@ if [ ${?} -gt 0 ] ; then
    fi   
 else
    # hmmmm ...
-   # todo: automatic check if pip is OS managed or not
+   # todo: automatic check if pip3 is OS managed or not
    # check ... already done :)
 
-   outlog "pip found .... Checking which pip is installed...."
+   outlog "pip3 found .... Checking which pip3 is installed...."
 
-   drun 'pip -V'
-   drun 'pip  -V | cut -d " " -f 4 | cut -d "/" -f 3'
-   drun 'find /usr -name pip'
-   drun 'find /usr -name pip | grep -v local'
+   drun 'pip3 -V'
+   drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
+   drun 'find /usr -name pip3'
+   drun 'find /usr -name pip3 | grep -v local'
 
    # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
-   # - no local in pip -V output 
+   # - no local in pip3 -V output 
    #   OR
-   # - pip below /usr without local
-   # -> potential distro pip found
-   if [ `pip  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip | grep -v local | wc -l` -gt 0 ] ; then
-      # pip may be distro pip
-      outlog "Potential distro pip found"
+   # - pip3 below /usr without local
+   # -> potential distro pip3 found
+   if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
+      # pip3 may be distro pip3
+      outlog "Potential distro pip3 found"
    else
-      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
+      outlog "pip3 found which doesn't seem to be installed as a distro package. Looks ok to me."
    fi
 
 fi
 
-drun 'pip list --format=legacy'
 else
     outlog "Skipping PIP check in FAST mode"
 fi
@@ -684,6 +709,13 @@ if [ "$INTERACTIVE" == "0" ]; then
 	exit 9
     fi
 fi
+if [ "$piid" == "" ]; then
+    piid=$(openssl rand -hex 10)
+    dlog "new piid ${piid}"
+else    
+    dlog "old piid ${piid}"
+fi
+
 
 ###########################################################
 ## DShield Account
@@ -727,7 +759,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
 	       # TODO: urlencode($user)
 	       user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
                dlog "Checking API key ..."
-	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash > $TMPDIR/checkapi'
+	       run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion > $TMPDIR/checkapi'
    
                dlog "Curl return code is ${?}"
    
@@ -739,7 +771,7 @@ if [ $return_value -eq  $DIALOG_OK ]; then
    
                drun "cat ${TMPDIR}/checkapi"
    
-               dlog "Excamining result of API key check ..."
+               dlog "Examining result of API key check ..."
    
                if grep -q '<result>ok</result>' $TMPDIR/checkapi ; then
                   apikeyok=1;
@@ -919,7 +951,7 @@ fi
 # reboot at least for the current remote device
 CONIPS="$localips ${CONIPS}"
 dlog "CONIPS with config values before removing duplicates: ${CONIPS}"
-CONIPS=`echo ${CONIPS} | tr ' ' '\n' | grep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'`
+CONIPS=`echo ${CONIPS} | tr ' ' '\n' | egrep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'`
 dlog "CONIPS with removed duplicates: ${CONIPS}"
 
 if [ "$INTERACTIVE" == 1 ] ; then
@@ -1026,7 +1058,7 @@ ${NOFWLOGGING}" 0 0
 fi
 fi # interactive mode
 ##---------------------------------------------------------
-## disable honepot for nets / IPs
+## disable honeypot for nets / IPs
 ##---------------------------------------------------------
 
 dlog "firewall config: IPs and ports to disable honeypot for"
@@ -1364,6 +1396,7 @@ run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
+run 'echo "piid=$piid" >> /etc/dshield.ini'
 run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
 run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
 run 'echo "honeypotip=$honeypotip" >> /etc/dshield.ini'
@@ -1380,7 +1413,7 @@ run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "logretention=7" >> /etc/dshield.ini'
 run 'echo "minimumcowriesize=1000" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
@@ -1418,7 +1451,11 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://www.dshield.org/cowrie.zip"
+if [ "$BETA" == 1 ] ; then    
+    run "curl -s https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
+else
+    run "curl -s https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
+fi
 
 
 if [ ${?} -ne 0 ] ; then
@@ -1452,15 +1489,15 @@ run 'virtualenv cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
-run 'pip install --upgrade pip'
-run 'pip install --upgrade -r requirements.txt'
-run 'pip install --upgrade -r requirements-output.txt'
-run 'pip install --upgrade bcrypt'
-run 'pip install --upgrade pip'
-run 'pip install --upgrade -r requirements.txt'
-run 'pip install --upgrade -r requirements-output.txt'
-run 'pip install --upgrade bcrypt'
-run 'pip install --upgrade requests'
+run 'pip3 install --upgrade pip3'
+run 'pip3 install --upgrade -r requirements.txt'
+run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade bcrypt'
+run 'pip3 install --upgrade pip3'
+run 'pip3 install --upgrade -r requirements.txt'
+run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade bcrypt'
+run 'pip3 install --upgrade requests'
 if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details.
 
@@ -1470,7 +1507,7 @@ if [ ${?} -ne 0 ] ; then
 fi
 
 # installing python dependencies. Most of these are for cowrie.
-run 'pip install -r requirements.txt'
+run 'pip3 install -r requirements.txt'
 cd ${OLDDIR}
 
 outlog "Doing further cowrie configuration."
@@ -1529,6 +1566,9 @@ fi
 run 'mkdir ${COWRIEDIR}/log'
 run 'chmod 755 ${COWRIEDIR}/log'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log'
+run 'mkdir ${COWRIEDIR}/log/tty'
+run 'chmod 755 ${COWRIEDIR}/log/tty'
+run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
 find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
@@ -1567,8 +1607,11 @@ run "chown cowrie ${WEBDIR}/DB/*"
 ###########################################################
 
 dlog "copying further system files"
-
-do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+# no longer needed. now done bu /etc/cron.d/dshield
+# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+if [ -f /etc/cron.hourly/dshield ]; then
+    run "rm /etc/cron.hourly/dshield"
+fi
 # do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
 # do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
 
@@ -1595,8 +1638,8 @@ fi
 
 
 # setting up services
-dlog "setting up services: cowrie"
-run 'update-rc.d cowrie defaults'
+# dlog "setting up services: cowrie"
+# run 'update-rc.d cowrie defaults'
 # run 'update-rc.d mini-httpd defaults'
 
 
@@ -1613,7 +1656,7 @@ run 'update-rc.d cowrie defaults'
 if [ "$dist" == "apt" ]; then
     outlog "Installing and configuring postfix."
     dlog "uninstalling postfix"
-    run 'apt-get -y -q purge postfix'
+    run 'apt -y -q purge postfix'
     dlog "preparing installation of postfix"
     echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
     echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
@@ -1622,7 +1665,7 @@ if [ "$dist" == "apt" ]; then
     outlog "package configuration for postfix"
     run 'debconf-get-selections | grep postfix'
     dlog "installing postfix"
-    run 'apt-get -y -q install postfix'
+    run 'apt -y -q install postfix'
 fi
 if grep -q 'inet_protocols = all' /etc/postfix/main.cf ; then
     sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
@@ -1749,6 +1792,11 @@ outlog "           connect using ssh -p ${SSHDPORT} $SUDO_USER@$ipaddr"
 outlog
 outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
+outlog "To check if all is working right:"
+outlog "   Run the script 'status.sh' (but reboot first!)"
+outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
+outlog
+outlog " for help, check our slack channel: https://isc.sans.edu/slack "
 
 
 

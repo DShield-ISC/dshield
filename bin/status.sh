@@ -10,6 +10,7 @@ RED=`tput setaf 1`
 GREEN=`tput setaf 2`
 NC=`tput sgr0`
 
+myip=$(netstat -nt  | grep ESTABLISHED | awk '{print $4}' | cut -f1 -d':' | head -1)
 
 echo "
 
@@ -48,7 +49,7 @@ nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
 # TODO: urlencode($user)
 user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
-status=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash`
+status=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version`
 if [ "$status" = "" ] ; then
    echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
    echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash"
@@ -80,6 +81,8 @@ echo "
 echo E-mail : $email
 echo API Key: $apikey
 echo User-ID: $userid
+echo My Internal IP: $myip
+echo My External IP: $honeypotip
 
 echo "
 ###### Are My Reports Received? ######
@@ -151,3 +154,7 @@ if [[ "$port" == "open" ]]; then
 else
     echo "${RED}ERROR${ND}: webserver not exposed. check network fireall"
 fi
+echo
+echo "also check https://isc.sans.edu/myreports.html (after logging in)"
+echo "to see that your reports arrive."
+echo "It may take an hour for new reports to show up."

@@ -10,7 +10,7 @@ User=cowrie
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=webpy
-ExecStart=/usr/bin/python /srv/www/bin/web.py
+ExecStart=/usr/bin/python3 /srv/www/bin/web.py
 
 [Install]
 WantedBy=multi-user.target

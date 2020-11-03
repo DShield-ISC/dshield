@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from http.server import BaseHTTPRequestHandler,HTTPServer
 import ssl
 import socket
-import urlparse
+from urllib.parse import urlparse
 import db_builder
 import sigmatch
 import os
@@ -12,32 +12,28 @@ import time
 import cgi
 import re
 import requests
-#from sys import stderr
+import sys
 
 # Default port - feel free to change
 PORT_NUMBER = 8000
+PRODSTRING = 'Apache/3.2.3'
 
-# Global Variables - bummer need to fix :(
-# configure config SQLLite DB and log directory
-# hpconfig = '..'+os.path.sep+'etc'+os.path.sep+'hpotconfig.db'
-'''# not using at this time - but will
-logfile = '..' + os.path.sep + 'var' + os.path.sep + 'log'
-logdir = '..' + os.path.sep + 'var'
-if not os.path.exists(logdir):
-    print 'var directory not found creating directory.'
-    os.makedirs(logdir)
-stderr = open (logfile, 'w')
-'''
+
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
 config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
 honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
-# webpath = '..' + os.path.sep + 'srv' + os.path.sep + 'www' + os.path.sep
 # will be if user sets up SSL cert and key
 certpath = '..' + os.path.sep + 'domain.crt'
 keypath = '..' + os.path.sep + 'domain.key'
 
 # Query to DShield API to determine local public IP address
-local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = False)
+
+try: 
+  local_pub_IP = requests.get('https://www4.dshield.org/api/myip?json', verify = True)
+except requests.exceptions.RequestException as e:
+    raise SystemExit(e)
+print("My IP Address %s" % (local_pub_IP.json()['ip'],))
+
 
 # have to build Certificates to get this to work with https requests - recommend to do so, better data -
 # name them the same as the ../server.cert and ../server.key or change above.
@@ -51,15 +47,15 @@ else:
 
     
 def build_db():
-    DBPath = '..' + os.path.sep + 'DB'
-    if not os.path.exists(DBPath):
-        print 'DB directory not found creating directory.'
-        os.makedirs(DBPath)
+    dbpath = '..' + os.path.sep + 'DB'
+    if not os.path.exists(dbpath):
+        print('DB directory not found creating directory.')
+        os.makedirs(dbpath)
     db_builder.build_DB()
 
 class SecureHTTPServer(HTTPServer):
-    def __init__(self, server_address, HandlerClass):
-        HTTPServer.__init__(self, server_address, MyHandler)
+    def __init__(self, server_address, handlerclass):
+        HTTPServer.__init__(self, server_address, myhandler)
         ctx = ssl.Context(ssl.SSLv23_METHOD)
         # server.pem's location (containing the server private key and
         # the server certificate).
@@ -72,7 +68,7 @@ class SecureHTTPServer(HTTPServer):
 
 # This class will handles any incoming request from
 # the browser
-class MyHandler(BaseHTTPRequestHandler):
+class myhandler(BaseHTTPRequestHandler):
     ''' #not using this but will
     log_file = open(logfile, 'w')
     def log_message(self, format, *args):
@@ -122,9 +118,9 @@ class MyHandler(BaseHTTPRequestHandler):
                 #self.send_header('Date', self.date_time_string(time.time()))
                 #self.end_headers()
             else:
-                print self.client_address[
+                print(self.client_address[
                           0
-                      ] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
+                      ] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -132,12 +128,12 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin','*')
             self.send_header('Content-type', 'text/html')
-            self.server_version='Apache/3.2.3'
+            self.server_version=PRODSTRING
             self.end_headers()
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.server_version='Apache/3.2.3'
+        self.server_version=PRODSTRING
         self.end_headers()
         # going to use xml or DB for this -
         # glastopf sigs https://github.com/mushorg/glastopf/tree/master/glastopf
@@ -191,21 +187,21 @@ class MyHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-type', 'text/html')
-        self.server_version='Apache/3.2.3'
+        self.server_version=PRODSTRING
         self.end_headers()
-        print self.client_address[
-                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy."
+        print(self.client_address[
+                  0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: HEAD request - looking for open proxy.")
 
     def do_CONNECT(self):
         if not _USE_SSL:
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'Apache/2.0.1')
-            self.server_version='Apache/3.2.3'
+            self.send_header('Server', PRODSTRING)
+            self.server_version=PRODSTRING
             self.end_headers()
-            print self.client_address[
-                      0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy."
+            print(self.client_address[
+                      0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: CONNECT request - looking for open proxy.")
 
     def do_POST(self):
         # Parse the form data posted
@@ -236,8 +232,8 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Date', self.date_time_string(time.time()))
                 self.end_headers()
             else:
-                print self.client_address[
-                          0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response."
+                print(self.client_address[
+                          0] + " - - [" + self.date_time_string() + "] - - Useragent: '" + useragentstring + "' needs a custom response.")
                 self.send_response(200)  # OK
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
@@ -254,7 +250,6 @@ class MyHandler(BaseHTTPRequestHandler):
         # Signatures identification section - will eventually
         # or matches xml page see -  https://github.com/mushorg/glastopf/blob/master/glastopf/requests.xml
         match = 0
-        pathmatch = c.execute("""SELECT patternString FROM Sigs""").fetchall()
         conn.commit()
         sigmatch.sigmatch(self, path, 'lfi')
         sigmatch.sigmatch(self, path, 'robots')
@@ -322,9 +317,9 @@ class MyHandler(BaseHTTPRequestHandler):
         line = self.rfile.readline()
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line)
-        dir(fn)
-        if not fn:
-            return False, "Can't find out file name..."
+        dfn=dir(fn)
+        if not dfn:
+            return False, "Can't find our file name..."
         # TODO: is translate path ever defined?
         path = self.translate_path(self.path)
         fn = os.path.join(path, fn[0])
@@ -362,16 +357,20 @@ if __name__ == "__main__":
         build_db()
         conn = sqlite3.connect(config)
         c = conn.cursor()
-        server = HTTPServer(('', PORT_NUMBER), MyHandler)
+        try:
+          server = HTTPServer(('', PORT_NUMBER), myhandler)
+        except OSError as e:
+            print("Something is already listening on port %s" % (PORT_NUMBER,))
+            sys.exit()
         server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
                                             certfile=certpath, server_side=True)
-            print "using SSL"
+            print("using SSL")
 
-        print 'Started httpserver on port ', PORT_NUMBER
+        print('Started httpserver on port ', PORT_NUMBER)
         # Wait forever for incoming http requests
         server.serve_forever()
 
     except KeyboardInterrupt:
-        print '^C received, shutting down the web server'
+        print('^C received, shutting down the web server')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # linked to schema for web.py
 
-from xml.etree import ElementTree
+import xml.etree.ElementTree as ElementTree
 import os
 import sqlite3
 
@@ -72,7 +72,7 @@ def build_DB():
     # hopefully all these requests don't get jacked with sql injection
     c.execute('''CREATE TABLE IF NOT EXISTS paths
         (
-            SigID,
+            SigID integer,
             path text,
             OSPath text
         )
@@ -105,7 +105,7 @@ def build_DB():
     c.execute('''CREATE TABLE IF NOT EXISTS FileResp
         (
             ID integer,
-            SigID,
+            SigID integer,
             FileNamePost text,
             FileDataPost blob,
             FileTextPost text,
