@@ -15,11 +15,16 @@
 
 # version 2020/09/21 01
 
-readonly myversion=74
+readonly myversion=75
 
 #
 # Major Changes (for details see Github):
 #
+#
+# - V75 (Johannes)
+#   - fixes for Pythong3 (web.py)
+#   - added a piid
+#   - updated cowrie
 #
 # - V74 (Freek)
 #   - webpy port to Python3 and bug fix
