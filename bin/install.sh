@@ -123,7 +123,7 @@ readonly myversion=74
 
 INTERACTIVE=1
 FAST=0
-BETA=1
+BETA=0
 
 # parse command line arguments
 
@@ -702,6 +702,13 @@ if [ "$INTERACTIVE" == "0" ]; then
 	exit 9
     fi
 fi
+if [ "$piid" == "" ]; then
+    piid=$(openssl rand -hex 10)
+    dlog "new piid ${piid}"
+else    
+    dlog "old piid ${piid}"
+fi
+
 
 ###########################################################
 ## DShield Account
@@ -1382,6 +1389,7 @@ run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
+run 'echo "piid=$piid" >> /etc/dshield.ini'
 run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
 run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
 run 'echo "honeypotip=$honeypotip" >> /etc/dshield.ini'
