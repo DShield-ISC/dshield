@@ -452,7 +452,7 @@ dlog "TMPDIR: ${TMPDIR}"
 dlog "setting trap"
 # trap "rm -r $TMPDIR" 0 1 2 5 15
 run 'trap "echo Log: ${LOGFILE} && rm -r $TMPDIR" 0 1 2 5 15'
-if [ "$FAST" == 0 ]; then
+if [ "$FAST" == "0" ]; then
 outlog "Basic security checks"
 
 dlog "making sure default password was changed"
@@ -463,6 +463,7 @@ if [ "$ID" == "openSUSE" ]; then
        outlog "Change it NOW ..."
        exit 9
     fi
+fi
 
 if [ "$dist" == "apt" ]; then
     dlog "repair any package issues just in case"
@@ -521,13 +522,21 @@ if [ "$ID" == "opensuse" ]; then
    #[ "$distversion" = "Leap" ] run 'zypper --non-interactive up --no-recommends'
    outlog "Installing additional packages"
    run 'zypper --non-interactive remove systemd-logger'
-   run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
+   [ "$distversion" == "Tumbleweed" ] && \
+       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
+   [ "$distversion" == "Leap" ] && \
+       run 'zypper --non-interactive remove libressl-devel'
+   [ "$distversion" == "Leap" ] && \
+       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
    run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
    run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
    run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip logrotate'
    run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
-   run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
-# opensuse does not have packet wamerican so copy it
+   [ "$distversion" == "Tumbleweed" ] && \
+       run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
+   [ "$distversion" == "Leap" ] && \
+       run 'zypper --non-interactive install --no-recommends snappy-devel gcc-c++'
+   # opensuse does not have packet wamerican so copy it
    mkdir -p /usr/share/dict
    cp $progdir/../dict/american-english /usr/share/dict/
 fi
@@ -715,14 +724,14 @@ EOF
    drun "cat /etc/modprobe.d/ipv6.conf.bak"
    drun "cat /etc/modprobe.d/ipv6.conf"
 else    # in openSUSE
-   run "grep -q 'ipv6.conf' /etc/sysctl.conf"
+   run "grep -q 'ipv6.conf' /etc/sysctl.d/70-yast.conf"
    if [ ${?} -ne 0 ] ; then
-      dlog "Disabling IPv6 in /etc/sysctl.conf"
-      drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf'
+      dlog "Disabling IPv6 in /etc/sysctl.d/70-yast.conf"
       drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.conf'
       drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.conf'
+      drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf'
    else
-      dlog "IPv6 already disabled in /etc/sysctl.conf"
+      dlog "IPv6 already disabled in /etc/sysctl.d/70-yast.conf"
    fi
 fi
 
@@ -916,8 +925,8 @@ drun 'ip link show'
 if [ "$interface" == "" ] ; then
    dlog "Trying to figure out interface"
    # we don't expect a honeypot connected by WLAN ... but the user can change this of course
-   drun "ip -4 route show| grep '^default ' | cut -f5 -d' '"
-   interface=`ip -4 route show| grep '^default ' | cut -f5 -d' '`
+   drun "ip -4 route show | grep '^default ' | head -1 | cut -f5 -d' '"
+   interface=`ip -4 route show | grep '^default ' | head -1 | cut -f5 -d' '`
 fi
 
 # list of valid interfaces
@@ -1863,13 +1872,8 @@ fi
 clear
 
 if [ ${GENCERT} -eq 1 ] ; then
-  if [ "$ID" != "opensuse" ] ; then
    dlog "generating new CERTs using ./makecert.sh"
    ./makecert.sh
-  else
-   dlog "generating new CERTs using ./makecert-opensuse.sh"
-   ./makecert-opensuse.sh
-  fi
 fi
 
 #
