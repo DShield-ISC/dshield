@@ -21,10 +21,17 @@ readonly myversion=75
 # Major Changes (for details see Github):
 #
 #
+
 # - V75 (Freek)
 #   - added support for openSUSE
 #   - added dshield.sslca to save ca parameters
 #   - some cleanup
+
+# - V75 (Johannes)
+#   - fixes for Pythong3 (web.py)
+#   - added a piid
+#   - updated cowrie
+
 #
 # - V74 (Freek)
 #   - webpy port to Python3 and bug fix
@@ -128,6 +135,7 @@ readonly myversion=75
 
 INTERACTIVE=1
 FAST=0
+BETA=0
 
 # parse command line arguments
 
@@ -495,8 +503,8 @@ if [ "$dist" == "apt" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'   
    
-#   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython-dev libssl-dev libswitch-perl libwww-perl net-tools python-dev python-requests python-urllib3 python-virtualenv python2.7-minimal python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip; do
+
+   for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip libsnappy-dev; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
           outlog "I was unable to install the $b package via apt"
@@ -642,11 +650,13 @@ run 'pip3 > /dev/null'
 
 if [ ${?} -gt 0 ] ; then
    outlog "no pip3 found, installing pip3"
-   run 'wget -qO $TMPDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py'
+   run 'curl -s https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error downloading get-pip, aborting."
       exit 9
    fi
+
+
    run 'python3 $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error running get-pip3, aborting."
@@ -779,6 +789,13 @@ if [ "$INTERACTIVE" == "0" ]; then
        exit 9
     fi
 fi
+if [ "$piid" == "" ]; then
+    piid=$(openssl rand -hex 10)
+    dlog "new piid ${piid}"
+else    
+    dlog "old piid ${piid}"
+fi
+
 
 ###########################################################
 ## DShield Account
@@ -1488,6 +1505,7 @@ run 'echo "version=$myversion" >> /etc/dshield.ini'
 run 'echo "email=$email" >> /etc/dshield.ini'
 run 'echo "userid=$uid" >> /etc/dshield.ini'
 run 'echo "apikey=$apikey" >> /etc/dshield.ini'
+run 'echo "piid=$piid" >> /etc/dshield.ini'
 run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
 run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
 run 'echo "honeypotip=$honeypotip" >> /etc/dshield.ini'
@@ -1543,7 +1561,11 @@ fi
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-run "wget -qO $TMPDIR/cowrie.zip https://www.dshield.org/cowrie.zip"
+if [ "$BETA" == 1 ] ; then    
+    run "curl -s https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
+else
+    run "curl -s https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
+fi
 
 
 if [ ${?} -ne 0 ] ; then
@@ -1725,8 +1747,8 @@ fi
 
 
 # setting up services
-dlog "setting up services: cowrie"
-run 'update-rc.d cowrie defaults'
+# dlog "setting up services: cowrie"
+# run 'update-rc.d cowrie defaults'
 # run 'update-rc.d mini-httpd defaults'
 
 
@@ -1910,7 +1932,7 @@ outlog
 outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
 outlog "To check if all is working right:"
-outlog "   Run the script 'status.sh' "
+outlog "   Run the script 'status.sh' (but reboot first!)"
 outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
 outlog
 outlog " for help, check our slack channel: https://isc.sans.edu/slack "
