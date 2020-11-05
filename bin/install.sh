@@ -13,7 +13,7 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/10/30 01
+# version 2020/11/05 01
 
 readonly myversion=75
 
@@ -21,7 +21,10 @@ readonly myversion=75
 # Major Changes (for details see Github):
 #
 #
-
+# - V76 (Johannes)
+#   - fixing Ubuntu 20.04 issues (regression from V75 Suse additions)
+#   - improved status checks
+#
 # - V75 (Freek)
 #   - added support for openSUSE
 #   - added dshield.sslca to save ca parameters
@@ -236,8 +239,8 @@ do_log () {
        touch ${LOGFILE}
        chmod 600 ${LOGFILE}
        outlog "Log ${LOGFILE} started."
-       outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, API keys, ...)"
-       outlog "           Handle with care. Sanitize before submitting."
+       outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, "
+       outlog "           API keys, ...). Handle with care and sanitize before sharing."
    fi
    echo "`date +'%Y-%m-%d_%H%M%S'` ### ${*}" >> ${LOGFILE}
 }
@@ -438,9 +441,12 @@ if [ "$dist" == "invalid" ] ; then
    exit 9
 fi
 
-if [ "$ID" != "raspbian" -o "$ID" != "opensuse" ] || [ "$ID" = "raspbian" -a "$VERSION_ID" != "18.04" ] ; then
-   outlog "ATTENTION: the latest versions of this script have been tested on Raspbian and Ubuntu 18.04"
-   outlog "and openSUSE Tumbleweed/Leap only."
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ] ; then
+   outlog "ATTENTION: the latest versions of this script have been tested on:"
+   outlog " - Raspbian OS"
+   outlog " - Ubuntu 18.04"
+   outlog " - Ubuntu 20.04"
+   outlog " - openSUSE Tumbleweed/Leap."
    outlog "It may or may not work with your distro. Feel free to test and contribute."
    outlog "Press ENTER to continue, CTRL+C to abort."
    read lala
@@ -507,7 +513,7 @@ if [ "$dist" == "apt" ]; then
    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv; do
        run "apt -y -q install $b"
        if ! dpkg -l $b >/dev/null 2>/dev/null; then
-          outlog "I was unable to install the $b package via apt"
+          outlog "ERROR I was unable to install the $b package via apt"
           outlog "This may be a temporary network issue. You may"
           outlog "try and run this installer again. Or run this"
           outlog "command as root to see if it works/returns errors"
@@ -655,48 +661,37 @@ if [ ${?} -gt 0 ] ; then
       outlog "Error downloading get-pip, aborting."
       exit 9
    fi
-
-
    run 'python3 $TMPDIR/get-pip.py'
    if [ ${?} -ne 0 ] ; then
       outlog "Error running get-pip3, aborting."
       exit 9
    fi
 else
-   # hmmmm ...
-   # todo: automatic check if pip3 is OS managed or not
-   # check ... already done :)
+   outlog "pip3 found .... Checking which pip3 is installed...."
+   drun 'pip3 -V'
+   drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
+   drun 'find /usr -name pip3'
+   drun 'find /usr -name pip3 | grep -v local'
 
-   if [ "$ID" != "opensuse" ] ; then
-      outlog "pip3 found .... Checking which pip3 is installed...."
-
-      drun 'pip3 -V'
-      drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
-      drun 'find /usr -name pip3'
-      drun 'find /usr -name pip3 | grep -v local'
-
-      # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
-      # - no local in pip3 -V output 
-      #   OR
-      # - pip3 below /usr without local
-      # -> potential distro pip3 found
-      if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
-         # pip3 may be distro pip3
-         outlog "Potential distro pip3 found"
-      else
-         outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
-      fi
-   else   # there is no difference in pip installed on openSUSE
-      dlog 'pip is available in openSUSE (pip3 will be used)'
+   # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
+   # - no local in pip3 -V output 
+   #   OR
+   # - pip3 below /usr without local
+   # -> potential distro pip3 found
+   if [ `pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3` != "local" -o `find /usr -name pip3 | grep -v local | wc -l` -gt 0 ] ; then
+      # pip3 may be distro pip3
+      outlog "Potential distro pip3 found"
+   else
+      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
    fi
 fi
 
-
-if [ "$ID" != "opensuse" ] ; then
-   drun 'pip3 list --format=legacy'
-else
-   drun 'pip3 list --format=columns'
-fi
+   
+   if [ "$ID" != "opensuse" ] ; then
+      drun 'pip3 list --format=legacy'
+   else
+      drun 'pip3 list --format=columns'
+   fi
 else
     outlog "Skipping PIP check in FAST mode"
 fi
@@ -1451,6 +1446,7 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
+do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
 # check: automatic updates allowed?
@@ -1481,10 +1477,19 @@ echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/n
 offset1=`shuf -i0-59 -n1`
 offset2=`shuf -i0-23 -n1`
 echo "${offset1} ${offset2} * * * root /sbin/reboot" >> /etc/cron.d/dshield
-
-
+# run status check 5 minutes before reboot
+if [ $offset1 -gt 5 ]; then
+   offset1=$((offset1-5))
+else
+    offset1=$((offset1+54))
+    if [ $offset2 -gt 0 ]; then
+	offset2=$((offset2-1))
+    else
+	offset2=23
+    fi
+fi
+echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >> /etc/cron.d/dshield
 drun 'cat /etc/cron.d/dshield'
-
 
 #
 # Update dshield Configuration
@@ -1606,8 +1611,6 @@ if [ ${?} -ne 0 ] ; then
    outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
    exit 9
 fi
-# I don't think we need this as we do not use the special cowrie outputs like mongo and mysql we only 
-# need "requests" for dshield
 run 'pip3 install --upgrade requests'
 dlog "installing dependencies requirements-output.txt"
 run 'pip3 install --upgrade -r requirements-output.txt'
