@@ -1451,6 +1451,11 @@ do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
 # check: automatic updates allowed?
 
+# first initialize if not defined
+if [ "$MANUPDATES" == "" ]; then
+    MANUPDATES=0
+fi
+
 if [ "$MANUPDATES" -eq  "0" ]; then
    dlog "automatic updates OK, configuring"
    run 'touch ${DSHIELDDIR}/auto-update-ok'
