@@ -15,7 +15,7 @@
 
 # version 2020/11/05 01
 
-readonly myversion=75
+readonly myversion=76
 
 #
 # Major Changes (for details see Github):
