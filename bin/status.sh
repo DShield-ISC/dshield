@@ -201,7 +201,7 @@ if [[ "$port" == "open" ]]; then
   echo "${GREEN}OK${NC}: webserver exposed"
   TESTS['exposed']=1
 else
-  echo "${RED}ERROR${ND}: webserver not exposed. check network fireall"
+  echo "${RED}ERROR${ND}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
 nonce=$(openssl rand -hex 10)
@@ -212,7 +212,7 @@ for key in "${!TESTS[@]}"; do
 done
 data="$data ]"
 echo data
-curl -s https://isc.sans.edu/api/hpstatus/$user/$nonce/$hash -d "$data" > /dev/null
+curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash -d "$data" > /dev/null
 
 echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
