@@ -201,7 +201,7 @@ if [[ "$port" == "open" ]]; then
   echo "${GREEN}OK${NC}: webserver exposed"
   TESTS['exposed']=1
 else
-  echo "${RED}ERROR${ND}: webserver not exposed. check network firewall"
+  echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
 nonce=$(openssl rand -hex 10)
