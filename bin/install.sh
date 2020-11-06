@@ -13,13 +13,15 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/11/05 01
+# version 2020/11/06 01
 
-readonly myversion=76
+readonly myversion=77
 
 #
 # Major Changes (for details see Github):
 #
+# - V77 (Johannes)
+#   - fixing status.sh
 #
 # - V76 (Johannes)
 #   - fixing Ubuntu 20.04 issues (regression from V75 Suse additions)
