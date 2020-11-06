@@ -211,7 +211,7 @@ for key in "${!TESTS[@]}"; do
   data="$data, { '${key}': '${TESTS[$key]} }"
 done
 data="$data ]"
-echo data
+echo $data
 curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash -d "$data" > /dev/null
 
 echo

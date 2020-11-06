@@ -579,7 +579,7 @@ if [ "$INTERACTIVE" == 1 ]; then
   ###########################################################
 
   dlog "Privacy Notice"
-  dialog --title '### PRIVACY NOTICE ###' --colors --yesno "By running this honeypot, you agree to participate in our research project. This honeypot will report firewall logs, connections to various services (e.g. ssh, telnet, web) to DShield. The honeypot will also report errors and the status of its configuration to DShield. Your ability to remove this data is limited after it has been submitted. For details, see https://dshield.org/honeypotprivacy.html ." 0 0
+  dialog --title '### PRIVACY NOTICE ###' --colors --yesno "By running this honeypot, you agree to participate in our research project. This honeypot will report firewall logs, connections to various services (e.g. ssh, telnet, web) to DShield. The honeypot will also report errors and the status of its configuration to DShield. Your ability to remove this data is limited after it has been submitted. For details, see privacy.md ." 0 0
   respone=$?
   case $response in
   ${DIALOG_CANCEL})
