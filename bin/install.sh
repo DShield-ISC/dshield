@@ -1452,7 +1452,7 @@ run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/status.sh ${DSHIELDDIR} 700
-do_copy $progdir/status.sh ${DSHIELDDIR} 700
+do_copy $progdir/../srv/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
 # check: automatic updates allowed?
