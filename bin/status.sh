@@ -97,7 +97,7 @@ if [ "$email" == "" ]; then
 fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
-user=urlencode "${email}"
+user=$(urlencode "${email}")
 url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$hpid"
 status=$(curl -s $url)
 if [ "$status" = "" ]; then
