@@ -78,7 +78,6 @@ if [ ! "$uid" = "0" ]; then
 fi
 
 # Parsing configuration file
-
 if [ -f /etc/dshield.ini ]; then
   source <(grep '=' /etc/dshield.ini | sed 's/ *= */=/g')
 else
@@ -212,7 +211,7 @@ for key in "${!TESTS[@]}"; do
 done
 data="$data ]"
 echo $data
-curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash -d "$data" > /dev/null
+curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$verison/$hpid -d "$data" > /dev/null
 
 echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
