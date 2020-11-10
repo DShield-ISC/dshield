@@ -15,7 +15,7 @@ apikey=''
 version=''
 userid=''
 honeypotip=''
-hpid=''
+piid=''
 user=''
 
 declare -A TESTS
@@ -97,7 +97,7 @@ fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
 user=$(urlencode "${email}")
-url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$hpid"
+url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid"
 status=$(curl -s $url)
 if [ "$status" = "" ]; then
   echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
@@ -210,7 +210,7 @@ for key in "${!TESTS[@]}"; do
   data="$data, { '${key}': '${TESTS[$key]} }"
 done
 data="$data ]"
-curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$verison/$hpid -d "$data" > /dev/null
+curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$verison/$piid -d "$data" > /dev/null
 echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
 echo "to see that your reports arrive."
