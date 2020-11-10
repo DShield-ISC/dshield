@@ -101,7 +101,7 @@ url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid"
 status=$(curl -s $url)
 if [ "$status" = "" ]; then
   echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
-  echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash"
+  echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid"
 fi
 
 if echo $status | grep -q '<result>ok<\/result>'; then
