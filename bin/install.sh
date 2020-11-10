@@ -15,10 +15,14 @@
 
 # version 2020/11/06 01
 
-readonly myversion=77
+readonly myversion=78
 
 #
 # Major Changes (for details see Github):
+#
+# - V78 (Johannes)
+#   - improvements to status reporting
+#   - fixed dependency issue for older pis
 #
 # - V77 (Johannes)
 #   - fixing status.sh
@@ -1620,8 +1624,11 @@ if [ ${?} -ne 0 ]; then
   exit 9
 fi
 run 'pip3 install --upgrade requests'
-dlog "installing dependencies requirements-output.txt"
-run 'pip3 install --upgrade -r requirements-output.txt'
+# older Pis have issues with the slack dependency.
+# we only need 'requests'
+# dlog "installing dependencies requirements-output.txt"
+# run 'pip3 install --upgrade -r requirements-output.txt'
+run 'pip3 install --upgrade requests'
 if [ ${?} -ne 0 ]; then
   outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
   exit 9
