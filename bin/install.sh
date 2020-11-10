@@ -13,12 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/11/06 01
+# version 2020/11/10 01
 
-readonly myversion=78
+readonly myversion=79
 
 #
 # Major Changes (for details see Github):
+#
+#
+# - V79 (Johannes)
+#   - minor fixes to properly report version during status check and update check
 #
 # - V78 (Johannes)
 #   - improvements to status reporting
