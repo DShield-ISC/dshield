@@ -15,11 +15,15 @@
 
 # version 2020/11/10 01
 
-readonly myversion=79
+readonly myversion=80
 
 #
 # Major Changes (for details see Github):
 #
+#
+# - V80 (Freek)
+#   - Consistent use of manualupdate, also saved in dhield.ini
+#   - value of progdir saved in dshield.ini
 #
 # - V79 (Johannes)
 #   - minor fixes to properly report version during status check and update check
@@ -1471,10 +1475,12 @@ if [ "$MANUPDATES" == "" ]; then
   MANUPDATES=0
 fi
 
-if [ "$MANUPDATES" -eq "0" ]; then
-  dlog "automatic updates OK, configuring"
-  run 'touch ${DSHIELDDIR}/auto-update-ok'
-fi
+# Manual updates now consistent in dshield.ini; parameter manualupdates
+# 0 is auto-update, 1 is manual update
+#if [ "$MANUPDATES" -eq "0" ]; then
+#  dlog "automatic updates OK, configuring"
+#  run 'touch ${DSHIELDDIR}/auto-update-ok'
+#fi
 
 #
 # "random" offset for cron job so not everybody is reporting at once
@@ -1547,6 +1553,8 @@ nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "progdir=$progdir" >> /etc/dshield.ini'
+run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
