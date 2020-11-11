@@ -207,7 +207,7 @@ nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
 data="[ {\"version\": $version }"
 for key in "${!TESTS[@]}"; do
-  data="$data, { '${key}': '${TESTS[$key]} }"
+  data="$data, { '${key}': '${TESTS[$key]}' }"
 done
 data="$data ]"
 curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$verison/$piid -d "$data" > /dev/null
