@@ -56,6 +56,9 @@ user=$(urlencode "${email}")
 newversion=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
 
 # check if automatic updates are allowed
+if [ $manualupdates == "" ] ; then
+    manualupdates=0
+fi
 if [ $manualupdates -eq 1 ] ; then
    exit
 fi
