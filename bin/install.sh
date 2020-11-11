@@ -25,6 +25,9 @@ readonly myversion=80
 #   - Consistent use of manualupdate, also saved in dhield.ini
 #   - value of progdir saved in dshield.ini
 #
+# - V80 (Johannes)
+#   - cleaning up dshield cron job
+#
 # - V79 (Johannes)
 #   - minor fixes to properly report version during status check and update check
 #
