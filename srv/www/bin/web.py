@@ -178,7 +178,10 @@ class myhandler(BaseHTTPRequestHandler):
                 <fieldset>'
             ]
             message = '\r\n'.join(message_parts)
-            self.wfile.write(message)
+            try:
+              self.wfile.write(message.encode())
+            except:
+              print("IO Error writing response.")
 
         conn.commit()
         return
@@ -266,18 +269,18 @@ class myhandler(BaseHTTPRequestHandler):
             back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
 
             # Display the POST variables.
-            self.wfile.write('<html>')
-            self.wfile.write('  <head>')
-            self.wfile.write('    <title>Server POST Response</title>')
-            self.wfile.write('  </head>')
-            self.wfile.write('  <body>')
-            self.wfile.write('    <p>POST variables (%d).</p>' % (len(postvars)))
+            self.wfile.write(b'<html>')
+            self.wfile.write(b'  <head>')
+            self.wfile.write(b'    <title>Server POST Response</title>')
+            self.wfile.write(b'  </head>')
+            self.wfile.write(b'  <body>')
+            self.wfile.write(b'    <p>POST variables (%d).</p>' % (len(postvars)))
 
             if len(postvars):
                 # Write out the POST variables in 3 columns.
 
-                self.wfile.write('    <table>')
-                self.wfile.write('      <tbody>')
+                self.wfile.write(b'    <table>')
+                self.wfile.write(b'      <tbody>')
                 i = 0
                 for key in sorted(postvars):
                     i += 1
@@ -293,17 +296,17 @@ class myhandler(BaseHTTPRequestHandler):
                         c.execute("""INSERT INTO postlogs (date, address, cmd, path, useragent, vers, formkey, formvalue)"""
                                   """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                                   (dte, address, cmd, path, useragentstring, rvers, key, val[0]))
-                    self.wfile.write('        <tr>')
-                    self.wfile.write('          <td align="right">%d</td>' % i)
-                    self.wfile.write('          <td align="right">%s</td>' % key)
-                    self.wfile.write('          <td align="left">%s</td>' % val[0])
-                    self.wfile.write('        </tr>')
-                self.wfile.write('      </tbody>')
-                self.wfile.write('    </table>')
+                    self.wfile.write(b'        <tr>')
+                    self.wfile.write(b'          <td align="right">%d</td>' % i)
+                    self.wfile.write(b'          <td align="right">%s</td>' % key)
+                    self.wfile.write(b'          <td align="left">%s</td>' % val[0])
+                    self.wfile.write(b'        </tr>')
+                self.wfile.write(b'      </tbody>')
+                self.wfile.write(b'    </table>')
 
-            self.wfile.write('    <p><a href="%s">Back</a></p>' % back)
-            self.wfile.write('  </body>')
-            self.wfile.write('</html>')
+            self.wfile.write(b'    <p><a href="%s">Back</a></p>' % back)
+            self.wfile.write(b'  </body>')
+            self.wfile.write(b'</html>')
         conn.commit()
         return
 

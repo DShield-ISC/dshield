@@ -205,7 +205,7 @@ else
 fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
-data='[ {"grease": 1}'
+data="[ {\"version\": $version }"
 for key in "${!TESTS[@]}"; do
   data="$data, { '${key}': '${TESTS[$key]} }"
 done
