@@ -1610,10 +1610,25 @@ else
   outlog "Can not find cowrie.zip in $TMPDIR"
   exit 9
 fi
+
+#
+# deleting old backups
+#
+
+for d in `find /srv -name 'cowrie.2*' -ctime +30 -type d`; do
+    rm -rf $d
+done
+for d in `find /srv -name 'www.2*' -ctime +30 -type d`; do
+    rm -rf $d
+done
+
+
 if [ -d ${COWRIEDIR} ]; then
   dlog "old cowrie installation found, moving"
   run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
 fi
+
+
 dlog "moving extracted cowrie to ${COWRIEDIR}"
 if [ -d $TMPDIR/cowrie-master ]; then
   run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
