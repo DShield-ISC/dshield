@@ -13,16 +13,23 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/11/10 01
+# version 2020/11/13 01
 
-readonly myversion=80
+readonly myversion=81
 
 #
 # Major Changes (for details see Github):
 #
 #
+# - V81 (Freek)
+#   - fixes in status.sh when run in cron
+#   - removed folder install for openSUSE in README
+#   - added support for openSUSE in uninstall.sh
+#   - fixes for typos
+#   - added post-install option
+#
 # - V80 (Freek)
-#   - Consistent use of manualupdate, also saved in dhield.ini
+#   - Consistent use of manualupdate, also saved in dshield.ini
 #   - value of progdir saved in dshield.ini
 #
 # - V80 (Johannes)
@@ -48,7 +55,7 @@ readonly myversion=80
 #   - some cleanup
 
 # - V75 (Johannes)
-#   - fixes for Pythong3 (web.py)
+#   - fixes for Python3 (web.py)
 #   - added a piid
 #   - updated cowrie
 
@@ -1410,7 +1417,7 @@ if [ "$ID" != "opensuse" ]; then
     run 'systemctl enable iptables.service'
   fi
 else # openSUSE stuff
-  dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshiedfirewall*.service"
+  dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshieldfirewall*.service"
   do_copy $progdir/../etc/network/iptables-init /etc/network/iptables-init 600
   do_copy $progdir/../etc/network/iptables-stop /etc/network/iptables-stop 600
   do_copy $progdir/../lib/systemd/system/dshieldfirewall_init.service /usr/lib/systemd/system/dshieldfirewall_init.service 644
@@ -1945,6 +1952,23 @@ do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
 [ "$ID" = "opensuse" ] && sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
 if [ -f "/etc/cron.daily/logrotate" ]; then
   run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
+fi
+
+###########################################################
+## POSTINSTALL OPTION
+###########################################################
+
+if [ -f /root/bin/postinstall.sh ]; then
+  run "/root/bin/postinstall.sh"
+else
+  outlog
+  outlog
+  outlog "POSTINSTALL OPTION"
+  outlog
+  outlog "In case you need to do something extra after an installation, especially when you do an automatic"
+  outlog "update, in which case you may loose changes made after the initial installation."
+  outlog "For this situation you can have a post-installation script in /root/bin/postinstall.sh, which"
+  outlog "will be called at the end of processing the install.sh script, also called in the automatic update."
 fi
 
 ###########################################################

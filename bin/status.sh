@@ -6,9 +6,15 @@
 #
 ####
 
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 2)
-NC=$(tput sgr0)
+if [ "$TERM" != "" ]; then
+   RED=$(tput setaf 1)
+   GREEN=$(tput setaf 2)
+   NC=$(tput sgr0)
+else
+   RED=
+   GREEN=
+   NC=
+fi
 
 email=''
 apikey=''
@@ -188,7 +194,7 @@ checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
-if iptables -L -n -t nat | grep -q DSHIELDINPUT; then
+if /usr/sbin/iptables -L -n -t nat | grep -q DSHIELDINPUT; then
   echo "${GREEN}OK${NC}: firewall rules"
   TESTS['fw']=1
 else
