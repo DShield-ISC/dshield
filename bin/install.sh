@@ -26,6 +26,7 @@ readonly myversion=81
 #   - removed folder install for openSUSE in README
 #   - added support for openSUSE in uninstall.sh
 #   - fixes for typos
+#   - added post-install option
 #
 # - V80 (Freek)
 #   - Consistent use of manualupdate, also saved in dshield.ini
