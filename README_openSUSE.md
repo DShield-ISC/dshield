@@ -54,10 +54,8 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
     *zypper in --no-recommends git*
     
-- make install directory and get GIT repository  
+- get GIT repository  
 
-    *mkdir install*  
-    *cd install*  
     <em>git clone <span>https</span>://github.com/DShield-ISC/dshield.git<em>  
     
 - run the installation script  
