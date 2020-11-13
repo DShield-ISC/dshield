@@ -6,6 +6,32 @@
 #
 ####
 
+# Helper Functions
+
+#
+# simple native bash urlencode from
+# https://gist.github.com/cdown/1163649
+#
+
+urlencode() {
+  # urlencode <string>
+  old_lc_collate=$LC_COLLATE
+  LC_COLLATE=C
+  local length="${#1}"
+  for ((i = 0; i < length; i++)); do
+    local c="${1:$i:1}"
+    case $c in
+    [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
+    *) printf '%%%02X' "'$c" ;;
+    esac
+  done
+  LC_COLLATE=$old_lc_collate
+}
+
+#
+# check if we are running as root
+#
+
 userid=`id -u`
 if [ ! "$userid" = "0" ]; then
    echo "you have to run this script as root. eg."
@@ -13,29 +39,36 @@ if [ ! "$userid" = "0" ]; then
    exit
 fi
 
-version=0.0
+version=0
+
+# read configuration file
+
 source <(grep = /etc/dshield.ini | sed 's/ *= */=/g')
 
+#
+# check on new version. We do this no matter if we update or not to
+# report back the version we are running.
+#
+
+nonce=`openssl rand -hex 10`
+hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
+user=$(urlencode "${email}")
+newversion=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
+
 # check if automatic updates are allowed
+if [ "$manualupdates" == "" ] ; then
+    manualupdates=0
+fi
 if [ $manualupdates -eq 1 ] ; then
    exit
 fi
 
-nonce=`openssl rand -hex 10`
-hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-# TODO: urlencode($user)
-user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
-newversion=`curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid | grep '<result>ok</result>' | grep '\<version\>' | sed 's/.*<version>//' | sed 's/<\/version>.*//'`
-majornewversion=`echo $newversion | cut -f1 -d'.'`
-majoroldversion=`echo $version | cut -f1 -d'.'`
-minornewversion=`echo $newversion | cut -f2 -d'.'`
-minoroldversion=`echo $version | cut -f2 -d'.'`
+
 if [ ! -z $PS1 ]; then
     echo "Current Version: $version ; New Version: $newversion"
 fi
 
-
-if [ "$majoroldversion" -lt "$majornewversion" ]; then
+if [ "$version" -lt "$newversion" ]; then
     if [ ! -z $PS1 ]; then
        echo "UPDATE"
     fi
@@ -43,19 +76,10 @@ if [ "$majoroldversion" -lt "$majornewversion" ]; then
     $progdir/update.sh
     exit
 fi
-if [ $majoroldversion -eq $majornewversion ]; then
-    if [ $minoroldversion -lt $minornewversion ]; then
-	if [ ! -z $PS1 ]; then
-		echo "UPDATE"
-	fi
-	
-	git -C $progdir  pull -q
-	$progdir/update.sh
-	exit
-    fi
-fi
+
 if [ -z $PS1 ]; then
     exit
 else
     echo "NO UPDATE"
 fi
+
