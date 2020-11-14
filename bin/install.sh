@@ -21,6 +21,12 @@ readonly myversion=81
 # Major Changes (for details see Github):
 #
 #
+# - V82 (Freek)
+#   - fix in update.sh to call ./install.sh in proper folder
+#   - fix in fwlogparser.py to save lastcount in persistent folder
+#     /var/run/ may not survive a reboot; /var/tmp used instead
+#   - auto update may be used on openSUSE also
+#
 # - V81 (Freek)
 #   - fixes in status.sh when run in cron
 #   - removed folder install for openSUSE in README
@@ -655,11 +661,6 @@ if [ "$INTERACTIVE" == 1 ]; then
     MANUPDATES=1
   else
     MANUPDATES=0
-  fi
-
-  if [ "$ID" == "opensuse" ]; then
-    MANUPDATES=1
-    dlog "Only manual updates on openSUSE"
   fi
 
   dlog "MANUPDATES: ${MANUPDATES}"
