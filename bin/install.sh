@@ -15,7 +15,7 @@
 
 # version 2020/11/13 01
 
-readonly myversion=81
+readonly myversion=82
 
 #
 # Major Changes (for details see Github):
@@ -1729,10 +1729,10 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 if [ -f /etc/init.d/cowrie ]; then
   rm -f /etc/init.d/cowrie
 fi
-run 'mkdir ${COWRIEDIR}/log'
+run 'mkdir -p ${COWRIEDIR}/log'
 run 'chmod 755 ${COWRIEDIR}/log'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log'
-run 'mkdir ${COWRIEDIR}/log/tty'
+run 'mkdir -p ${COWRIEDIR}/log/tty'
 run 'chmod 755 ${COWRIEDIR}/log/tty'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
 find /etc/rc?.d -name '*cowrie*' -delete
@@ -1835,7 +1835,7 @@ if [ "$ID" == "opensuse" ]; then
   zypper search -i --match-exact postfix
   if [ $? -eq 0 ]; then
     # postfix installed
-    run 'zypper -non-interactive remove postfix'
+    run 'zypper --non-interactive remove postfix'
   fi
   run 'zypper --non-interactive install --no-recommends postfix'
   # postfix is already enabled
@@ -1946,7 +1946,7 @@ fi
 # creating PID directory
 #
 
-run 'mkdir /var/run/dshield'
+run 'mkdir -p /var/run/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
