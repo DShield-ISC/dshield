@@ -6,7 +6,7 @@
 #
 ####
 
-if [ "$TERM" != "" ]; then
+if [ "$TERM" != "" -a "$TERM" != "dumb" ]; then
    RED=$(tput setaf 1)
    GREEN=$(tput setaf 2)
    NC=$(tput sgr0)
