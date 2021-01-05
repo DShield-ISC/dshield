@@ -15,7 +15,7 @@
 
 # version 2021/01/05 01
 
-readonly myversion=80
+readonly myversion=83
 
 #
 # Major Changes (for details see Github):
