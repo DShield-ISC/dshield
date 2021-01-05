@@ -810,7 +810,7 @@ fi
 # defaulting to enable telnet
 #
 
-if [ "$telnet" != "" ]; then
+if [ "$telnet" == "" ]; then
     telnet="true"
 fi
 if [ "$telnet" == "no" ]; then
