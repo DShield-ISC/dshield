@@ -1672,11 +1672,12 @@ dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-dlog "installing dependencies: requirements.txt"
-run 'pip3 install --upgrade pip'
-run 'pip3 install --upgrade bcrypt'
 if [ "$FAST" == "0" ]; then
+    dlog "installing dependencies: requirements.txt"
+    run 'pip3 install --upgrade pip'
+    run 'pip3 install --upgrade bcrypt'
     run 'pip3 install --upgrade -r requirements.txt'
+    run 'pip3 install --upgrade requests'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
        exit 9
@@ -1685,7 +1686,7 @@ else
     dlog "skipping requirements in fast mode"
 fi
 
-run 'pip3 install --upgrade requests'
+
 # older Pis have issues with the slack dependency.
 # we only need 'requests'
 # dlog "installing dependencies requirements-output.txt"
@@ -1832,6 +1833,8 @@ fi
 # TODO: AWS/Yum based install
 #
 
+# skipping postfix install in fast mode
+if [ "$FAST" == "0" ]; then
 if [ "$dist" == "apt" ]; then
   outlog "Installing and configuring postfix."
   dlog "uninstalling postfix"
@@ -1849,6 +1852,7 @@ if [ "$dist" == "apt" ]; then
     sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
   fi
 fi # end "$dist" == "apt"
+fi
 ###########################################################
 ## Apt Cleanup
 ###########################################################
