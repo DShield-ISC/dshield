@@ -60,6 +60,7 @@ echo Current Version: $newversion
 
 if [ "$newversion" -gt "$version" ]; then
     echo "Update"
+    cd $progdir
     git checkout main
     git pull
     ./install.sh --update

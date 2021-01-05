@@ -94,6 +94,7 @@ def checklock(lockfile):
 # define paramters
 logfile = "/var/log/dshield.log"
 piddir="/var/run/dshield/"
+lastdir="/var/tmp/dshield/"
 config = "/etc/dshield.ini"
 startdate = 0
 now = datetime.utcnow()
@@ -124,9 +125,14 @@ try:
 except:
     os.mkdir(piddir)
 
+try:
+    os.stat(lastdir)
+except:
+    os.mkdir(lastdir)
+
 pidfile = piddir+"fwparser.pid"
-lastcount = piddir+"lastfwlog"
-skipvalue = piddir+"skipvalue"
+lastcount = lastdir+"lastfwlog"
+skipvalue = lastdir+"skipvalue"
     
 if os.path.isfile(logfile) is None:
     sys.exit('Can not find logfile %s ' % logfile)
