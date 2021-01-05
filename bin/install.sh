@@ -1647,13 +1647,8 @@ fi
 # deleting old backups
 #
 
-for d in `find /srv -name 'cowrie.2*' -ctime +30 -type d`; do
-    rm -rf $d
-done
-for d in `find /srv -name 'www.2*' -ctime +30 -type d`; do
-    rm -rf $d
-done
-
+run "find /srv -name 'cowrie.2*' -ctime +30 -delete"
+run "find /srv -name 'www.2*' -ctime +30 -delete"
 
 if [ -d ${COWRIEDIR} ]; then
   dlog "old cowrie installation found, moving"
@@ -1686,7 +1681,7 @@ if [ "$FAST" == "0" ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
        exit 9
     fi
-elif
+else
     dlog "skipping requirements in fast mode"
 fi
 
