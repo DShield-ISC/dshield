@@ -13,13 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/11/13 01
+# version 2021/01/05 01
 
-readonly myversion=81
+readonly myversion=80
 
 #
 # Major Changes (for details see Github):
 #
+#
+# - V83 (Johannes)
+#   - added ini option to disable telnet for ISPs that don't allow telnet servers
 #
 # - V82 (Freek)
 #   - fix in update.sh to call ./install.sh in proper folder
@@ -816,7 +819,6 @@ fi
 if [ "$TELNET" != "false" ]; then
     TELNET="true"
 fi
-
 
 
 # hmmm - this SHOULD NOT happen
@@ -1678,11 +1680,16 @@ run 'source cowrie-env/bin/activate'
 dlog "installing dependencies: requirements.txt"
 run 'pip3 install --upgrade pip'
 run 'pip3 install --upgrade bcrypt'
-run 'pip3 install --upgrade -r requirements.txt'
-if [ ${?} -ne 0 ]; then
-  outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
-  exit 9
+if [ "$FAST" == "0" ]; then
+    run 'pip3 install --upgrade -r requirements.txt'
+    if [ ${?} -ne 0 ]; then
+       outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+       exit 9
+    fi
+elif
+    dlog "skipping requirements in fast mode"
 fi
+
 run 'pip3 install --upgrade requests'
 # older Pis have issues with the slack dependency.
 # we only need 'requests'
@@ -1717,6 +1724,7 @@ export kernel_version=$(uname -r)
 export kernel_build_string=$(uname -v | sed 's/SMP.*/SMP/')
 export ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ttylog='false'
+export TELNET
 drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
