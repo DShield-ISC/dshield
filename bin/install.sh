@@ -810,14 +810,14 @@ fi
 # defaulting to enable telnet
 #
 
-if [ "$TELNET" != "" ]; then
-    TELNET="true"
+if [ "$telnet" != "" ]; then
+    telnet="true"
 fi
-if [ "$TELNET" == "no" ]; then
-    TELNET="false"
+if [ "$telnet" == "no" ]; then
+    telnet="false"
 fi
-if [ "$TELNET" != "false" ]; then
-    TELNET="true"
+if [ "$telnet" != "false" ]; then
+    telnet="true"
 fi
 
 
@@ -1402,7 +1402,7 @@ for PORT in ${SSHREDIRECT}; do
 done
 
 echo "# - telnet ports" >>/etc/network/iptables
-if [ "$TELNET" != "no" ]; then   
+if [ "$telnet" != "no" ]; then   
     for PORT in ${TELNETREDIRECT}; do
 	echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
     done
@@ -1589,7 +1589,7 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "progdir=$progdir" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
-run 'echo "telnet=$TELNET" >> /etc/dshield.ini'
+run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1720,7 +1720,7 @@ export kernel_version=$(uname -r)
 export kernel_build_string=$(uname -v | sed 's/SMP.*/SMP/')
 export ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ttylog='false'
-export TELNET
+export telnet
 drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
