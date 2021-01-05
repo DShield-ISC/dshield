@@ -799,7 +799,24 @@ if [ -f /etc/dshield.ini ]; then
   dlog "securing dshield.ini"
   run 'chmod 600 /etc/dshield.ini'
   run 'chown root:root /etc/dshield.ini'
+  
 fi
+
+#
+# defaulting to enable telnet
+#
+
+if [ "$TELNET" != "" ]; then
+    TELNET="true"
+fi
+if [ "$TELNET" == "no" ]; then
+    TELNET="false"
+fi
+if [ "$TELNET" != "false" ]; then
+    TELNET="true"
+fi
+
+
 
 # hmmm - this SHOULD NOT happen
 if ! [ -d $TMPDIR ]; then
@@ -1382,9 +1399,11 @@ for PORT in ${SSHREDIRECT}; do
 done
 
 echo "# - telnet ports" >>/etc/network/iptables
-for PORT in ${TELNETREDIRECT}; do
-  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
-done
+if [ "$TELNET" != "no" ]; then   
+    for PORT in ${TELNETREDIRECT}; do
+	echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
+    done
+fi
 
 echo "# - web ports" >>/etc/network/iptables
 for PORT in ${WEBREDIRECT}; do
@@ -1485,6 +1504,8 @@ if [ "$MANUPDATES" == "" ]; then
   MANUPDATES=0
 fi
 
+
+
 # Manual updates now consistent in dshield.ini; parameter manualupdates
 # 0 is auto-update, 1 is manual update
 #if [ "$MANUPDATES" -eq "0" ]; then
@@ -1565,6 +1586,7 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "progdir=$progdir" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
+run 'echo "telnet=$TELNET" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
