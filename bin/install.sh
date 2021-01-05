@@ -1975,7 +1975,7 @@ fi
 # creating PID directory
 #
 
-run 'mkdir -p /var/run/dshield'
+run 'mkdir -p /var/tmp/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
