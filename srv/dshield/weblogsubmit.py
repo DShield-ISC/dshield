@@ -38,6 +38,19 @@ try :
               linessent integer 
             )
           ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS requests
+                (
+                    date text,
+                    headers text,
+                    address text,
+                    cmd text,
+                    path text,
+                    useragent text,
+                    vers text,
+                    summary text,
+                    targetip text
+                )
+            ''')
 
     maxid = c.execute("""SELECT max(timestamp) from submissions""").fetchone()
 except sqlite3.Error as e:
