@@ -21,6 +21,9 @@ readonly myversion=83
 # Major Changes (for details see Github):
 #
 #
+# - V84 (Freek)
+#   - fixed bug in IPv6 disabling in openSUSE
+#
 # - V83 (Johannes)
 #   - added ini option to disable telnet for ISPs that don't allow telnet servers
 #
@@ -771,9 +774,9 @@ else # in openSUSE
   run "grep -q 'ipv6.conf' /etc/sysctl.d/70-yast.conf"
   if [ ${?} -ne 0 ]; then
     dlog "Disabling IPv6 in /etc/sysctl.d/70-yast.conf"
-    drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.conf'
-    drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.conf'
-    drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf'
+    drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.d/70-yast.conf'
+    drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.d/70-yast.conf'
+    drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.d/70-yast.conf'
   else
     dlog "IPv6 already disabled in /etc/sysctl.d/70-yast.conf"
   fi
@@ -1053,7 +1056,7 @@ dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
 drun "ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' '"
-localnet=$(ip route show | grep $interface | grep 'scope link' | cut -f1 -d' ')
+localnet=$(ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' ')
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
