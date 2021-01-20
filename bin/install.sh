@@ -1056,7 +1056,7 @@ dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
 drun "ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' '"
-localnet=$(ip route show | grep $interface | grep 'scope link' | cut -f1 -d' ')
+localnet=$(ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' ')
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
