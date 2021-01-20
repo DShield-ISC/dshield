@@ -13,13 +13,15 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2021/01/05 01
+# version 2021/01/18 01
 
-readonly myversion=83
+readonly myversion=85
 
 #
 # Major Changes (for details see Github):
 #
+# - V85
+#   - increased kippo batch size
 #
 # - V84 (Freek)
 #   - fixed bug in IPv6 disabling in openSUSE
