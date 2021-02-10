@@ -6,7 +6,7 @@ bcrypt==3.1.7
 binascii
 botocore
 configparser==4.0.2
-cryptography==3.2
+cryptography==3.3.2
 csirtgsdk>=0.0.0a17
 elasticsearch
 hpfeeds
