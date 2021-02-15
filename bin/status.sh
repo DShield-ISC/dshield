@@ -195,7 +195,7 @@ TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
 IPTABLES=/usr/sbin/iptables
-if -f /sbin/iptables; then
+if [ -f /sbin/iptables ]; then
     IPTABLES=/sbin/iptables
 fi
 
