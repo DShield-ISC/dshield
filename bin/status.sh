@@ -194,7 +194,12 @@ checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
-if /usr/sbin/iptables -L -n -t nat | grep -q DSHIELDINPUT; then
+IPTABLES=/usr/sbin/iptables
+if -f /sbin/iptables; then
+    IPTABLES=/sbin/iptables
+fi
+
+if $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT; then
   echo "${GREEN}OK${NC}: firewall rules"
   TESTS['fw']=1
 else
