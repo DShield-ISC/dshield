@@ -1005,7 +1005,7 @@ fi
 
 # list of valid interfaces
 drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'"
-validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //')
+validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //')
 
 # get honeypot external IPv4 address
 honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
