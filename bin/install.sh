@@ -1659,8 +1659,8 @@ fi
 # deleting old backups
 #
 
-run "find /srv -name 'cowrie.2*' -delete"
-run "find /srv -name 'www.2*' -delete"
+run "rm -rf /srv/cowrie.2*"
+run "rm -rf /srv/www.2*"
 
 #
 # pruning logs prior to backup
