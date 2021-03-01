@@ -13,12 +13,15 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2021/01/22 01
+# version 2021/03/01 01
 
-readonly myversion=86
+readonly myversion=87
 
 #
 # Major Changes (for details see Github):
+#
+# - V87 (Johannes)
+#   - quick update to delete all old backups. Only keep latest one
 #
 # - V86 (Johannes)
 #   - added cleanup script
@@ -1656,8 +1659,16 @@ fi
 # deleting old backups
 #
 
-run "find /srv -name 'cowrie.2*' -ctime +30 -delete"
-run "find /srv -name 'www.2*' -ctime +30 -delete"
+run "find /srv -name 'cowrie.2*' -delete"
+run "find /srv -name 'www.2*' -delete"
+
+#
+# pruning logs prior to backup
+#
+
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.log.2*"
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.json.2*"
+
 
 if [ -d ${COWRIEDIR} ]; then
   dlog "old cowrie installation found, moving"
