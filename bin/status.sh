@@ -6,7 +6,7 @@
 #
 ####
 
-if [ "$TERM" != "" ]; then
+if [ "$TERM" != "" -a "$TERM" != "dumb" ]; then
    RED=$(tput setaf 1)
    GREEN=$(tput setaf 2)
    NC=$(tput sgr0)
@@ -152,8 +152,8 @@ echo $status | sed 's/.*<lastreport>//' | sed 's/<\/lastreport>.*//'
 echo "
 ###### Are the submit scripts running?
 "
-if [ -f /var/run/dshield/lastfwlog ]; then
-  lastlog=$(cat /var/run/dshield/lastfwlog)
+if [ -f /var/tmp/dshield/lastfwlog ]; then
+  lastlog=$(cat /var/tmp/dshield/lastfwlog)
   echo -n "Last Firewall Log Processed: "
   date +"%F %T" -d @$lastlog
   TESTS['lastfwlog']=1
@@ -162,8 +162,8 @@ else
   TESTS['lastfwlog']=0
 fi
 
-if [ -f /var/run/dshield/skipvalue ]; then
-  skip=$(cat /var/run/dshield/skipvalue)
+if [ -f /var/tmp/dshield/skipvalue ]; then
+  skip=$(cat /var/tmp/dshield/skipvalue)
   if [ "$skip" -eq "1" ]; then
     echo "${GREEN}All Logs are processed. You are not sending too many logs${NC}"
   fi
@@ -194,7 +194,12 @@ checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
-if /usr/sbin/iptables -L -n -t nat | grep -q DSHIELDINPUT; then
+IPTABLES=/usr/sbin/iptables
+if [ -f /sbin/iptables ]; then
+    IPTABLES=/sbin/iptables
+fi
+
+if $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT; then
   echo "${GREEN}OK${NC}: firewall rules"
   TESTS['fw']=1
 else

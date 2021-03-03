@@ -13,13 +13,33 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2020/11/13 01
+# version 2021/03/01 02
 
-readonly myversion=81
+readonly myversion=87
 
 #
 # Major Changes (for details see Github):
 #
+# - V87 (Johannes)
+#   - quick update to delete all old backups. Only keep latest one
+#
+# - V86 (Johannes)
+#   - added cleanup script
+#
+# - V85
+#   - increased kippo batch size
+#
+# - V84 (Freek)
+#   - fixed bug in IPv6 disabling in openSUSE
+#
+# - V83 (Johannes)
+#   - added ini option to disable telnet for ISPs that don't allow telnet servers
+#
+# - V82 (Freek)
+#   - fix in update.sh to call ./install.sh in proper folder
+#   - fix in fwlogparser.py to save lastcount in persistent folder
+#     /var/run/ may not survive a reboot; /var/tmp used instead
+#   - auto update may be used on openSUSE also
 #
 # - V81 (Freek)
 #   - fixes in status.sh when run in cron
@@ -657,11 +677,6 @@ if [ "$INTERACTIVE" == 1 ]; then
     MANUPDATES=0
   fi
 
-  if [ "$ID" == "opensuse" ]; then
-    MANUPDATES=1
-    dlog "Only manual updates on openSUSE"
-  fi
-
   dlog "MANUPDATES: ${MANUPDATES}"
   clear
 
@@ -767,9 +782,9 @@ else # in openSUSE
   run "grep -q 'ipv6.conf' /etc/sysctl.d/70-yast.conf"
   if [ ${?} -ne 0 ]; then
     dlog "Disabling IPv6 in /etc/sysctl.d/70-yast.conf"
-    drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.conf'
-    drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.conf'
-    drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf'
+    drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.d/70-yast.conf'
+    drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.d/70-yast.conf'
+    drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.d/70-yast.conf'
   else
     dlog "IPv6 already disabled in /etc/sysctl.d/70-yast.conf"
   fi
@@ -799,7 +814,23 @@ if [ -f /etc/dshield.ini ]; then
   dlog "securing dshield.ini"
   run 'chmod 600 /etc/dshield.ini'
   run 'chown root:root /etc/dshield.ini'
+  
 fi
+
+#
+# defaulting to enable telnet
+#
+
+if [ "$telnet" == "" ]; then
+    telnet="true"
+fi
+if [ "$telnet" == "no" ]; then
+    telnet="false"
+fi
+if [ "$telnet" != "false" ]; then
+    telnet="true"
+fi
+
 
 # hmmm - this SHOULD NOT happen
 if ! [ -d $TMPDIR ]; then
@@ -976,8 +1007,8 @@ if [ "$interface" == "" ]; then
 fi
 
 # list of valid interfaces
-drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'"
-validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //')
+drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //'"
+validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //')
 
 # get honeypot external IPv4 address
 honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
@@ -1033,7 +1064,7 @@ dlog "ipaddr: ${ipaddr}"
 
 drun "ip route show"
 drun "ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' '"
-localnet=$(ip route show | grep $interface | grep 'scope link' | cut -f1 -d' ')
+localnet=$(ip route show | grep $interface | grep 'scope link' | grep '/' | cut -f1 -d' ')
 # added most common private subnets. This will help if the Pi is in its
 # own subnet (e.g. 192.168.1.0/24) which is part of a larger network.
 # either way, hits from private IPs are hardly ever log worthy.
@@ -1382,9 +1413,11 @@ for PORT in ${SSHREDIRECT}; do
 done
 
 echo "# - telnet ports" >>/etc/network/iptables
-for PORT in ${TELNETREDIRECT}; do
-  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
-done
+if [ "$telnet" != "no" ]; then   
+    for PORT in ${TELNETREDIRECT}; do
+	echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
+    done
+fi
 
 echo "# - web ports" >>/etc/network/iptables
 for PORT in ${WEBREDIRECT}; do
@@ -1476,6 +1509,7 @@ run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
+do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 
 # check: automatic updates allowed?
@@ -1484,6 +1518,8 @@ do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 if [ "$MANUPDATES" == "" ]; then
   MANUPDATES=0
 fi
+
+
 
 # Manual updates now consistent in dshield.ini; parameter manualupdates
 # 0 is auto-update, 1 is manual update
@@ -1565,6 +1601,7 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "progdir=$progdir" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
+run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1622,12 +1659,15 @@ fi
 # deleting old backups
 #
 
-for d in `find /srv -name 'cowrie.2*' -ctime +30 -type d`; do
-    rm -rf $d
-done
-for d in `find /srv -name 'www.2*' -ctime +30 -type d`; do
-    rm -rf $d
-done
+run "rm -rf /srv/cowrie.2*"
+run "rm -rf /srv/www.2*"
+
+#
+# pruning logs prior to backup
+#
+
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.log.2*"
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.json.2*"
 
 
 if [ -d ${COWRIEDIR} ]; then
@@ -1652,15 +1692,21 @@ dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-dlog "installing dependencies: requirements.txt"
-run 'pip3 install --upgrade pip'
-run 'pip3 install --upgrade bcrypt'
-run 'pip3 install --upgrade -r requirements.txt'
-if [ ${?} -ne 0 ]; then
-  outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
-  exit 9
+if [ "$FAST" == "0" ]; then
+    dlog "installing dependencies: requirements.txt"
+    run 'pip3 install --upgrade pip'
+    run 'pip3 install --upgrade bcrypt'
+    run 'pip3 install --upgrade -r requirements.txt'
+    run 'pip3 install --upgrade requests'
+    if [ ${?} -ne 0 ]; then
+       outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+       exit 9
+    fi
+else
+    dlog "skipping requirements in fast mode"
 fi
-run 'pip3 install --upgrade requests'
+
+
 # older Pis have issues with the slack dependency.
 # we only need 'requests'
 # dlog "installing dependencies requirements-output.txt"
@@ -1694,6 +1740,7 @@ export kernel_version=$(uname -r)
 export kernel_build_string=$(uname -v | sed 's/SMP.*/SMP/')
 export ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ttylog='false'
+export telnet
 drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
@@ -1728,10 +1775,10 @@ do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 if [ -f /etc/init.d/cowrie ]; then
   rm -f /etc/init.d/cowrie
 fi
-run 'mkdir ${COWRIEDIR}/log'
+run 'mkdir -p ${COWRIEDIR}/log'
 run 'chmod 755 ${COWRIEDIR}/log'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log'
-run 'mkdir ${COWRIEDIR}/log/tty'
+run 'mkdir -p ${COWRIEDIR}/log/tty'
 run 'chmod 755 ${COWRIEDIR}/log/tty'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
 find /etc/rc?.d -name '*cowrie*' -delete
@@ -1806,6 +1853,8 @@ fi
 # TODO: AWS/Yum based install
 #
 
+# skipping postfix install in fast mode
+if [ "$FAST" == "0" ]; then
 if [ "$dist" == "apt" ]; then
   outlog "Installing and configuring postfix."
   dlog "uninstalling postfix"
@@ -1823,6 +1872,7 @@ if [ "$dist" == "apt" ]; then
     sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
   fi
 fi # end "$dist" == "apt"
+fi
 ###########################################################
 ## Apt Cleanup
 ###########################################################
@@ -1834,7 +1884,7 @@ if [ "$ID" == "opensuse" ]; then
   zypper search -i --match-exact postfix
   if [ $? -eq 0 ]; then
     # postfix installed
-    run 'zypper -non-interactive remove postfix'
+    run 'zypper --non-interactive remove postfix'
   fi
   run 'zypper --non-interactive install --no-recommends postfix'
   # postfix is already enabled
@@ -1945,7 +1995,7 @@ fi
 # creating PID directory
 #
 
-run 'mkdir /var/run/dshield'
+run 'mkdir -p /var/tmp/dshield'
 
 # rotate dshield firewall logs
 do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
@@ -1996,3 +2046,6 @@ outlog "   Run the script 'status.sh' (but reboot first!)"
 outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
 outlog
 outlog " for help, check our slack channel: https://isc.sans.edu/slack "
+outlog
+outlog " In case you are low in disk space, run /srv/dshield/cleanup.sh "
+outlog " This will delete some backups and logs "

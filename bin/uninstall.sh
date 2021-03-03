@@ -23,7 +23,9 @@ mv /etc/dshield.ini /etc/dshield.ini.backup
 mv /etc/dshield.sslca /etc/dshield.sslca.backup
 rm -rf /etc/cron.d/dshield
 rm -rf /etc/rsyslog.d/dshield.conf
+# older versions used /var/run instead of /var/tmp
 rm -rf /var/run/dshield
+rm -rf /var/tmp/dshield
 rm -rf /lib/systemd/system/cowrie.service
 rm -rf /lib/systemd/system/webpy.service
 rm -rf /etc/network/iptables*
