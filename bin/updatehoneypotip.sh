@@ -13,7 +13,6 @@ if [ ! -f /etc/dshield.ini ]; then
     exit 9
 fi
 honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
-echo $honeypotip
 if echo -n $honeypotip | egrep -q '^[0-9\.]+$'; then
     sed -i "s/^honeypotip=.*/honeypotip=$honeypotip/" /etc/dshield.ini
 else
