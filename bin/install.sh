@@ -180,6 +180,8 @@ readonly myversion=87
 #
 #
 
+TERM = vt100
+
 INTERACTIVE=1
 FAST=0
 BETA=0
