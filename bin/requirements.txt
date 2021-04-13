@@ -8,11 +8,13 @@ botocore
 configparser==4.0.2
 cryptography==3.3.2
 csirtgsdk>=0.0.0a17
+datetime
 elasticsearch
 hpfeeds
 hpfeeds3
 influxdb
 inspect
+json
 mysqlclient
 optparse
 packaging==20.3
