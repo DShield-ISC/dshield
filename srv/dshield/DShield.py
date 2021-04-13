@@ -24,7 +24,8 @@ import sys
 import socket
 import struct
 import syslog
-
+import json
+from datetime import datetime
 
 class DshieldSubmit:
     id = 0
@@ -66,6 +67,15 @@ class DshieldSubmit:
             r = requests.post(self.url, json=mydata, headers=header)
             if r.status_code != 200:
                 self.log('received status code %d in response' % r.status_code)
+            else:
+                self.log('sent %d bytes to %s' % (sys.getsizeof(mydata),self.url))
+                if self.localcopy != '' :
+                    f = open(self.localcopy,'a')
+                    now = datetime.now()                    
+                    f.write("\n# %s\n" % now.strftime("%s %Y-%m-%d %H:%M:%S"))
+                    f.write(json.dumps(mydata))
+                    f.write("\n")
+                    f.close()
         else:
             self.log('no valid type defined in post')
 
@@ -176,11 +186,16 @@ class DshieldSubmit:
                 sys.exit()
             key = config.get('DShield', 'apikey')
             apikeyre = re.compile('^[a-zA-Z0-9=+/]+$')
+            try: 
+                self.localcopy = config.get('DShield','localcopy')
+            except:
+                self.localcopy = ''
             if apikeyre.match(key):
                 self.key = key
             else:
                 self.log("no api key configured")
                 sys.exit()
+                        
 
             # extract translate internal IP settings
 
