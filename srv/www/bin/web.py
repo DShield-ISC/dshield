@@ -15,16 +15,13 @@ import requests
 import sys
 
 # Default port - feel free to change
+
 PORT_NUMBER = 8000
 PRODSTRING = 'Apache/3.2.3'
 
 
 # got a webserver DB and will prolly have honeypot DB for dorks if we have sqlinjection
-config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
-honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
-# will be if user sets up SSL cert and key
-certpath = '..' + os.path.sep + 'domain.crt'
-keypath = '..' + os.path.sep + 'domain.key'
+config = '../../DB/weblogs.sqlite'
 
 # Query to DShield API to determine local public IP address
 
