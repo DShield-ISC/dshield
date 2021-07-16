@@ -28,9 +28,9 @@ f = open(pidfile, 'w')
 f.write(str(os.getpid()))
 f.close()
 
-config = '..' + os.path.sep + 'www'+os.path.sep+'DB' + os.path.sep + 'webserver.sqlite'
+logs = '..' + os.path.sep + 'DB'+ os.path.sep + 'weblogs.sqlite'
 try :
-    conn = sqlite3.connect(config)
+    conn = sqlite3.connect(logs)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS submissions
             (
