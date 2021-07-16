@@ -163,7 +163,12 @@ else
 fi
 
 if [ -f /var/tmp/dshield/skipvalue ]; then
-  skip=$(cat /var/tmp/dshield/skipvalue)
+    skip=$(cat /var/tmp/dshield/skipvalue)
+    if [ "$skip" == "" ]; then
+	skip=1
+	rm /var/tmp/dshield/skipvalue
+    fi
+	
   if [ "$skip" -eq "1" ]; then
     echo "${GREEN}All Logs are processed. You are not sending too many logs${NC}"
   fi
