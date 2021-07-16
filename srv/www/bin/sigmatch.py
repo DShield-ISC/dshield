@@ -7,8 +7,9 @@ import sqlite3
 
 
 def sigmatch(self, pattern, module):
-    config = '..' + os.path.sep + 'DB' + os.path.sep + 'webserver.sqlite'
-    honeydb = '..' + os.path.sep + 'DB' + os.path.sep + 'config.sqlite'
+    logs = '../../DB/weblogs.sqlite'
+    config = '../../DB/webconfig.sqlite'
+    honeydb = '../../DB/config.sqlite'
     conn = sqlite3.connect(config)
     c = conn.cursor()
     match = 0
