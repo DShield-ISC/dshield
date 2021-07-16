@@ -164,7 +164,10 @@ if ( startdate<currenttime-86400):
 
 if os.path.isfile(skipvalue):
     f = open(skipvalue, 'r')
-    skip = float(f.readline())
+    try:
+        skip = float(f.readline())
+    except:
+        skip = 1
     f.close()
 if skip<1:
     skip=1
