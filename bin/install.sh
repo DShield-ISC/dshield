@@ -1809,7 +1809,7 @@ run "systemctl enable webpy.service"
 
 # change ownership for web databases to cowrie as we will run the
 # web honeypot as cowrie
-touch ${WEBDIR}/DB/webserver.sqlite
+touch ${TARGETDIR}/DB/webserver.sqlite
 run "chown cowrie ${WEBDIR}/DB"
 run "chown cowrie ${WEBDIR}/DB/*"
 
