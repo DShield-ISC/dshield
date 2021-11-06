@@ -13,12 +13,15 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2021/01/22 01
+# version 2021/03/01 02
 
-readonly myversion=86
+readonly myversion=87
 
 #
 # Major Changes (for details see Github):
+#
+# - V87 (Johannes)
+#   - quick update to delete all old backups. Only keep latest one
 #
 # - V86 (Johannes)
 #   - added cleanup script
@@ -176,6 +179,8 @@ readonly myversion=86
 #   - major additions and rewrites (e.g. added logging)
 #
 #
+
+TERM = vt100
 
 INTERACTIVE=1
 FAST=0
@@ -543,7 +548,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv randomsound rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -1004,8 +1009,8 @@ if [ "$interface" == "" ]; then
 fi
 
 # list of valid interfaces
-drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //'"
-validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | tr -d '\n' | sed 's/^ //')
+drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //'"
+validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //')
 
 # get honeypot external IPv4 address
 honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
@@ -1656,8 +1661,16 @@ fi
 # deleting old backups
 #
 
-run "find /srv -name 'cowrie.2*' -ctime +30 -delete"
-run "find /srv -name 'www.2*' -ctime +30 -delete"
+run "rm -rf /srv/cowrie.2*"
+run "rm -rf /srv/www.2*"
+
+#
+# pruning logs prior to backup
+#
+
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.log.2*"
+run "rm -f /srv/cowrie/var/log/cowrie/cowrie.json.2*"
+
 
 if [ -d ${COWRIEDIR} ]; then
   dlog "old cowrie installation found, moving"

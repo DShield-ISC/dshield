@@ -163,7 +163,11 @@ else
 fi
 
 if [ -f /var/tmp/dshield/skipvalue ]; then
-  skip=$(cat /var/tmp/dshield/skipvalue)
+    skip=$(cat /var/tmp/dshield/skipvalue)
+    if [ "$skip" == "" ]; then
+	skip=1
+	rm /var/tmp/dshield/skipvalue
+    fi
   if [ "$skip" -eq "1" ]; then
     echo "${GREEN}All Logs are processed. You are not sending too many logs${NC}"
   fi
@@ -194,7 +198,12 @@ checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
-if /usr/sbin/iptables -L -n -t nat | grep -q DSHIELDINPUT; then
+IPTABLES=/usr/sbin/iptables
+if [ -f /sbin/iptables ]; then
+    IPTABLES=/sbin/iptables
+fi
+
+if $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT; then
   echo "${GREEN}OK${NC}: firewall rules"
   TESTS['fw']=1
 else
