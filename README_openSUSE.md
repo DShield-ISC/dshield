@@ -1,7 +1,7 @@
-
+﻿
 # dshield
 
-## DShield Raspberry Pi Sensor for openSUSE Leap 15.2 and Tumbleweed system
+## DShield Raspberry Pi Sensor for openSUSE Leap 15.3 and Tumbleweed system
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
@@ -22,13 +22,13 @@ If there is the need for other distros, "someone" has to check and maintain the 
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it. For openSUSE it is assumed that you are using openSUSE for this preparation.
 
-- get the openSUSE image for your Raspberry Pi for Leap 15.2 [RPI3 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.2/appliances/openSUSE-Leap-15.2-ARM-JeOS-raspberrypi3.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.2/appliances/openSUSE-Leap-15.2-ARM-JeOS-raspberrypi4.aarch64.raw.xz) for Tumbleweed [RPi3 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi4.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi3.aarch64.raw.xz)
+- get the openSUSE image for your Raspberry Pi for Leap 15.3 [RPI3 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-ARM-JeOS-raspberrypi3.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-ARM-JeOS-raspberrypi4.aarch64.raw.xz) for Tumbleweed [RPi3 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi4.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi3.aarch64.raw.xz)
   
 - put it onto a micro-SD card (e.g. using procedures described [here for RPi3](https://en.opensuse.org/HCL:Raspberry_Pi3) or [here for RPi4](https://en.opensuse.org/HCL:Raspberry_Pi4)
 - insert the micro-SD card in the Pi and power it on, to boot the Pi from the micro-SD card.
     - the system will use DHCP to get network parameters o.a. the IP address.
 - if you do not have a monitor connected you will be able to use ssh to connect.
-- connect to the device using an ssh client (port 22), log in with user *root*, password *linux*
+- connect to the device using a ssh client (port 22), log in with user *root*, password *linux*
 - __CHANGE THE DEFAULT PASSWORD__ for the *root* user (better: use keys to authenticate and set *PermitRootLogin* to *prohibit-password* in */etc/ssh/sshd_config*)  
 
     *passwd*  
@@ -37,8 +37,8 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - you may use the command *yast language* to set your language as the default language, the layout of the keyboard and the timezone.
-- update your Pi. The install script has commented lines to do it, so it does not do it yet.  
-    - For Leap 15.2 use:  
+- The first thing the install script will update the system.  
+    - For Leap 15.3 it uses:  
 
         *zypper up --no-recommends*  
 
@@ -105,8 +105,9 @@ Inside your "dshield" directory (the directory created above when you run `git c
 *bin/install.sh*  
 
 
-Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
+Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, rerun the install.sh script to configure the firewall. Editing `/etc/network/iptables` or `/etc/network/ruleset.nft` is not recommended (note: nat table is also used).
 Also certificate information is saved in `/etc/dshield.sslca`.
+Save these two `/etc/dshield.*` files on another system, and put these back in `/etc/` before you run the installation script, when you start allover again.
 
 Please make sure to keep special port and network configuration up to date (e.g. manually configure recently added telnet / web ports in firewall config), e.g. no-log config, no-honey config, ... unfortunately this can't be done automagically as of now. If unsure delete respective lines in `/etc/dshield.ini` and re-run the installation script.
 
@@ -127,9 +128,9 @@ So you must place the Pi on a network where it can be exposed to the Internet (a
 
 For SoHo users there is normally an option in the DSL or cable router to direct all traffic from the public IP the router is using (i.e. has been assigned by the ISP) to an internal IP. This has to be the Pi. This feature is named e.g. "exposed host", "DMZ" (here you may have to enable further configuration to ensure ___all___ traffic is being routed to the Pi's internal IP address and not only e.g. port 80).
 
-For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the dhshield project and the community which can be tracked via whois to your company.
+For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the dshield project and the community which can be tracked via whois to your company.
 
-To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your dshield account. Use only for quick and limited testing purposes, please, so that dhshield data isn't falsified.
+To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your dshield account. Use only for quick and limited testing purposes, please, so that dshield data isn't falsified.
 
 ### Navigating in Forms
 - RETURN: submit the form (OK)
