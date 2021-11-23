@@ -20,6 +20,11 @@ readonly myversion=87
 #
 # Major Changes (for details see Github):
 #
+# - V88 (Freek)
+#   - use of iptables replaced by nftables (at least in openSUSE Tumbleweed)
+#     iptables indicated as obsolete; left to be implemented by others in other OSes
+#   - remove of systemd-logger in Tumbleweed not needed anymore
+#
 # - V87 (Johannes)
 #   - quick update to delete all old backups. Only keep latest one
 #
@@ -569,11 +574,11 @@ if [ "$FAST" == "0" ]; then
   fi
 
   if [ "$ID" == "opensuse" ]; then
-    outlog "Updating your openSUSE Operating System will now be done. SKIPPED FOR NOW"
-    #[ "$distversion" = "Tumbleweed" ] run 'zypper --non-interactive dup --no-recommends'
-    #[ "$distversion" = "Leap" ] run 'zypper --non-interactive up --no-recommends'
+    outlog "Updating your openSUSE Operating System will now be done."
+    [ "$distversion" = "Tumbleweed" ] && run 'zypper --non-interactive dup --no-recommends'
+    [ "$distversion" = "Leap" ] && run 'zypper --non-interactive up --no-recommends'
     outlog "Installing additional packages"
-    run 'zypper --non-interactive remove systemd-logger'
+    [ "$distversion" == "Leap" ] && run 'zypper --non-interactive remove systemd-logger'
     [ "$distversion" == "Tumbleweed" ] &&
       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
     [ "$distversion" == "Leap" ] &&
@@ -1307,7 +1312,12 @@ if [ -f /etc/network/iptables ]; then
   run "mv /etc/network/iptables /etc/network/iptables.${INSTDATE}"
 fi
 
-cat >/etc/network/iptables <<EOF
+if [ -f /etc/network/ruleset.nft ]; then
+  run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
+fi
+
+if [ "$distversion" != "Tumbleweed" ] ; then
+  cat >/etc/network/iptables <<EOF
 
 #
 # 
@@ -1323,51 +1333,51 @@ cat >/etc/network/iptables <<EOF
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
 EOF
 
-# allow pings from localnet
-echo "# allow ping from local network" >>/etc/network/iptables
-echo "-A INPUT -i $interface -s ${localnet} -p icmp -m icmp --icmp-type 8 -j ACCEPT" >>/etc/network/iptables
+  # allow pings from localnet
+  echo "# allow ping from local network" >>/etc/network/iptables
+  echo "-A INPUT -i $interface -s ${localnet} -p icmp -m icmp --icmp-type 8 -j ACCEPT" >>/etc/network/iptables
 
-# insert IPs and ports for which honeypot has to be disabled
-# as soon as possible
-if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ]; then
-  echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
-  for NOHONEYIP in ${NOHONEYIPS}; do
-    for NOHONEYPORT in ${NOHONEYPORTS}; do
-      echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >>/etc/network/iptables
+  # insert IPs and ports for which honeypot has to be disabled
+  # as soon as possible
+  if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ]; then
+    echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
+    for NOHONEYIP in ${NOHONEYIPS}; do
+      for NOHONEYPORT in ${NOHONEYPORTS}; do
+        echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >>/etc/network/iptables
+      done
+    done
+    echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
+  fi
+
+  # allow access to admin ports for local nets / IPs
+  echo "# START: allow access to admin ports for local IPs" >>/etc/network/iptables
+  for PORT in ${ADMINPORTS}; do
+    # first: local network
+    echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
+    # second: other IPs
+    for IP in ${CONIPS}; do
+      echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
     done
   done
-  echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
-fi
+  echo "# END: allow access to admin ports for local IPs" >>/etc/network/iptables
 
-# allow access to admin ports for local nets / IPs
-echo "# START: allow access to admin ports for local IPs" >>/etc/network/iptables
-for PORT in ${ADMINPORTS}; do
-  # first: local network
-  echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
-  # second: other IPs
-  for IP in ${CONIPS}; do
-    echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
-  done
-done
-echo "# END: allow access to admin ports for local IPs" >>/etc/network/iptables
+  # allow access to honeypot ports
+  if [ "${HONEYPORTS}" != "" ]; then
+    echo "# START: Ports honeypot should be enabled for" >>/etc/network/iptables
+    for HONEYPORT in ${HONEYPORTS}; do
+      echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >>/etc/network/iptables
+    done
+    echo "# END: Ports honeypot should be enabled for" >>/etc/network/iptables
+  fi
 
-# allow access to honeypot ports
-if [ "${HONEYPORTS}" != "" ]; then
-  echo "# START: Ports honeypot should be enabled for" >>/etc/network/iptables
-  for HONEYPORT in ${HONEYPORTS}; do
-    echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >>/etc/network/iptables
-  done
-  echo "# END: Ports honeypot should be enabled for" >>/etc/network/iptables
-fi
+  # create stuff for PREROUTING chain:
+  # - no logging for trusted nets -> skip rest of chain (4.)
+  #   (this means for trusted nets the redirects for
+  #    honeypot ports don't happen, but this shouldn't matter)
+  # - logging of all access attempts (1.)
+  # - redirect for honeypot ports (6.)
 
-# create stuff for PREROUTING chain:
-# - no logging for trusted nets -> skip rest of chain (4.)
-#   (this means for trusted nets the redirects for
-#    honeypot ports don't happen, but this shouldn't matter)
-# - logging of all access attempts (1.)
-# - redirect for honeypot ports (6.)
-
-cat >>/etc/network/iptables <<EOF
+  cat >>/etc/network/iptables <<EOF
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
@@ -1380,16 +1390,16 @@ COMMIT
 -A PREROUTING -i $interface -d 255.255.255.255 -j RETURN
 EOF
 
-# insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
-if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ]; then
-  echo "# START: IPs firewall logging should be disabled for" >>/etc/network/iptables
-  for NOFWLOG in ${NOFWLOGGING}; do
-    echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >>/etc/network/iptables
-  done
-  echo "# END: IPs firewall logging should be disabled for" >>/etc/network/iptables
-fi
+  # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
+  if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ]; then
+    echo "# START: IPs firewall logging should be disabled for" >>/etc/network/iptables
+    for NOFWLOG in ${NOFWLOGGING}; do
+      echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >>/etc/network/iptables
+    done
+    echo "# END: IPs firewall logging should be disabled for" >>/etc/network/iptables
+  fi
 
-cat >>/etc/network/iptables <<EOF
+  cat >>/etc/network/iptables <<EOF
 # log all traffic with original ports, but exclude traffic from unused/prive IPs.
 -N DSHIELDLOG
 -A DSHIELDLOG -s 10.0.0.0/8 -j RETURN
@@ -1409,29 +1419,137 @@ cat >>/etc/network/iptables <<EOF
 # redirect honeypot ports
 EOF
 
-echo "# - ssh ports" >>/etc/network/iptables
-for PORT in ${SSHREDIRECT}; do
-  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >>/etc/network/iptables
-done
+  echo "# - ssh ports" >>/etc/network/iptables
+  for PORT in ${SSHREDIRECT}; do
+    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >>/etc/network/iptables
+  done
 
-echo "# - telnet ports" >>/etc/network/iptables
-if [ "$telnet" != "no" ]; then   
-    for PORT in ${TELNETREDIRECT}; do
-	echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
+  echo "# - telnet ports" >>/etc/network/iptables
+  if [ "$telnet" != "no" ]; then   
+      for PORT in ${TELNETREDIRECT}; do
+	  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
+      done
+  fi
+
+  echo "# - web ports" >>/etc/network/iptables
+  for PORT in ${WEBREDIRECT}; do
+    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >>/etc/network/iptables
+  done
+
+  echo "COMMIT" >>/etc/network/iptables
+
+  run 'chmod 700 /etc/network/iptables'
+
+  dlog "/etc/network/iptables follows"
+  drun 'cat /etc/network/iptables'
+else #Tumbleweed ; maybe later also for Leap and other operating systems
+  cat > /etc/network/ruleset.nft <<EOF
+# NFT ruleset generated on $(date)
+add table ip filter
+add chain ip filter INPUT { type filter hook input priority 0; policy drop; }
+add chain ip filter FORWARD { type filter hook forward priority 0; policy drop; }
+add chain ip filter OUTPUT { type filter hook output priority 0; policy accept; }
+add rule ip filter INPUT iifname "lo" counter accept
+add rule ip filter INPUT iifname "${interface}" ct state related,established  counter accept
+EOF
+
+  # allow pings from localnet
+  echo "# allow ping from local network" >>/etc/network/ruleset.nft
+  echo "add rule ip filter INPUT iifname \"$interface\" ip saddr ${localnet} icmp type echo-request counter accept" >>/etc/network/ruleset.nft
+
+  # insert IPs and ports for which honeypot has to be disabled
+  # as soon as possible
+  if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ]; then
+    echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
+    for NOHONEYIP in ${NOHONEYIPS}; do
+      for NOHONEYPORT in ${NOHONEYPORTS}; do
+        echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${NOHONEYIP} tcp dport ${NOHONEYPORT} counter reject" >>/etc/network/ruleset.nft
+      done
     done
+    echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
+  fi
+
+  # allow access to admin ports for local nets / IPs
+  echo "# START: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
+  for PORT in ${ADMINPORTS}; do
+    # first: local network
+    echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${localnet} tcp dport ${PORT} counter accept" >>/etc/network/ruleset.nft
+    # second: other IPs
+    for IP in ${CONIPS}; do
+      echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${IP} tcp dport ${PORT} counter accept" >>/etc/network/ruleset.nft
+    done
+  done
+  echo "# END: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
+
+  # allow access to honeypot ports
+  if [ "${HONEYPORTS}" != "" ]; then
+    echo "# START: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
+    for HONEYPORT in ${HONEYPORTS}; do
+      echo "add rule ip filter INPUT iifname \"$interface\" tcp dport ${HONEYPORT} counter accept" >>/etc/network/ruleset.nft
+    done
+    echo "# END: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
+  fi
+
+  cat >> /etc/network/ruleset.nft <<EOF
+add table ip nat
+add chain ip nat PREROUTING { type nat hook prerouting priority -100; policy accept; }
+add chain ip nat INPUT { type nat hook input priority 100; policy accept; }
+add chain ip nat OUTPUT { type nat hook output priority -100; policy accept; }
+add chain ip nat POSTROUTING { type nat hook postrouting priority 100; policy accept; }
+add rule ip nat PREROUTING iifname "${interface}" pkttype multicast counter return
+add rule ip nat PREROUTING iifname "${interface}" ip daddr 255.255.255.255 counter return
+EOF
+
+  # insert to-be-ignored IPs just before the logging stuff so that traffic will be handled by default policy for chain
+
+  if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ]; then
+    echo "# START: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
+    for NOFWLOG in ${NOFWLOGGING}; do
+      echo "add rule ip nat PREROUTING iifname \"${interface}\" ip saddr ${NOFWLOG} counter return" >>/etc/network/ruleset.nft
+    done
+    echo "# END: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
+  fi
+
+  cat >> /etc/network/ruleset.nft <<EOF
+add chain ip nat DSHIELDLOG
+add rule ip nat DSHIELDLOG ip saddr 10.0.0.0/8 counter return
+add rule ip nat DSHIELDLOG ip saddr 100.64.0.0/10 counter return
+add rule ip nat DSHIELDLOG ip saddr 127.0.0.0/8 counter return
+add rule ip nat DSHIELDLOG ip saddr 169.254.0.0/16 counter return
+add rule ip nat DSHIELDLOG ip saddr 172.16.0.0/12 counter return
+add rule ip nat DSHIELDLOG ip saddr 192.0.0.0/24 counter return
+add rule ip nat DSHIELDLOG ip saddr 192.0.2.0/24 counter return
+add rule ip nat DSHIELDLOG ip saddr 192.168.0.0/16 counter return
+add rule ip nat DSHIELDLOG ip saddr 224.0.0.0/4 counter return
+add rule ip nat DSHIELDLOG ip saddr 240.0.0.0/4 counter return
+add rule ip nat DSHIELDLOG ip saddr 255.255.255.255 counter return
+add rule ip nat DSHIELDLOG counter log prefix " DSHIELDINPUT "
+add rule ip nat DSHIELDLOG counter return
+add rule ip nat PREROUTING iifname "$interface" ct state invalid,new  counter jump DSHIELDLOG
+EOF
+
+  echo "# - ssh ports" >>/etc/network/ruleset.nft
+  for PORT in ${SSHREDIRECT}; do
+    echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${SSHHONEYPORT}" >>/etc/network/ruleset.nft
+  done
+
+  echo "# - telnet ports" >>/etc/network/ruleset.nft
+  if [ "$telnet" != "no" ]; then   
+      for PORT in ${TELNETREDIRECT}; do
+	  echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${TELNETHONEYPORT}" >>/etc/network/ruleset.nft
+      done
+  fi
+
+  echo "# - web ports" >>/etc/network/ruleset.nft
+  for PORT in ${WEBREDIRECT}; do
+    echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${WEBHONEYPORT}" >>/etc/network/ruleset.nft
+  done
+
+  run 'chmod 700 /etc/network/ruleset.nft'
+
+  dlog "/etc/network/ruleset.nft follows"
+  drun 'cat /etc/network/ruleset.nft'
 fi
-
-echo "# - web ports" >>/etc/network/iptables
-for PORT in ${WEBREDIRECT}; do
-  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >>/etc/network/iptables
-done
-
-echo "COMMIT" >>/etc/network/iptables
-
-run 'chmod 700 /etc/network/iptables'
-
-dlog "/etc/network/iptables follows"
-drun 'cat /etc/network/iptables'
 
 if [ "$ID" != "opensuse" ]; then
   dlog "Copying /etc/network/if-pre-up.d"
@@ -1452,12 +1570,21 @@ if [ "$ID" != "opensuse" ]; then
     run 'systemctl enable iptables.service'
   fi
 else # openSUSE stuff
-  dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshieldfirewall*.service"
-  do_copy $progdir/../etc/network/iptables-init /etc/network/iptables-init 600
-  do_copy $progdir/../etc/network/iptables-stop /etc/network/iptables-stop 600
-  do_copy $progdir/../lib/systemd/system/dshieldfirewall_init.service /usr/lib/systemd/system/dshieldfirewall_init.service 644
-  do_copy $progdir/../lib/systemd/system/dshieldfirewall.service /usr/lib/systemd/system/dshieldfirewall.service 644
-  run 'systemctl enable dshieldfirewall.service'
+  if [ "$distversion" == "Leap" ] ; then
+    dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshieldfirewall*.service"
+    do_copy $progdir/../etc/network/iptables-init /etc/network/iptables-init 600
+    do_copy $progdir/../etc/network/iptables-stop /etc/network/iptables-stop 600
+    do_copy $progdir/../lib/systemd/system/dshieldfirewall_init.service /usr/lib/systemd/system/dshieldfirewall_init.service 644
+    do_copy $progdir/../lib/systemd/system/dshieldfirewall.service /usr/lib/systemd/system/dshieldfirewall.service 644
+    run 'systemctl enable dshieldfirewall.service'
+  else # Tumbleweed
+    dlog "Copying /etc/network/ruleset-init.nft, /etc/network/ruleset-stop.nft, /usr/lib/systemd/system/dshieldnft*.service"
+    do_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
+    do_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
+    do_copy $progdir/../lib/systemd/system/dshieldnft_init.service /usr/lib/systemd/system/dshieldnft_init.service 644
+    do_copy $progdir/../lib/systemd/system/dshieldnft.service /usr/lib/systemd/system/dshieldnft.service 644
+    run 'systemctl enable dshieldnft.service'
+  fi
   run "systemctl daemon-reload"
 fi
 

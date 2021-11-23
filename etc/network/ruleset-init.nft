@@ -1,0 +1,15 @@
+# Translated by iptables-restore-translate v1.8.7 on Sat Nov 13 18:03:15 2021
+add table ip filter
+add chain ip filter INPUT { type filter hook input priority 0; policy drop; }
+add chain ip filter FORWARD { type filter hook forward priority 0; policy drop; }
+add chain ip filter OUTPUT { type filter hook output priority 0; policy accept; }
+add chain ip filter reject_func
+add rule ip filter INPUT iifname "lo" counter accept
+add rule ip filter INPUT ct state established counter accept
+add rule ip filter INPUT ip protocol icmp ct state related counter accept
+add rule ip filter INPUT udp dport 5353 pkttype multicast counter accept
+add rule ip filter OUTPUT oifname "lo" counter accept
+add rule ip filter reject_func ip protocol tcp counter reject with tcp reset
+add rule ip filter reject_func ip protocol udp counter reject
+add rule ip filter reject_func counter reject with icmp type prot-unreachable
+# Completed on Sat Nov 13 18:03:15 2021
