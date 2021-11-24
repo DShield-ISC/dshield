@@ -21,9 +21,10 @@ readonly myversion=87
 # Major Changes (for details see Github):
 #
 # - V88 (Freek)
-#   - use of iptables replaced by nftables (at least in openSUSE Tumbleweed)
-#     iptables indicated as obsolete; left to be implemented by others in other OSes
+#   - use of iptables replaced by nftables (at least for openSUSE)
+#     iptables has been indicated as obsolete; left to be implemented by others in other OSes
 #   - remove of systemd-logger in Tumbleweed not needed anymore
+#   - Tumbleweed added a kernel source to the firewall log; patch in DSield.py
 #
 # - V87 (Johannes)
 #   - quick update to delete all old backups. Only keep latest one
@@ -516,7 +517,7 @@ if [ "$FAST" == "0" ]; then
 
   dlog "making sure default password was changed"
 
-  if [ "$ID" == "openSUSE" ]; then
+  if [ "$ID" == "opensuse" ]; then
     if $progdir/passwordtest-opensuse.pl | grep -q 1; then
       outlog "You have not yet changed the default password for the 'root' user"
       outlog "Change it NOW ..."
@@ -581,8 +582,6 @@ if [ "$FAST" == "0" ]; then
     [ "$distversion" == "Leap" ] && run 'zypper --non-interactive remove systemd-logger'
     [ "$distversion" == "Tumbleweed" ] &&
       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
-    [ "$distversion" == "Leap" ] &&
-      run 'zypper --non-interactive remove libressl-devel'
     [ "$distversion" == "Leap" ] &&
       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
     run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
@@ -1316,7 +1315,7 @@ if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
-if [ "$distversion" != "Tumbleweed" ] ; then
+if [ "$ID" != "opensuse" ] ; then
   cat >/etc/network/iptables <<EOF
 
 #
@@ -1442,7 +1441,9 @@ EOF
 
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
-else #Tumbleweed ; maybe later also for Leap and other operating systems
+
+else # openSUSE ; maybe later also for other operating systems
+
   cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
 add table ip filter
@@ -1570,21 +1571,12 @@ if [ "$ID" != "opensuse" ]; then
     run 'systemctl enable iptables.service'
   fi
 else # openSUSE stuff
-  if [ "$distversion" == "Leap" ] ; then
-    dlog "Copying /etc/network/iptables-init, /etc/network/iptables-stop, /usr/lib/systemd/system/dshieldfirewall*.service"
-    do_copy $progdir/../etc/network/iptables-init /etc/network/iptables-init 600
-    do_copy $progdir/../etc/network/iptables-stop /etc/network/iptables-stop 600
-    do_copy $progdir/../lib/systemd/system/dshieldfirewall_init.service /usr/lib/systemd/system/dshieldfirewall_init.service 644
-    do_copy $progdir/../lib/systemd/system/dshieldfirewall.service /usr/lib/systemd/system/dshieldfirewall.service 644
-    run 'systemctl enable dshieldfirewall.service'
-  else # Tumbleweed
-    dlog "Copying /etc/network/ruleset-init.nft, /etc/network/ruleset-stop.nft, /usr/lib/systemd/system/dshieldnft*.service"
-    do_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
-    do_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
-    do_copy $progdir/../lib/systemd/system/dshieldnft_init.service /usr/lib/systemd/system/dshieldnft_init.service 644
-    do_copy $progdir/../lib/systemd/system/dshieldnft.service /usr/lib/systemd/system/dshieldnft.service 644
-    run 'systemctl enable dshieldnft.service'
-  fi
+  dlog "Copying /etc/network/ruleset-init.nft, /etc/network/ruleset-stop.nft, /usr/lib/systemd/system/dshieldnft*.service"
+  do_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
+  do_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
+  do_copy $progdir/../lib/systemd/system/dshieldnft_init.service /usr/lib/systemd/system/dshieldnft_init.service 644
+  do_copy $progdir/../lib/systemd/system/dshieldnft.service /usr/lib/systemd/system/dshieldnft.service 644
+  run 'systemctl enable dshieldnft.service'
   run "systemctl daemon-reload"
 fi
 
@@ -1640,6 +1632,8 @@ do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
+[ "$ID" = "opensuse" -a "$distversion" = "Tumbleweed" ] &&
+  run "patch ${DSHIELDDIR}DShield.py $progdir/../srv/dshield/DShield.patch"
 
 # check: automatic updates allowed?
 
@@ -1932,7 +1926,7 @@ do_copy $progdir/../srv/www ${WEBDIR}/../
 do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
 run "systemctl daemon-reload"
 run "systemctl enable webpy.service"
-[ "$ID" != "openSUSE" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
+[ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
 # change ownership for web databases to cowrie as we will run the
 # web honeypot as cowrie
@@ -2084,6 +2078,7 @@ if [ ! -f ../etc/CA/ca.serial ]; then
   echo 01 >../etc/CA/ca.serial
 fi
 drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
+dlog "Exit code not zero is possible, is expected in first run"
 if [ $(ls ../etc/CA/certs/*.crt 2>/dev/null | wc -l) -gt 0 ]; then
   if [ "$INTERACTIVE" == 1 ]; then
     dlog "CERTs may already be there, asking user"
