@@ -586,7 +586,8 @@ if [ "$FAST" == "0" ]; then
       run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
     run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
     run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
-    run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip logrotate'
+    run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip'
+    run 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
     run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
     [ "$distversion" == "Tumbleweed" ] &&
       run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
@@ -1571,6 +1572,12 @@ if [ "$ID" != "opensuse" ]; then
     run 'systemctl enable iptables.service'
   fi
 else # openSUSE stuff
+  if [ -e /etc/network/iptables ] ; then
+    # when (automatic) upgrading this system, a previous version may use iptables, which should be disabled and removed
+    [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && systemctl disable dshieldiptables.services
+    rm /etc/network/iptables*
+    rm /usr/lib/systemd/system/dshieldiptables*
+  fi
   dlog "Copying /etc/network/ruleset-init.nft, /etc/network/ruleset-stop.nft, /usr/lib/systemd/system/dshieldnft*.service"
   do_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
   do_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
@@ -1633,7 +1640,7 @@ do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
 [ "$ID" = "opensuse" -a "$distversion" = "Tumbleweed" ] &&
-  run "patch ${DSHIELDDIR}DShield.py $progdir/../srv/dshield/DShield.patch"
+  run "patch ${DSHIELDDIR}/DShield.py $progdir/../srv/dshield/DShield.patch"
 
 # check: automatic updates allowed?
 

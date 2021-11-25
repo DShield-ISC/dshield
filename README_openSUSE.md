@@ -14,7 +14,7 @@ Current design goals and prerequisites for using the automated installation proc
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is tested on Raspberry Pi OS, Ubuntu 20.04 LTS Server and on openSUSE Leap 15.2 and Tumbleweed,
+The current version is tested on Raspberry Pi OS, Ubuntu 20.04 LTS Server and on openSUSE Leap 15.3 and Tumbleweed,
 not on other distros, sorry.
 If there is the need for other distros, "someone" has to check and maintain the installation script.
 
@@ -37,7 +37,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - you may use the command *yast language* to set your language as the default language, the layout of the keyboard and the timezone.
-- The first thing the install script will update the system.  
+- The first thing the install script will do is update the system.  
     - For Leap 15.3 it uses:  
 
         *zypper up --no-recommends*  
@@ -56,7 +56,9 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
     
 - get GIT repository  
 
-    <em>git clone <span>https</span>://github.com/DShield-ISC/dshield.git<em>  
+    <em>git clone <span>https</span>://github.com/Dshield-ISC/dshield.git<em>
+
+– in case you do a reinstall of a previous system, you should have saved the files `/etc/dshield.ini` and `/etc/dshield.sslca`, copy these files in the same locations; when you run the installation script answers are filled in and you only need to acknowledge the questions
     
 - run the installation script  
 
@@ -81,7 +83,8 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 This script will:
 
 - disable IPv6 on the Pi
-- enable firewall logging and submitting of logs to DShield
+- enable firewall logging and submitting of logs to Dshield
+– openSUSE, from version 88 on, will use nftables instead of the depricated iptables
 - change your ssh server to listen on port 12222 for you as administator (access only from configurable IP addresses)
 - install the ssh honeypot cowrie (for ssh and telnet)
 - install honeypot web server
