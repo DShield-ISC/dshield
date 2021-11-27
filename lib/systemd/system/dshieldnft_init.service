@@ -1,0 +1,19 @@
+[Unit]
+Description=Dshield nft phase 1
+Before=network.service
+DefaultDependencies=false
+Requires=sysinit.target
+After=sysinit.target
+RequiresMountsFor=/dev/shm
+Conflicts=firewalld.service
+Conflicts=dshieldfirewall.service
+
+[Service]
+ExecStart=/usr/sbin/nft -f /etc/network/ruleset-init.nft
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+Also=dshieldnft.service
+
