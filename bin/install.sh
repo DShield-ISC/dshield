@@ -440,6 +440,11 @@ if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "9" ]; then
   distversion=r9
 fi
 
+if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "11" ]; then
+  dist='apt'
+  distversion=r11
+fi
+
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ]; then
   dist='apt'
   distversion=r8
@@ -563,7 +568,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -581,6 +586,7 @@ if [ "$FAST" == "0" ]; then
     run 'yum -q update -y'
     outlog "Installing additional packages"
     run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
+    outlog "The new script /srv/dshield/webpy.sh needs lsof; it might need to be added here to be installed."
   fi
 
   if [ "$ID" == "opensuse" ]; then
@@ -1331,6 +1337,7 @@ use_iptables=True
 case $ID in
   "opensuse" ) use_iptables=False;;
   "raspbian" ) [ "$VERSION_ID" = "11" ] && use_iptables=False;;
+  "debian"   ) [ "$VERSION_ID" = "11" ] && use_iptables=False;;
   *          ) ;;
 esac
 
@@ -1654,6 +1661,7 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
@@ -1683,12 +1691,7 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-if [ "$ID" != "opensuse" ]; then
-  echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >/etc/cron.d/dshield
-else
-  do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
-  echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" >/etc/cron.d/dshield
-fi
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" >/etc/cron.d/dshield
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)

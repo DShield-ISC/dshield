@@ -7,6 +7,7 @@ During the install of the honeypot, a ```/etc/cron.d/dshield``` is created with 
 ### weblog submit
 
 The weblogsubmit.py script is run twice an hour (the times are randomly set during install, but 30 minutes from each other). This script will read logs from the sqlite database (/srv/www/DB/webserver.sqlite) and submit them to DShield via HTTPs
+Also the webpy.sh script is run at the same time, it checks the status of the webpy service. If certain condition are found, this service will be restarted. It may be enough to exclude the reboot mentioned lower in this text. It needs lsof to be installed, which is done for systems using apt and zypper.
 
 ### firewall logs parser
 
@@ -18,5 +19,6 @@ If the user selected automatic updates, the update.sh script runs once a day at 
 
 ### reboot
 
-The honeypot reboots once a day (again: at a random time set during install). This is a hopefully temporary fix to solve some stability issues in web.py the hard way
+The honeypot reboots once a day (again: at a random time set during install). This is a hopefully temporary fix to solve some stability issues in web.py the hard way.
+See above, try to comment this out and watch the status of the systemd webpy service.
 
