@@ -199,12 +199,16 @@ TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/dshield.conf"
 TESTS['dshieldconf']=$?
 IPTABLES=/usr/sbin/iptables
+NFT=/usr/sbin/nft
 if [ -f /sbin/iptables ]; then
     IPTABLES=/sbin/iptables
 fi
 
-if $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT; then
-  echo "${GREEN}OK${NC}: firewall rules"
+if [ -f $IPTABLES ] && [ $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT ] ; then
+  echo "${GREEN}OK${NC}: ip-firewall rules"
+  TESTS['fw']=1
+elif $NFT list ruleset | grep -q DSHIELDINPUT; then
+  echo "${GREEN}OK${NC}: nf-firewall rules"
   TESTS['fw']=1
 else
   echo "${RED}MISSING${NC}: firewall rules"

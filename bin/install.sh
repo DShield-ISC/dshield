@@ -20,6 +20,10 @@ readonly myversion=87
 #
 # Major Changes (for details see Github):
 #
+# - V89 (Freek)
+#   - removed progdir from dshield.ini (not really needed there)
+#   - added support for raspios bullseye (both armhf and arm64) which also use nftables
+#
 # - V88 (Freek)
 #   - use of iptables replaced by nftables (at least for openSUSE)
 #     iptables has been indicated as obsolete; left to be implemented by others in other OSes
@@ -449,6 +453,11 @@ fi
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ]; then
   dist='apt'
   distversion=r10
+fi
+
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "11" ]; then
+  dist='apt'
+  distversion=r11
 fi
 
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ]; then
@@ -1316,7 +1325,16 @@ if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
-if [ "$ID" != "opensuse" ] ; then
+# Further conditions can be inserted below whether iptables of nftables should be used
+
+use_iptables=True
+case $ID in
+  "opensuse" ) use_iptables=False;;
+  "raspbian" ) [ "$VERSION_ID" = "11" ] && use_iptables=False;;
+  *          ) ;;
+esac
+
+if [ "$use_iptables" = "True" ] ; then
   cat >/etc/network/iptables <<EOF
 
 #
@@ -1443,7 +1461,7 @@ EOF
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
 
-else # openSUSE ; maybe later also for other operating systems
+else # use_iptables = False -> use nftables
 
   cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
@@ -1553,7 +1571,7 @@ EOF
   drun 'cat /etc/network/ruleset.nft'
 fi
 
-if [ "$ID" != "opensuse" ]; then
+if [ "$use_iptables" = "True" ]; then
   dlog "Copying /etc/network/if-pre-up.d"
 
   do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
@@ -1571,7 +1589,7 @@ if [ "$ID" != "opensuse" ]; then
     run 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
     run 'systemctl enable iptables.service'
   fi
-else # openSUSE stuff
+else #  use nftables
   if [ -e /etc/network/iptables ] ; then
     # when (automatic) upgrading this system, a previous version may use iptables, which should be disabled and removed
     [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && systemctl disable dshieldiptables.services
@@ -1729,7 +1747,6 @@ nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
-run 'echo "progdir=$progdir" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
