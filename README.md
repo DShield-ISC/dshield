@@ -80,7 +80,7 @@ sudo apt-get -y install git
 ```
 git clone https://github.com/DShield-ISC/dshield.git
 ```
-- run the installation script
+- run the installation script, in case you do have an earlier system, copy the files `/etc/dshield.ini` and `/etc/dshield.sslca` from that system to `/etc`; you will be able to reuse the data entered for that system.
 ```
 cd dshield/bin
 sudo ./install.sh

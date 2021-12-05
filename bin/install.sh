@@ -20,6 +20,10 @@ readonly myversion=87
 #
 # Major Changes (for details see Github):
 #
+# - V89 (Freek)
+#   - removed progdir from dshield.ini (not really needed there)
+#   - added support for raspios bullseye (both armhf and arm64) which also use nftables
+#
 # - V88 (Freek)
 #   - use of iptables replaced by nftables (at least for openSUSE)
 #     iptables has been indicated as obsolete; left to be implemented by others in other OSes
@@ -436,6 +440,11 @@ if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "9" ]; then
   distversion=r9
 fi
 
+if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "11" ]; then
+  dist='apt'
+  distversion=r11
+fi
+
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ]; then
   dist='apt'
   distversion=r8
@@ -449,6 +458,11 @@ fi
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "10" ]; then
   dist='apt'
   distversion=r10
+fi
+
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "11" ]; then
+  dist='apt'
+  distversion=r11
 fi
 
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ]; then
@@ -554,7 +568,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -572,6 +586,7 @@ if [ "$FAST" == "0" ]; then
     run 'yum -q update -y'
     outlog "Installing additional packages"
     run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
+    outlog "The new script /srv/dshield/webpy.sh needs lsof; it might need to be added here to be installed."
   fi
 
   if [ "$ID" == "opensuse" ]; then
@@ -1316,7 +1331,17 @@ if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
-if [ "$ID" != "opensuse" ] ; then
+# Further conditions can be inserted below whether iptables of nftables should be used
+
+use_iptables=True
+case $ID in
+  "opensuse" ) use_iptables=False;;
+  "raspbian" ) [ "$VERSION_ID" = "11" ] && use_iptables=False;;
+  "debian"   ) [ "$VERSION_ID" = "11" ] && use_iptables=False;;
+  *          ) ;;
+esac
+
+if [ "$use_iptables" = "True" ] ; then
   cat >/etc/network/iptables <<EOF
 
 #
@@ -1443,7 +1468,7 @@ EOF
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
 
-else # openSUSE ; maybe later also for other operating systems
+else # use_iptables = False -> use nftables
 
   cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
@@ -1553,7 +1578,7 @@ EOF
   drun 'cat /etc/network/ruleset.nft'
 fi
 
-if [ "$ID" != "opensuse" ]; then
+if [ "$use_iptables" = "True" ]; then
   dlog "Copying /etc/network/if-pre-up.d"
 
   do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
@@ -1571,7 +1596,7 @@ if [ "$ID" != "opensuse" ]; then
     run 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
     run 'systemctl enable iptables.service'
   fi
-else # openSUSE stuff
+else #  use nftables
   if [ -e /etc/network/iptables ] ; then
     # when (automatic) upgrading this system, a previous version may use iptables, which should be disabled and removed
     [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && systemctl disable dshieldiptables.services
@@ -1636,6 +1661,7 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
+do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
@@ -1665,12 +1691,7 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-if [ "$ID" != "opensuse" ]; then
-  echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py" >/etc/cron.d/dshield
-else
-  do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
-  echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" >/etc/cron.d/dshield
-fi
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" >/etc/cron.d/dshield
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
@@ -1729,7 +1750,6 @@ nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
-run 'echo "progdir=$progdir" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
