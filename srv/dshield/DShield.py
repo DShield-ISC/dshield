@@ -68,7 +68,7 @@ class DshieldSubmit:
             if r.status_code != 200:
                 self.log('received status code %d in response' % r.status_code)
             else:
-                self.log('sent %d bytes to %s' % (sys.getsizeof(mydata),self.url))
+                self.log('sent %d bytes to %s' % (sys.getsizeof(mydata)+sys.getsizeof(mydata['logs']),self.url))
                 if self.localcopy != '' :
                     f = open(self.localcopy,'a')
                     now = datetime.now()                    
