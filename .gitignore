@@ -20,3 +20,4 @@ etc/CA/ca.serial
 etc/CA/index.txt.attr
 etc/CA/index.txt
 etc/dshield.ini
+srv/dshield/lastweblogtime.txt
