@@ -204,7 +204,7 @@ if [ -f /sbin/iptables ]; then
     IPTABLES=/sbin/iptables
 fi
 
-if [ -f $IPTABLES ] && [ $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT ] ; then
+if [ -f $IPTABLES ] && $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT ; then
   echo "${GREEN}OK${NC}: ip-firewall rules"
   TESTS['fw']=1
 elif $NFT list ruleset | grep -q DSHIELDINPUT; then
