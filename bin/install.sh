@@ -20,6 +20,12 @@ readonly myversion=89
 #
 # Major Changes (for details see Github):
 #
+# - V90 (Freek)
+#   - repair definition of TERM
+#   - improve coding in status.sh
+#   - insert sleep 10 in cron.d/dshield before call of /srv/dshield/webpy.sh
+#   - do not copy file to /etc/cron.hourly/dshield (done in /etc/cron.d/dshield with ./update.sh --cron)
+#
 # - V89 (Freek)
 #   - removed progdir from dshield.ini (not really needed there)
 #   - added support for raspios bullseye (both armhf and arm64) which also use nftables
@@ -190,7 +196,7 @@ readonly myversion=89
 #
 #
 
-TERM = vt100
+TERM=vt100
 
 INTERACTIVE=1
 FAST=0
@@ -1691,7 +1697,7 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; ./webpy.sh" >/etc/cron.d/dshield
+echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; sleep 10; ./webpy.sh" >/etc/cron.d/dshield
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
@@ -1967,7 +1973,7 @@ run "chown cowrie ${WEBDIR}/DB/*"
 
 dlog "copying further system files"
 
-do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
+# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
 # do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
 # do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
 
