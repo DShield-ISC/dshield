@@ -204,15 +204,23 @@ if [ -f /sbin/iptables ]; then
     IPTABLES=/sbin/iptables
 fi
 
-if [ -f $IPTABLES ] && $IPTABLES -L -n -t nat | grep -q DSHIELDINPUT ; then
-  echo "${GREEN}OK${NC}: ip-firewall rules"
-  TESTS['fw']=1
-elif $NFT list ruleset | grep -q DSHIELDINPUT; then
-  echo "${GREEN}OK${NC}: nf-firewall rules"
-  TESTS['fw']=1
-else
-  echo "${RED}MISSING${NC}: firewall rules"
-  TESTS['fw']=0
+TESTS['fw']=0
+if [ -f $IPTABLES ] ; then
+    $IPTABLES -L -n -t nat 2>/dev/null | grep -q DSHIELDINPUT
+    if [ $? -eq 0 ] ; then
+       echo "${GREEN}OK${NC}: ip-firewall rules"
+       TESTS['fw']=1
+    fi
+fi
+if [ -f $NFT ] ; then
+    $NFT list ruleset 2>/dev/null | grep -q DSHIELDINPUT
+        if [ $? -eq 0 ] ; then
+            echo "${GREEN}OK${NC}: nf-firewall rules"
+            TESTS['fw']=1
+        fi
+fi
+if [ ${TESTS['fw']} -eq 0 ] ; then
+    echo "${RED}MISSING${NC}: firewall rules"
 fi
 port=$(curl -s 'https://isc.sans.edu/api/portcheck?json' | jq .port80 | tr -d '"')
 if [[ "$port" == "open" ]]; then
