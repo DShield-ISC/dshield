@@ -15,5 +15,10 @@ elif [ "${lastline:8:16}" = "OperationalError" ] ; then
   # echo "webpy restarted"
   exit 0
 fi
-lsof -p $(pidof python3) | grep 5u | grep -q ESTABLISHED
-[ $? -eq 0 ] && systemctl restart webpy && echo "webpy restarted; 5u ESTAB "
+if [ -f /srv/www/wwwpy.pid ]; then
+    pid=$(head -1 /srv/www/wwwpy.pid)
+    lsof -p $pid | grep 5u | grep -q ESTABLISHED
+    [ $? -eq 0 ] && systemctl restart webpy && echo "webpy restarted; 5u ESTAB "
+else
+    systemctl start webpy
+fi
