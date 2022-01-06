@@ -230,6 +230,11 @@ else
   echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
+voltagecount=$(grep -c 'Voltage normalised' /var/log/messages)
+if [ $voltagecount -gt 10 ]; then
+    echo "${RED}ERROR${NC}: Your Raspberry Pi's power supply may be too weak."
+    TESTS['voltage']=$voltagecount
+fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
 data="[ {\"version\": $version }"
