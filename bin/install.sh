@@ -13,12 +13,17 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2021/03/01 02
+# version 2022/01/05 01
 
-readonly myversion=89
+readonly myversion=91
 
 #
 # Major Changes (for details see Github):
+#
+#
+# - V91 (Johannes)
+#   - upgraded cowrie
+#   - added pid file for web.py for simpler restart /fixing webpy.sh
 #
 # - V90 (Freek)
 #   - repair definition of TERM
