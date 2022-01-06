@@ -354,6 +354,20 @@ class myhandler(BaseHTTPRequestHandler):
         return False, "Unexpected End of data."
 
 if __name__ == "__main__":
+    # check if pid file exists
+    pidfile = '/srv/www/wwwpy.pid'
+    if os.path.exists(pidfile):
+      with open(pidfile,'r') as f:
+        pid = f.read()
+        pid = pid.strip()
+        if os.path.exists('/proc/'+pid):
+          sys.exit('web.py appears to be already running')
+        else:
+          print(f"stale lockfile for pid {pid}. Will overwrite.")
+    # setup a pid file
+    pid = os.getpid()
+    with open(pidfile,'w') as f:
+      f.write(pid)
     try:
         # Create a web server, DB and define the handler to manage the
         # incoming request
@@ -364,6 +378,7 @@ if __name__ == "__main__":
           server = HTTPServer(('', PORT_NUMBER), myhandler)
         except OSError as e:
             print("Something is already listening on port %s" % (PORT_NUMBER,))
+            os.remove(pidfile)
             sys.exit()
         server.serve_forever()
         if _USE_SSL:
@@ -374,6 +389,6 @@ if __name__ == "__main__":
         print('Started httpserver on port ', PORT_NUMBER)
         # Wait forever for incoming http requests
         server.serve_forever()
-
     except KeyboardInterrupt:
         print('^C received, shutting down the web server')
+    os.remove(pidfile)
