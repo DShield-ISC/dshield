@@ -355,7 +355,7 @@ class myhandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     # check if pid file exists
-    pidfile = '/srv/www/wwwpy.pid'
+    pidfile = '/tmp/wwwpy.pid'
     if os.path.exists(pidfile):
       with open(pidfile,'r') as f:
         pid = f.read()
