@@ -360,14 +360,14 @@ if __name__ == "__main__":
       with open(pidfile,'r') as f:
         pid = f.read()
         pid = pid.strip()
-        if os.path.exists('/proc/'+pid):
+        if pid != '' and os.path.exists('/proc/'+pid):
           sys.exit('web.py appears to be already running')
         else:
           print(f"stale lockfile for pid {pid}. Will overwrite.")
     # setup a pid file
     pid = os.getpid()
     with open(pidfile,'w') as f:
-      f.write(pid)
+      f.write(str(pid))
     try:
         # Create a web server, DB and define the handler to manage the
         # incoming request
