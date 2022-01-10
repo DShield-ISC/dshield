@@ -1838,10 +1838,11 @@ fi
 
 
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d $TMPDIR/cowrie ]; then
-  run "mv $TMPDIR/cowrie ${COWRIEDIR}"
+if [ -d $TMPDIR/cowrie-master ]; then
+  run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
+  run "mv ${COWRIEDIR}/cowrie-master ${COWRIEDIR}/cowrie"
 else
-  outlog "$TMPDIR/cowrie not found"
+  outlog "$TMPDIR/cowrie-master not found"
   exit 9
 fi
 
