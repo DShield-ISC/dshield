@@ -1842,8 +1842,13 @@ if [ -d $TMPDIR/cowrie ]; then
   run "mv $TMPDIR/cowrie ${COWRIEDIR}"
   run "mv ${COWRIEDIR}/cowrie ${COWRIEDIR}/cowrie"
 else
-  outlog "$TMPDIR/cowrie not found"
-  exit 9
+    if [ -d $TMPDIR/cowrie-master ]; then
+	run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
+	run "mv ${COWRIEDIR}/cowrie-master ${COWRIEDIR}/cowrie"
+    else
+	outlog "$TMPDIR/cowrie / cowrie-master not found"
+	exit 9
+    fi
 fi
 
 # step 4 (Setup Virtual Environment)
