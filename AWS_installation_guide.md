@@ -10,7 +10,7 @@ Use the following guide to deploy DShield honeypot using the free compute tier (
 
 
 3. **Select "free tier eligible" and search for Ubuntu images, select version 18.04. *Please be advised that current installer build does not work on Ubuntu 20.04:**
-![OS Selection](https://github.com/parthdmaniar/images/blob/master/2_OS_Selection.png)
+![OS Selection](https://github.com/dlee35/images/blob/main/dshield/2_OS_Selection.png)
 
 4. **Choose a general-purpose t2.micro instance along with storage size of your preference:**
 ![instance_selection](https://github.com/parthdmaniar/images/blob/master/4_ec2_instance_selection.png)
