@@ -657,7 +657,7 @@ if [ "$INTERACTIVE" == 1 ]; then
 
   dlog "Privacy Notice"
   dialog --title '### PRIVACY NOTICE ###' --colors --yesno "By running this honeypot, you agree to participate in our research project. This honeypot will report firewall logs, connections to various services (e.g. ssh, telnet, web) to DShield. The honeypot will also report errors and the status of its configuration to DShield. Your ability to remove this data is limited after it has been submitted. For details, see privacy.md ." 0 0
-  respone=$?
+  response=$?
   case $response in
   ${DIALOG_CANCEL})
     clear
@@ -2209,7 +2209,7 @@ outlog "### Thank you for supporting the ISC and dshield! ###"
 outlog
 outlog "To check if all is working right:"
 outlog "   Run the script 'status.sh' (but reboot first!)"
-outlog "   or check https://isc.sans.edu/myreports.sh (after logging in)"
+outlog "   or check https://isc.sans.edu/myreports.html (after logging in)"
 outlog
 outlog " for help, check our slack channel: https://isc.sans.edu/slack "
 outlog
