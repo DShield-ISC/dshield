@@ -20,3 +20,7 @@ etc/CA/ca.serial
 etc/CA/index.txt.attr
 etc/CA/index.txt
 etc/dshield.ini
+*.tfstate
+*.tfstate.backup
+*.tfvars
+**/.terraform
