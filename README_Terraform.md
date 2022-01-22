@@ -1,7 +1,7 @@
 ### For instructions on how to install `terraform`, please consult the following: [HashiCorp Terraform Installation](https://learn.hashicorp.com/tutorials/terraform/install-cli)  
 
 ### Clone this repository:
-`git clone https://github.com/dlee35/dshield`
+`git clone https://github.com/DShield-ISC/dshield`
 
 ### Change into the automation directory:
 `cd dshield/terraform/`
