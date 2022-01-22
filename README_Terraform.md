@@ -1,5 +1,9 @@
 ### For instructions on how to install `terraform`, please consult the following: [HashiCorp Terraform Installation](https://learn.hashicorp.com/tutorials/terraform/install-cli)  
 
+### Install `git` if not part of the default OS packages:
+`sudo <OS package manager here> install git`  
+(_could be apt, yum, dpkg, etc._)
+
 ### Clone this repository:
 `git clone https://github.com/DShield-ISC/dshield`
 
