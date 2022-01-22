@@ -29,7 +29,7 @@
 - **dshield_ca_company** (default: `DShield`)
 - **dshield_ca_depart** (default: `Decoy`)
 
-### General assumptions (**please update to reflect the appropriate locations as reflected above**):
+### General assumptions (**please update to reflect the appropriate locations as denoted above**):
 - AWS credentials are contained in the default location: 
   - `~/.aws/credentials`
 
