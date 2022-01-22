@@ -1,3 +1,22 @@
+terraform {
+  required_providers {
+    aws = {
+      version = "~> 3.73.0"
+    }
+    http = {
+      version = ">= 2.1.0"
+    }
+    null = {
+      version = ">= 3.1.0"
+    }
+    template = {
+      version = ">= 2.2.0"
+    }
+  }
+
+  required_version = "~> 1.1.4"
+}
+
 provider "aws" {
   shared_credentials_file = var.aws_credentials
   region                  = var.aws_region
