@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  sans-isc-agent:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- python main.py
+    volumes:
+      - .:/opt/sans-isc-agent
+    ports:
+      - 80:80
+      - 8000:8000
+      - 8080:8080
