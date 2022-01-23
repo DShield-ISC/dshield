@@ -10,7 +10,7 @@ class HealthCheck(resource.Resource):
     def render_GET(self, request: Request):
         self.numberRequests += 1
         request.setHeader(b"content-type", b"text/plain")
-        content = u"I am request #{}\n".format(self.numberRequests)
+        content = f"I am request #{self.numberRequests}\n"
         return content.encode("ascii")
 
 
