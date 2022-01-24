@@ -1,0 +1,28 @@
+[MASTER]
+
+
+ignore-patterns=.*tests.py,.*sql.py,test_settings.py
+ignore=tests,migrations,seeds,scripts
+ignored-argument-names=_|args|kwargs
+disable=missing-docstring,
+        too-few-public-methods,
+        no-self-use,
+        no-member,
+        too-many-ancestors,
+        fixme,
+        abstract-method,
+        invalid-name,
+        inconsistent-return-statements,
+        wrong-import-order,
+        trailing-comma-tuple,
+        not-callable,
+        try-except-raise,
+        raise-missing-from,
+        R0801,
+        duplicate-code,
+        broad-except,
+        unspecified-encoding,
+        too-many-locals
+max-line-length=120
+output-format=colorized
+reports=no
