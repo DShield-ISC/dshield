@@ -23,6 +23,7 @@
 - **aws_credentials**
 
 ### Optional variables:
+- **honeypot_nodes** (default: `1` *increase to scale horizontally*)
 - **aws_region** (default: `us-east-1`)
 - **aws_ec2_size** (default: `t2.micro`)
 - **honeypot_network** (default: `10.40.0.0/16` for VPC & `10.40.0.0/24` for SG)
