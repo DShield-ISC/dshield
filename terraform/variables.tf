@@ -1,3 +1,8 @@
+# number of honeypot instances to deploy
+variable "honeypot_nodes" {
+  default = 1
+}
+
 variable "dshield_email" {
 }
 
@@ -83,9 +88,8 @@ variable "dshield_ca_depart" {
   default = "Decoy"
 }
 
-// # number of honeypot instances to deploy
-// # eventual addition
-// variable "honeypot_nodes" {
-//   default = 1
-// }
-
+# true or false whether cowrie should output json
+# also appends logrotate policy in /etc/logrotate.d/dshield
+variable "output_logging" {
+  default = true
+}
