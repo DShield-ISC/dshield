@@ -1,0 +1,5 @@
+Country="${dshield_ca_country}"
+State="${dshield_ca_state}"
+City="${dshield_ca_city}"
+Company="${dshield_ca_company}"
+Depart="${dshield_ca_depart}"
