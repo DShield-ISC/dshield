@@ -40,6 +40,7 @@
 
 - SSH credentials are contained in the default location: 
   - `~/.ssh/id_rsa`
+  - `~/.ssh/id_rsa.pub`
 
 ### After completing the above items, run the following commands to begin the installation:
 ```terraform init; terraform plan -out=honeypot; terraform apply "honeypot"```  
