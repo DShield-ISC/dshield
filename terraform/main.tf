@@ -9,6 +9,9 @@ terraform {
     null = {
       version = ">= 3.1.0"
     }
+    local = {
+      version = ">= 2.1.0"
+    }
     template = {
       version = ">= 2.2.0"
     }
@@ -26,31 +29,6 @@ data "http" "local_ip" {
   url = "https://ipv4.icanhazip.com"
 }
 
-data "template_file" "dshield_ini" {
-  template = file("templates/dshield_ini.tpl")
-  vars = {
-     dshield_email  = var.dshield_email
-     dshield_userid = var.dshield_userid
-     dshield_apikey = var.dshield_apikey
-     public_ip      = aws_instance.honeypot.public_ip
-     public_ssh     = var.honeypot_ssh_port
-     deploy_ip      = chomp(data.http.local_ip.body)
-  }
-
-  depends_on = [ aws_instance.honeypot ]
-}
-
-data "template_file" "dshield_sslca" {
-  template = file("templates/dshield_sslca.tpl")
-  vars = {
-     dshield_ca_country  = var.dshield_ca_country
-     dshield_ca_state    = var.dshield_ca_state
-     dshield_ca_city     = var.dshield_ca_city
-     dshield_ca_company  = var.dshield_ca_company
-     dshield_ca_depart   = var.dshield_ca_depart
-  }
-}
-
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -62,6 +40,12 @@ data "aws_ami" "ubuntu_ami" {
     name   = "name"
     values = [ var.aws_ami_name ]
   }
+}
+
+# switched from template_file to local_file due to: https://github.com/hashicorp/terraform/issues/24616
+resource "local_file" "enable_logging" {
+  content = templatefile("${path.module}/templates/install_honeypot.tpl", {output_logging  = var.output_logging})
+  filename = "${path.module}/scripts/install_honeypot.sh"
 }
 
 # upload ssh key to provision / configure ec2
@@ -118,8 +102,8 @@ resource "aws_instance" "honeypot" {
   instance_type          = var.aws_ec2_size
   key_name               = aws_key_pair.honeypot_key.id
   vpc_security_group_ids = [ aws_security_group.honeypot_security_group.id ]
-  subnet_id	         = aws_subnet.honeypot_subnet.id
-  // count	         = var.honeypot_nodes
+  subnet_id              = aws_subnet.honeypot_subnet.id
+  count                  = var.honeypot_nodes
 
   tags = {
     Name = var.aws_tag
@@ -127,25 +111,40 @@ resource "aws_instance" "honeypot" {
 }
 
 resource "null_resource" "upload" {
+  count    = var.honeypot_nodes
   triggers = {
-    ec2_public_ip = aws_instance.honeypot.public_ip
+    ec2_public_ip = element(aws_instance.honeypot.*.public_ip, count.index) 
   }
 
   connection {
     type        = "ssh"
     user        = var.aws_ami_user
-    host        = aws_instance.honeypot.public_ip
+    host        = element(aws_instance.honeypot.*.public_ip, count.index)
     private_key = file(var.aws_ssh_key_priv)
   }
 
   provisioner "file" {
-    content     = data.template_file.dshield_ini.rendered
     destination = "/tmp/dshield.ini"
+    content     = templatefile("${path.module}/templates/dshield_ini.tpl", {
+     dshield_email  = var.dshield_email
+     dshield_userid = var.dshield_userid
+     dshield_apikey = var.dshield_apikey
+     public_ip      = element(aws_instance.honeypot.*.public_ip, count.index)
+     public_ssh     = var.honeypot_ssh_port
+     private_ip     = join("/", [var.honeypot_network, "24"])
+     deploy_ip      = chomp(data.http.local_ip.body)
+    })
   }
   
   provisioner "file" {
-    content     = data.template_file.dshield_sslca.rendered
     destination = "/tmp/dshield.sslca"
+    content     = templatefile("${path.module}/templates/dshield_sslca.tpl", {
+     dshield_ca_country  = var.dshield_ca_country
+     dshield_ca_state    = var.dshield_ca_state
+     dshield_ca_city     = var.dshield_ca_city
+     dshield_ca_company  = var.dshield_ca_company
+     dshield_ca_depart   = var.dshield_ca_depart
+    })
   }
 
   # upload our provisioning scripts
@@ -171,14 +170,15 @@ resource "null_resource" "upload" {
 }
 
 resource "null_resource" "install" {
+  count    = var.honeypot_nodes
   triggers = {
-    ec2_public_ip = aws_instance.honeypot.public_ip
+    ec2_public_ip = element(aws_instance.honeypot.*.public_ip, count.index) 
   }
 
   connection {
     type        = "ssh"
     user        = var.aws_ami_user
-    host        = aws_instance.honeypot.public_ip
+    host        = element(aws_instance.honeypot.*.public_ip, count.index)
     port        = var.honeypot_ssh_port
     private_key = file(var.aws_ssh_key_priv)
   }
