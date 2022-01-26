@@ -17,7 +17,11 @@
     git checkout epic/ISC-1-web-rebuild
     git pull
     ``` 
-4. Run the following command to start the project.
+4. Run the following command to cd into the isc-agent directory.
+    ```shell script
+    cd srv/isc-agent
+    ```
+5. Run the following command to start the project.
     ```shell script
     # This command should be ran anytime new packages are added to the project.
     # It is good habit to rebuild everytime you pull down new code.
