@@ -26,7 +26,7 @@ class Sigs(Base):
 class HdrResponses(Base):
     __tablename__ = 'HdrResponses'
 
-    id = Column(Integer)
+    id = Column(Integer, primary_key=True)
     SigID = Column(Integer)
     HeaderField = Column(Text)
     dataField = Column(Text)
@@ -36,21 +36,21 @@ class HdrResponses(Base):
         HeaderField={self.HeaderField}, dataField={self.dataField!r})'''
 
 
-class paths(Base):
+class Paths(Base):
     __tablename__ = 'paths'
 
-    SigID = Column(Integer)
+    SigID = Column(Integer, primary_key=True)
     path = Column(Text)
     OSPath = Column(Text)
 
     def __repr__(self):
-        return f"paths(SigID={self.SigID!r}, path={self.path!r}, OSPath={self.OSPath!r})"
+        return f"Paths(SigID={self.SigID!r}, path={self.path!r}, OSPath={self.OSPath!r})"
 
 
 class SQLResp(Base):
-    __tablename = 'SQLResp'
+    __tablename__ = 'SQLResp'
 
-    SigID = Column(Integer)
+    SigID = Column(Integer, primary_key=True)
     SQLInput = Column(Text)
     SQLOutput = Column(Text)
 
@@ -59,14 +59,14 @@ class SQLResp(Base):
 
 
 class XssResp(Base):
-    __tablename__ = 'XSSResp'
+    __tablename__ = 'XssResp'
 
     SigID = Column(Integer)
     ScriptReq = Column(Text, primary_key=True)
     ScriptResp = Column(Text)
 
     def __repr__(self):
-        return f"XSSResp(SigID={self.SigID!r}, ScriptReq={self.ScriptReq!r}, ScriptResp={self.ScriptResp!r})"
+        return f"XssResp(SigID={self.SigID!r}, ScriptReq={self.ScriptReq!r}, ScriptResp={self.ScriptResp!r})"
 
 
 class RFIResp(Base):
@@ -83,7 +83,7 @@ class RFIResp(Base):
 class FileResp(Base):
     __tablename__ = 'FileResp'
 
-    ID = Column(Integer)
+    ID = Column(Integer, primary_key=True)
     SigID = Column(Integer)
     FileNamePost = Column(Text)
     FileDataPost = Column(BLOB)
@@ -114,7 +114,7 @@ class Postlogs(Base):
     summary = Column(Text)
 
     def __repr__(self):
-        return f'''postlogs(ID={self.ID!r}, data={self.data!r}, headers={self.headers!r}, address={self.address!r}
+        return f'''Postlogs(ID={self.ID!r}, data={self.data!r}, headers={self.headers!r}, address={self.address!r}
         cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r}, 
         formkey={self.formkey!r}, fomrvalue={self.formvalue!r}, summary={self.summary!r})'''
 
@@ -128,13 +128,13 @@ class Files(Base):
     DATA = Column(BLOB)
 
     def __repr__(self):
-        return f"files(ID={self.ID!r}, RID={self.RID!r}, filename={self.filename!r}, DATA={self.DATA!r})"
+        return f"Files(ID={self.ID!r}, RID={self.RID!r}, filename={self.filename!r}, DATA={self.DATA!r})"
 
 
 class Requests(Base):
     __tablename__ = 'requests'
 
-    data = Column(Text)
+    data = Column(Text, primary_key=True)
     headers = Column(Text)
     address = Column(Text)
     cmd = Column(Text)
@@ -145,7 +145,7 @@ class Requests(Base):
     target = Column(Text)
 
     def __repr__(self):
-        return f'''requests(data={self.data!r}, headers={self.headers!r}, address={self.address!r}, 
+        return f'''Requests(data={self.data!r}, headers={self.headers!r}, address={self.address!r}, 
         cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r},
         summary={self.summery!r}, target={self.target!r})'''
 
@@ -158,7 +158,7 @@ class Useragents(Base):
     useragent = Column(Text, unique=True)
 
     def __repr__(self):
-        return f"useragents(ID={self.ID!r}, refid={self.refid!r}, useragent={self.useragent!r})"
+        return f"Useragents(ID={self.ID!r}, refid={self.refid!r}, useragent={self.useragent!r})"
 
 
 class Responses(Base):
@@ -170,7 +170,7 @@ class Responses(Base):
     dataField = Column(Text)
 
     def __repr__(self):
-        return f'''reponses(ID={self.ID!r}, RID={self.RID!r}, 
+        return f'''Responses(ID={self.ID!r}, RID={self.RID!r}, 
         HeaderField={self.HeaderField!r}, dataField={self.dataField!r})'''
 
 
@@ -187,9 +187,5 @@ def build_models():
 
 if __name__ == "__main__":
     build_models()
-
-
-
-
 
 
