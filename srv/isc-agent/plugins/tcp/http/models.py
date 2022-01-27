@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, MetaData, ForeignKey
-from sqlalchemy import Table, Column, Integer, String, Text, BLOB
-from sqlalchemy.orm import declarative_base, registry
+from sqlalchemy import create_engine
+from sqlalchemy import Column, Integer, Text, BLOB
+from sqlalchemy.orm import registry
 
 mapper_registry = registry()
 
@@ -19,7 +19,7 @@ class Sigs(Base):
     module = Column(Text)
 
     def __repr__(self):
-        return f'''Sigs(id={self.id!r}, patternDescription={self.patternDescription!r}, 
+        return f'''Sigs(id={self.id!r}, patternDescription={self.patternDescription!r},
         patternString={self.patternString!r}, db_ref={self.db_ref!r}, module={self.module!r} )'''
 
 
@@ -32,7 +32,7 @@ class HdrResponses(Base):
     data_field = Column(Text)
 
     def __repr__(self):
-        return f'''HdrResponses(id={self.id!r}, SigID={self.SigID!r}, 
+        return f'''HdrResponses(id={self.id!r}, SigID={self.SigID!r},
         HeaderField={self.HeaderField}, dataField={self.dataField!r})'''
 
 
@@ -145,7 +145,7 @@ class Requests(Base):
     target = Column(Text)
 
     def __repr__(self):
-        return f'''Requests(data={self.data!r}, headers={self.headers!r}, address={self.address!r}, 
+        return f'''Requests(data={self.data!r}, headers={self.headers!r}, address={self.address!r},
         cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r},
         summary={self.summery!r}, target={self.target!r})'''
 
@@ -170,7 +170,7 @@ class Responses(Base):
     data_field = Column(Text)
 
     def __repr__(self):
-        return f'''Responses(ID={self.ID!r}, RID={self.RID!r}, 
+        return f'''Responses(ID={self.ID!r}, RID={self.RID!r},
         HeaderField={self.HeaderField!r}, dataField={self.dataField!r})'''
 
 
@@ -179,13 +179,8 @@ def build_models():
     # Establish connectivity with SQLalchemy engine
     engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
 
-    # Front facing interface around python dictonary that stores table objects
-    metadata_obj = MetaData()
-
     mapper_registry.metadata.create_all(engine)
 
 
 if __name__ == "__main__":
     build_models()
-
-
