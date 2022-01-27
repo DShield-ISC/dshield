@@ -9,7 +9,7 @@ Base = mapper_registry.generate_base()
 
 # Sigs model
 class Sigs(Base):
-    __tablename__ = 'Sigs'
+    __tablename__ = 'sigs'
 
     id = Column(Integer, primary_key=True)
     # Should this be Text vs String?
@@ -24,7 +24,7 @@ class Sigs(Base):
 
 
 class HdrResponses(Base):
-    __tablename__ = 'HdrResponses'
+    __tablename__ = 'hdr_responses'
 
     id = Column(Integer, primary_key=True)
     SigID = Column(Integer)
@@ -48,7 +48,7 @@ class Paths(Base):
 
 
 class SQLResp(Base):
-    __tablename__ = 'SQLResp'
+    __tablename__ = 'sql_resp'
 
     SigID = Column(Integer, primary_key=True)
     SQLInput = Column(Text)
@@ -59,7 +59,7 @@ class SQLResp(Base):
 
 
 class XssResp(Base):
-    __tablename__ = 'XssResp'
+    __tablename__ = 'xss_resp'
 
     SigID = Column(Integer)
     ScriptReq = Column(Text, primary_key=True)
@@ -70,7 +70,7 @@ class XssResp(Base):
 
 
 class RFIResp(Base):
-    __tablename__ = 'RFIResp'
+    __tablename__ = 'rfi_resp'
 
     SigID = Column(Integer)
     protocol = Column(Text, primary_key=True)
@@ -81,7 +81,7 @@ class RFIResp(Base):
 
 
 class FileResp(Base):
-    __tablename__ = 'FileResp'
+    __tablename__ = 'file_resp'
 
     ID = Column(Integer, primary_key=True)
     SigID = Column(Integer)
@@ -99,7 +99,7 @@ class FileResp(Base):
 
 
 class Postlogs(Base):
-    __tablename__ = 'postlogs'
+    __tablename__ = 'post_logs'
 
     ID = Column(Integer, primary_key=True)
     data = Column(Text)
@@ -151,7 +151,7 @@ class Requests(Base):
 
 
 class Useragents(Base):
-    __tablename__ = 'useragents'
+    __tablename__ = 'user_agents'
 
     ID = Column(Integer, primary_key=True)
     refid = Column(Integer)
