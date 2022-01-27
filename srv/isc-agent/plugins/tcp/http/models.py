@@ -13,8 +13,8 @@ class Sigs(Base):
 
     id = Column(Integer, primary_key=True)
     # Should this be Text vs String?
-    patternDescription = Column(Text)
-    patternString = Column(Text)
+    pattern_description = Column(Text)
+    pattern_string = Column(Text)
     db_ref = Column(Text)
     module = Column(Text)
 
@@ -27,9 +27,9 @@ class HdrResponses(Base):
     __tablename__ = 'hdr_responses'
 
     id = Column(Integer, primary_key=True)
-    SigID = Column(Integer)
-    HeaderField = Column(Text)
-    dataField = Column(Text)
+    sig_id = Column(Integer)
+    header_field = Column(Text)
+    data_field = Column(Text)
 
     def __repr__(self):
         return f'''HdrResponses(id={self.id!r}, SigID={self.SigID!r}, 
@@ -39,9 +39,9 @@ class HdrResponses(Base):
 class Paths(Base):
     __tablename__ = 'paths'
 
-    SigID = Column(Integer, primary_key=True)
+    sig_id = Column(Integer, primary_key=True)
     path = Column(Text)
-    OSPath = Column(Text)
+    os_path = Column(Text)
 
     def __repr__(self):
         return f"Paths(SigID={self.SigID!r}, path={self.path!r}, OSPath={self.OSPath!r})"
@@ -50,9 +50,9 @@ class Paths(Base):
 class SQLResp(Base):
     __tablename__ = 'sql_resp'
 
-    SigID = Column(Integer, primary_key=True)
-    SQLInput = Column(Text)
-    SQLOutput = Column(Text)
+    sig_id = Column(Integer, primary_key=True)
+    sql_input = Column(Text)
+    sql_output = Column(Text)
 
     def __repr__(self):
         return f"SQLResp(SigID={self.SigID!r}, SQLInput={self.SQLInput!r}, SQLOutput={self.SQLOutput!r})"
@@ -61,9 +61,9 @@ class SQLResp(Base):
 class XssResp(Base):
     __tablename__ = 'xss_resp'
 
-    SigID = Column(Integer)
-    ScriptReq = Column(Text, primary_key=True)
-    ScriptResp = Column(Text)
+    sig_id = Column(Integer)
+    script_req = Column(Text, primary_key=True)
+    script_resp = Column(Text)
 
     def __repr__(self):
         return f"XssResp(SigID={self.SigID!r}, ScriptReq={self.ScriptReq!r}, ScriptResp={self.ScriptResp!r})"
@@ -72,9 +72,9 @@ class XssResp(Base):
 class RFIResp(Base):
     __tablename__ = 'rfi_resp'
 
-    SigID = Column(Integer)
+    sig_id = Column(Integer)
     protocol = Column(Text, primary_key=True)
-    remoteuri = Column(Text)
+    remote_uri = Column(Text)
 
     def __repr__(self):
         return f"RFIResp(SigID={self.SigID!r}, protocol={self.protocol!r}, remoteuri={self.remoteuri!r})"
@@ -83,14 +83,14 @@ class RFIResp(Base):
 class FileResp(Base):
     __tablename__ = 'file_resp'
 
-    ID = Column(Integer, primary_key=True)
-    SigID = Column(Integer)
-    FileNamePost = Column(Text)
-    FileDataPost = Column(BLOB)
-    FileTextPost = Column(Text)
-    OSPath = Column(Text)
-    FileResp = Column(BLOB)
-    CowrieRef = Column(Text)
+    id = Column(Integer, primary_key=True)
+    sig_id = Column(Integer)
+    file_name_post = Column(Text)
+    file_data_post = Column(BLOB)
+    file_text_post = Column(Text)
+    os_path = Column(Text)
+    file_resp = Column(BLOB)
+    cowrie_ref = Column(Text)
 
     def __repr__(self):
         return f'''FileResp(ID={self.ID!r}, SigID={self.SigID!r}, FileNamePost={self.FileNamePost!r},
@@ -101,7 +101,7 @@ class FileResp(Base):
 class Postlogs(Base):
     __tablename__ = 'post_logs'
 
-    ID = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     data = Column(Text)
     headers = Column(Text)
     address = Column(Text)
@@ -122,10 +122,10 @@ class Postlogs(Base):
 class Files(Base):
     __tablename__ = 'files'
 
-    ID = Column(Integer, primary_key=True)
-    RID = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    rid = Column(Integer)
     filename = Column(Text)
-    DATA = Column(BLOB)
+    data = Column(BLOB)
 
     def __repr__(self):
         return f"Files(ID={self.ID!r}, RID={self.RID!r}, filename={self.filename!r}, DATA={self.DATA!r})"
@@ -153,7 +153,7 @@ class Requests(Base):
 class Useragents(Base):
     __tablename__ = 'user_agents'
 
-    ID = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     refid = Column(Integer)
     useragent = Column(Text, unique=True)
 
@@ -164,10 +164,10 @@ class Useragents(Base):
 class Responses(Base):
     __tablename__ = 'responses'
 
-    ID = Column(Integer, primary_key=True)
-    RID = Column(Integer)
-    HeaderField = Column(Text)
-    dataField = Column(Text)
+    id = Column(Integer, primary_key=True)
+    rid = Column(Integer)
+    header_field = Column(Text)
+    data_field = Column(Text)
 
     def __repr__(self):
         return f'''Responses(ID={self.ID!r}, RID={self.RID!r}, 
