@@ -32,7 +32,7 @@ The requests are logged to the "requests" table. For example:
 
 Get all user agents: 
 ```
-select useragents from requests
+select useragent from requests;
 ```
 Or to get a summary:
 ```
