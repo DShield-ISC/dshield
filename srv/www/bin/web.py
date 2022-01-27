@@ -90,7 +90,7 @@ class myhandler(BaseHTTPRequestHandler):
                 file_path = os.path.join(webpath, i)
         dte = time.time()
         targetip = local_pub_IP.json()['ip']
-        # Each self.<module> item specified here as a variable needs to be specified in db_builder.py as well so that the db has a column to store it.
+        # Each self.<module> item specified here as a variable needs to be specified in models.py as well so that the db has a column to store it.
         address = self.client_address[0]
         cmd = '%s' % self.command  # same as ubelow
         path = '%s' % self.path  # see below comment
