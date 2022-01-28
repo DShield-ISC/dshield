@@ -8,7 +8,8 @@ Base = mapper_registry.generate_base()
 
 
 # Sigs model
-class Sigs(Base):
+#Signature may connect to responses
+class Signature(Base):
     __tablename__ = 'sigs'
 
     id = Column(Integer, primary_key=True)
@@ -18,12 +19,17 @@ class Sigs(Base):
     db_ref = Column(Text)
     module = Column(Text)
 
+    #May split pattern string into multipl string on for header ad body
+
     def __repr__(self):
-        return f'''Sigs(id={self.id!r}, patternDescription={self.patternDescription!r},
-        patternString={self.patternString!r}, db_ref={self.db_ref!r}, module={self.module!r} )'''
+        return f"{self.__class__.__name__}({self.id!r}: {self})"
 
+    def __str__(self):
+        return self.pattern_string
 
-class HdrResponses(Base):
+#Headers of response that are returned
+#May combine headers and body
+class HeaderResponse(Base):
     __tablename__ = 'hdr_responses'
 
     id = Column(Integer, primary_key=True)
@@ -35,8 +41,8 @@ class HdrResponses(Base):
         return f'''HdrResponses(id={self.id!r}, SigID={self.SigID!r},
         HeaderField={self.HeaderField}, dataField={self.dataField!r})'''
 
-
-class Paths(Base):
+#May not be required.  Alternate to signatures.  Can possibly be removed
+class Path(Base):
     __tablename__ = 'paths'
 
     sig_id = Column(Integer, primary_key=True)
@@ -46,8 +52,9 @@ class Paths(Base):
     def __repr__(self):
         return f"Paths(SigID={self.SigID!r}, path={self.path!r}, OSPath={self.OSPath!r})"
 
-
-class SQLResp(Base):
+#Linkage between signatures and responses
+#Could have multiple responses for a signature. Responses would be chosen randomly.  Not 1 to 1, but 1 to many.
+class SQLResponse(Base):
     __tablename__ = 'sql_resp'
 
     sig_id = Column(Integer, primary_key=True)
@@ -57,8 +64,8 @@ class SQLResp(Base):
     def __repr__(self):
         return f"SQLResp(SigID={self.SigID!r}, SQLInput={self.SQLInput!r}, SQLOutput={self.SQLOutput!r})"
 
-
-class XssResp(Base):
+#No longer needed
+class XssResponse(Base):
     __tablename__ = 'xss_resp'
 
     sig_id = Column(Integer)
@@ -68,8 +75,8 @@ class XssResp(Base):
     def __repr__(self):
         return f"XssResp(SigID={self.SigID!r}, ScriptReq={self.ScriptReq!r}, ScriptResp={self.ScriptResp!r})"
 
-
-class RFIResp(Base):
+#No longer needed. Only for special cases
+class RFIResponse(Base):
     __tablename__ = 'rfi_resp'
 
     sig_id = Column(Integer)
@@ -79,8 +86,8 @@ class RFIResp(Base):
     def __repr__(self):
         return f"RFIResp(SigID={self.SigID!r}, protocol={self.protocol!r}, remoteuri={self.remoteuri!r})"
 
-
-class FileResp(Base):
+#No longer needed
+class FileResponse(Base):
     __tablename__ = 'file_resp'
 
     id = Column(Integer, primary_key=True)
@@ -97,8 +104,9 @@ class FileResp(Base):
         FileDataPost={self.FileDataPost!r}, FileTextPost={self.FileTextPost!r}, OSPath={self.OSPath!r},
         FileResp={self.FileResp!r}, CowrieRef={self.CowrieRef!r})'''
 
-
-class Postlogs(Base):
+#All post requests.  Will need to retain some of the body
+#may onlt do 1 logs class
+class Postlog(Base):
     __tablename__ = 'post_logs'
 
     id = Column(Integer, primary_key=True)
@@ -118,8 +126,11 @@ class Postlogs(Base):
         cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r}, 
         formkey={self.formkey!r}, fomrvalue={self.formvalue!r}, summary={self.summary!r})'''
 
-
-class Files(Base):
+#May not be needed.
+#Tracks various static files
+#attribute "data" can be removed
+#What Static files will we be recieveing?
+class File(Base):
     __tablename__ = 'files'
 
     id = Column(Integer, primary_key=True)
@@ -130,8 +141,8 @@ class Files(Base):
     def __repr__(self):
         return f"Files(ID={self.ID!r}, RID={self.RID!r}, filename={self.filename!r}, DATA={self.DATA!r})"
 
-
-class Requests(Base):
+#Request may end up being PostLogs.
+class Request(Base):
     __tablename__ = 'requests'
 
     data = Column(Text, primary_key=True)
@@ -149,8 +160,8 @@ class Requests(Base):
         cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r},
         summary={self.summery!r}, target={self.target!r})'''
 
-
-class Useragents(Base):
+#No longer needed
+class UserAgent(Base):
     __tablename__ = 'user_agents'
 
     id = Column(Integer, primary_key=True)
@@ -160,8 +171,10 @@ class Useragents(Base):
     def __repr__(self):
         return f"Useragents(ID={self.ID!r}, refid={self.refid!r}, useragent={self.useragent!r})"
 
-
-class Responses(Base):
+#What will be returned as response
+#Could link to earlier header response
+#May be used instead of header response
+class Response(Base):
     __tablename__ = 'responses'
 
     id = Column(Integer, primary_key=True)
