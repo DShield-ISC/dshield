@@ -1,0 +1,46 @@
+[
+  {
+    "ruleid": "1",
+    "port": {
+      "value": "80",
+      "score": 1
+    },
+    "method": {
+      "value": "GET",
+      "score": 5
+    },
+    "url": {
+      "type": "contains",
+      "value": "wp-admin",
+      "score": 10
+    },
+    "header": {
+      "user-agent": {
+        "type": "regex",
+        "value": "^python.*",
+        "score": 1
+      },
+      "accept-encoding": {
+        "type": "present",
+        "score": 2
+      }
+    }
+  },
+  {
+    "ruleid": "2",
+    "url": {
+      "type": "contains",
+      "value": "$jndi",
+      "score": 10
+    }
+  },
+  {
+    "ruleid": "3",
+    "header": {
+      "user-agent": {
+        "type": "contains",
+        "value": "$jndi"
+      }
+    }
+  }
+]
