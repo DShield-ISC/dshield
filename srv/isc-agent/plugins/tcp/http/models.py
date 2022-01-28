@@ -17,6 +17,8 @@ class Signature(Base):
     db_ref = Column(Text)
     module = Column(Text)
 
+    #May split pattern string into multipl string on for header ad body
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.id}: {self})"
 
