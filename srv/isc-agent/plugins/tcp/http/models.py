@@ -1,5 +1,4 @@
-from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, Text, BLOB, JSON
+from sqlalchemy import create_engine, Column, Integer, Text, JSON, ForeignKey
 from sqlalchemy.orm import registry
 
 mapper_registry = registry()
@@ -11,13 +10,10 @@ class Signature(Base):
     __tablename__ = 'signature'
 
     id = Column(Integer, primary_key=True)
-    # Should this be Text vs String?
     pattern_description = Column(Text)
     pattern_string = Column(Text)
     db_ref = Column(Text)
     module = Column(Text)
-
-    #May split pattern string into multipl string on for header ad body
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.id}: {self})"
@@ -46,7 +42,7 @@ class SQLResponse(Base):
 
     id = Column(Integer, primary_key=True)
     #we want to use a foreign key reference
-    signature_id = Column(Integer, primary_key=True)
+    signature_id = Column(Integer, ForeignKey('signature.id'))
     sql_input = Column(Text)
     sql_output = Column(Text)
 
@@ -68,7 +64,8 @@ class RequestLog(Base):
     path = Column(Text)
     user_agent = Column(Text)
     version = Column(Text)
-    metadata = Column(JSON)
+    #had to change from metadata to data becuase metadata is reserved for the Metadata instance when using a declarative base class.
+    data = Column(JSON)
     summary = Column(Text)
     target = Column(Text)
 
@@ -84,7 +81,7 @@ class Response(Base):
 
     id = Column(Integer, primary_key=True)
     #Will need to be foreign key connecting to request_log_id
-    request_id = Column(Integer)
+    request_id = Column(Integer, ForeignKey('request_log.id'))
     header_field = Column(Text)
     data_field = Column(Text)
 
