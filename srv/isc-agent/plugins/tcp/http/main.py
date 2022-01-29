@@ -2,6 +2,8 @@ from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from twisted.web.http import Request
 
+from plugins.tcp.http.models import prepare_database
+
 
 class HealthCheck(resource.Resource):
     isLeaf = True
@@ -15,5 +17,6 @@ class HealthCheck(resource.Resource):
 
 
 def handler():
+    prepare_database()
     endpoints.serverFromString(reactor, "tcp:8000").listen(server.Site(HealthCheck()))
     return reactor.run()
