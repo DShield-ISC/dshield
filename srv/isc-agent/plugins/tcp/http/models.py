@@ -1,5 +1,4 @@
-from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, Text, BLOB, JSON
+from sqlalchemy import create_engine, Column, Integer, Text, JSON, ForeignKey
 from sqlalchemy.orm import registry
 
 mapper_registry = registry()
@@ -7,54 +6,19 @@ mapper_registry = registry()
 Base = mapper_registry.generate_base()
 
 
-class Signature(Base):
-    __tablename__ = 'signature'
+class HeaderResponse(Base):
+    __tablename__ = 'header_response'
 
     id = Column(Integer, primary_key=True)
-    # Should this be Text vs String?
-    pattern_description = Column(Text)
-    pattern_string = Column(Text)
-    db_ref = Column(Text)
-    module = Column(Text)
-
-    #May split pattern string into multipl string on for header ad body
+    signature_id = Column(Integer)
+    header = Column(Text)
+    data = Column(Text)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.id}: {self})"
 
     def __str__(self):
-        return self.pattern_string
-
-
-class HeaderResponse(Base):
-    __tablename__ = 'header_responses'
-
-    id = Column(Integer, primary_key=True)
-    sig_id = Column(Integer)
-    header_field = Column(Text)
-    data_field = Column(Text)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.id}:{self})"
-
-    def __str__(self):
         return self.header_field
-
-
-class SQLResponse(Base):
-    __tablename__ = 'sql_response'
-
-    id = Column(Integer, primary_key=True)
-    #we want to use a foreign key reference
-    signature_id = Column(Integer, primary_key=True)
-    sql_input = Column(Text)
-    sql_output = Column(Text)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.SigID}: {self})"
-
-    def __str__(self):
-        return self.sql_output
 
 
 class RequestLog(Base):
@@ -68,7 +32,7 @@ class RequestLog(Base):
     path = Column(Text)
     user_agent = Column(Text)
     version = Column(Text)
-    metadata = Column(JSON)
+    data = Column(JSON)
     summary = Column(Text)
     target = Column(Text)
 
@@ -83,16 +47,49 @@ class Response(Base):
     __tablename__ = 'response'
 
     id = Column(Integer, primary_key=True)
-    #Will need to be foreign key connecting to request_log_id
-    request_id = Column(Integer)
-    header_field = Column(Text)
-    data_field = Column(Text)
+    request_id = Column(Integer, ForeignKey('request_log.id'))
+    header = Column(Text)
+    data = Column(Text)
 
     def __repr__(self):
         return f'''{self.__class__.__name__}({self.ID}: {self})'''
 
     def __str__(self):
         return self.header_field
+
+
+class Signature(Base):
+    __tablename__ = 'signature'
+
+    id = Column(Integer, primary_key=True)
+    pattern_description = Column(Text)
+    pattern_string = Column(Text)
+    db_ref = Column(Text)
+    module = Column(Text)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.id}: {self})"
+
+    def __str__(self):
+        return self.pattern_string
+
+
+class SQLResponse(Base):
+    __tablename__ = 'sql_response'
+
+    id = Column(Integer, primary_key=True)
+    signature_id = Column(Integer, ForeignKey('signature.id'))
+    sql_input = Column(Text)
+    sql_output = Column(Text)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.SigID}: {self})"
+
+    def __str__(self):
+        return self.sql_output
+
+
+
 
 
 def build_models():
