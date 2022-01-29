@@ -11,8 +11,8 @@ class HeaderResponse(Base):
 
     id = Column(Integer, primary_key=True)
     signature_id = Column(Integer)
-    header_field = Column(Text)
-    data_field = Column(Text)
+    header = Column(Text)
+    data = Column(Text)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.id}: {self})"
@@ -32,7 +32,6 @@ class RequestLog(Base):
     path = Column(Text)
     user_agent = Column(Text)
     version = Column(Text)
-    # had to change from metadata to data becuase metadata is reserved for the Metadata instance when using a declarative base class.
     data = Column(JSON)
     summary = Column(Text)
     target = Column(Text)
@@ -48,10 +47,9 @@ class Response(Base):
     __tablename__ = 'response'
 
     id = Column(Integer, primary_key=True)
-    # Will need to be foreign key connecting to request_log_id
     request_id = Column(Integer, ForeignKey('request_log.id'))
-    header_field = Column(Text)
-    data_field = Column(Text)
+    header = Column(Text)
+    data = Column(Text)
 
     def __repr__(self):
         return f'''{self.__class__.__name__}({self.ID}: {self})'''
@@ -80,7 +78,6 @@ class SQLResponse(Base):
     __tablename__ = 'sql_response'
 
     id = Column(Integer, primary_key=True)
-    #we want to use a foreign key reference
     signature_id = Column(Integer, ForeignKey('signature.id'))
     sql_input = Column(Text)
     sql_output = Column(Text)
