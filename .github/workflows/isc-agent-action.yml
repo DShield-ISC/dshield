@@ -2,7 +2,7 @@ name: ISC Agent Code Check Action
 
 on:
   pull_request:
-    branches: [develop, development, master, main, stage]
+    branches: [epic/ISC-1-web-rebuild]
 
 jobs:
   code-check:
