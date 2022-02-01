@@ -13,6 +13,10 @@ class HealthCheck(resource.Resource):
         content = f"I am request #{self.numberRequests}\n"
         return content.encode("ascii")
 
+    def do_HEAD(self, request):
+        request.setResonseCode(200)
+        request.setHeader(b"")
+
 
 def handler():
     endpoints.serverFromString(reactor, "tcp:8000").listen(server.Site(HealthCheck()))
