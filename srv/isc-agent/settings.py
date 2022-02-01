@@ -33,6 +33,11 @@ DATABASE_SESSION = Session(DATABASE_ENGINE)
 PLUGINS = [
     {
         'protocol': 'tcp',
-        'name': 'http'
+        'name': 'http',
+        'ports': [
+            80,
+            8000,
+            8080,
+        ]
     }
 ]
