@@ -1,9 +1,11 @@
+import logging
 from http import HTTPStatus
 from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from twisted.web.http import Request
 
 PRODSTRING = 'Apache/3.2.3'
+logger = logging.getLogger(__name__)
 
 
 class HealthCheck(resource.Resource):
@@ -16,12 +18,13 @@ class HealthCheck(resource.Resource):
         content = f"I am request #{self.numberRequests}\n"
         return content.encode("ascii")
 
-    def render_HEAD(self, request):
+    def render_HEAD(self, request: Request):
         request.setResponseCode(HTTPStatus.OK)
         request.setHeader(b"Server", f"{PRODSTRING}")
         request.setHeader(b"Access-Control-Allow-Origin", "*")
         request.setHeader(b"content-type", b"text/plain")
         content = f"I am HEAD request #{self.numberRequests}\n"
+        logger.warning("Request type is %s", request.method)
         return content.encode("ascii")
 
 
