@@ -17,7 +17,6 @@ class HealthCheck(resource.Resource):
         return content.encode("ascii")
 
     def render_HEAD(self, request):
-        request_type = request.getHeader('HEAD')
         request.setResponseCode(HTTPStatus.OK)
         request.setHeader(b"Server", f"{PRODSTRING}")
         request.setHeader(b"Access-Control-Allow-Origin", "*")
