@@ -2,7 +2,7 @@ name: ISC Agent Code Check Action
 
 on:
   pull_request:
-    branches: [develop, development, master, main, stage]
+    branches: [epic/ISC-1-web-rebuild]
 
 jobs:
   code-check:
@@ -12,4 +12,4 @@ jobs:
     - uses: actions/checkout@v2
     - name: Code scan
       run: make ops-scan
-      working-directory: ./src/isc-agent
+      working-directory: ./srv/isc-agent

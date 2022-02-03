@@ -1,0 +1,218 @@
+[
+  {
+    "headers": [
+      {
+        "Server": "Apache/2.0.1",
+        "Content-Type": "text/html",
+        "Connection": "keep-alive"
+      }
+    ],
+    "module": "rfi",
+    "pattern_description": "remote file inclusion",
+    "pattern_string": ".*(=.*(http(s){0,1}|ftp(s){0,1}):).*",
+    "responses": [
+      {
+        "patterIn": ".+http\\:.+",
+        "patterOut": "http.+"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "unknown",
+    "pattern_description": "php code injection",
+    "pattern_string": ".*(define|eval|file_get_contents|include|require|require_once|set|shell_exec|phpinfo|system|passthru|preg_|execute|echo|print|print_r|var_dump|[fp]open)\\(.*",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "unknown",
+    "pattern_description": "basic php code execution",
+    "pattern_string": ".*(<\\?php).*",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "unknown",
+    "pattern_description": "SQL benchmark and sleep",
+    "pattern_string": ".*((select|;)\\s+(benchmark|if|sleep)).*",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "sqli",
+    "pattern_description": "SQL injection",
+    "pattern_string": "'.+",
+    "responses": [
+      {
+        "patternRequest": "'.+insert.+/*.+",
+        "responseToRequest": "<p>replace<\/p>"
+      },
+      {
+        "patternRequest": "'.+select.+/*.+",
+        "responseToRequest": "<p>id=1,username=admin,password=admin123<\/p><p>id=2,username=webuser,password=password123<\/p>"
+      },
+      {
+        "patternRequest": "'.+",
+        "responseToRequest": "<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\"' at line 5<\/p>"
+      },
+      {
+        "patternRequest": "'.+",
+        "responseToRequest": "<p>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\"' at line 5<\/p>"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "xss",
+    "pattern_description": "basic XSS",
+    "pattern_string": ".+\\<script\\>.+",
+    "responses": [
+      {
+        "patternRequest": ".+alert.+",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "unknown",
+    "pattern_description": "JS properties and objects",
+    "pattern_string": ".*(hash|href|navigateandfind|source|pathname|close|constructor|port|protocol|assign|replace|back|forward|document|ownerdocument|window|self|parent|frames|cookie|innerhtml|innertext|resizeto|createstylesheet)\\(.*",
+    "responses": [
+      {
+        "patternRequest": ".+\\?.*(/\\.\\.)*etc.passwd.*",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "lfi",
+    "pattern_description": "local file inclusion linux",
+    "pattern_string": ".+\\?.*(/\\.\\.)*(home|conf|usr|etc|proc|opt|s?bin|local|dev|tmp|kern|root|sys|system|windows|winnt|program|inetpub/boot\\.ini)/.*",
+    "responses": [
+      {
+        "patternRequest": ".+\\?.*(/\\.\\.)*etc.passwd.*",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'passwd'"
+      },
+      {
+        "patternRequest": ".+\\?.*(/\\.\\.)*etc.shadow.*",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "lfi",
+    "pattern_description": "local file inclusion windows",
+    "pattern_string": ".+\\?.*[a-zA-Z]:((([\\\\/]+(.{0,2}))|[\\\\/]+)[^\\\\/:*?\"<>|,]+)+.*",
+    "responses": [
+      {
+        "patternRequest": ".+\\?.*(/\\.\\.)*etc.shadow.*",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'etc' + os.path.sep + 'shadow'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "xss",
+    "pattern_description": "XSS",
+    "pattern_string": ".*(script).*",
+    "responses": [
+      {
+        "patternRequest": ".+alert.+",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'js' + os.path.sep + 'hello.html'"
+      }
+    ]
+  },
+  {
+    "id": "13",
+    "pattern_description": "favicon.ico",
+    "pattern_string": ".*(faviscon.ico).*",
+    "headers": [],
+    "responses": [],
+    "module": "unknown"
+  },
+  {
+    "id": "14",
+    "pattern_description": "style.css",
+    "pattern_string": ".*/style\\.css$",
+    "headers": [],
+    "responses": [],
+    "module": "style_css"
+  },
+  {
+    "headers": [],
+    "module": "robots",
+    "pattern_description": "robots.txt",
+    "pattern_string": "^/robots\\.txt$",
+    "responses": [
+      {
+        "patternRequest": "^/robots\\.txt$",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'robots.txt'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "phpmyadmin",
+    "pattern_description": "PHPMyAdmin",
+    "pattern_string": "(^/phpmyadmin|^/pma|^/phpmyadmin\\-[\\w\\.]+)",
+    "responses": [
+      {
+        "patternRequest": "(^/phpmyadmin|^/pma|^/phpmyadmin\\-[\\w\\.]+)",
+        "responseToRequest": "'..'+ os.path.sep + 'html' + os.path.sep + 'phpMyAdmin.html'"
+      }
+    ]
+  },
+  {
+    "headers": [],
+    "module": "comments",
+    "pattern_description": "comment spam",
+    "pattern_string": ".*/comments",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "login",
+    "pattern_description": "login brute force",
+    "pattern_string": "^/login",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "tomcat_manager",
+    "pattern_description": "tomcat manager",
+    "pattern_string": "^/manager/html",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "tomcat_status",
+    "pattern_description": "tomcat manager status",
+    "pattern_string": "^/manager/status",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "php_cgi_rce",
+    "pattern_description": "PHP CGI Source code disclosure CVE-2012-1823",
+    "pattern_string": "\\?\\-[s|w](\\s\\%3d)?$",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "php_cgi_rce",
+    "pattern_description": "PHP CGI Remote command execution CVE-2012-1823",
+    "pattern_string": "\\-d\\sauto_prepend_file=php://input",
+    "responses": []
+  },
+  {
+    "headers": [],
+    "module": "phpinfo",
+    "pattern_description": "Common PHPInfo test/debug resources",
+    "pattern_string": "^/info.php|^/phpinfo.php|^/phpinfo.html",
+    "responses": []
+  }
+]

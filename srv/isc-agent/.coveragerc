@@ -26,8 +26,10 @@ exclude_lines =
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
+fail_under=60
 show_missing = true
 
 [html]
+directory = ./.generated/coverage/htmlcov
 show_contexts = true
 title = SANS ISC Test Report

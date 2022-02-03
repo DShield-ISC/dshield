@@ -2,8 +2,12 @@ from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from twisted.web.http import Request
 
+from plugins.tcp.http.models import prepare_database
 
-class HealthCheck(resource.Resource):
+DEFAULT_PORTS = [80, 8000, 8080]
+
+
+class Web(resource.Resource):
     isLeaf = True
     numberRequests = 0
 
@@ -14,6 +18,8 @@ class HealthCheck(resource.Resource):
         return content.encode("ascii")
 
 
-def handler():
-    endpoints.serverFromString(reactor, "tcp:8000").listen(server.Site(HealthCheck()))
-    return reactor.run()
+def handler(**kwargs):
+    prepare_database()
+    ports = kwargs.get('ports', DEFAULT_PORTS)
+    for port in ports:
+        endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(Web()))
