@@ -23,7 +23,7 @@ class HealthCheck(resource.Resource):
         request.setHeader('Server', PRODSTRING)
         request.setHeader('Access-Control-Allow-Origin', '*')
         request.setHeader('content-type', 'text/plain')
-        logger.info("Request type is %s", request.method)
+        logger.info(request.getClientAddress())
         request.finish()
 
 
