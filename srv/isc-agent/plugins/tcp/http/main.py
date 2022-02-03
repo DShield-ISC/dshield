@@ -20,12 +20,11 @@ class HealthCheck(resource.Resource):
 
     def render_HEAD(self, request: Request):
         request.setResponseCode(HTTPStatus.OK)
-        request.setHeader(b"Server", f"{PRODSTRING}")
-        request.setHeader(b"Access-Control-Allow-Origin", "*")
-        request.setHeader(b"content-type", b"text/plain")
-        content = f"I am HEAD request #{self.numberRequests}\n"
-        logger.warning("Request type is %s", request.method)
-        return content.encode("ascii")
+        request.setHeader('Server', PRODSTRING)
+        request.setHeader('Access-Control-Allow-Origin', '*')
+        request.setHeader('content-type', 'text/plain')
+        logger.info("Request type is %s", request.method)
+        request.finish()
 
 
 def handler():
