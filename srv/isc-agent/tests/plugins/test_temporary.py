@@ -1,6 +1,6 @@
-from plugins.tcp.http.main import HealthCheck
+from plugins.tcp.http.main import Web
 
 
 def test_temporary():
-    HealthCheck()
+    Web()
     return True

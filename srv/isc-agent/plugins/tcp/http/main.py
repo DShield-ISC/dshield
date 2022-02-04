@@ -1,14 +1,20 @@
 import logging
 from http import HTTPStatus
+
 from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from twisted.web.http import Request
 
+from plugins.tcp.http.models import prepare_database
+
+DEFAULT_PORTS = [80, 8000, 8080]
 PRODSTRING = 'Apache/3.2.3'
 logger = logging.getLogger(__name__)
 
 
-class HealthCheck(resource.Resource):
+
+
+class Web(resource.Resource):
     isLeaf = True
     numberRequests = 0
 
@@ -27,6 +33,8 @@ class HealthCheck(resource.Resource):
         request.finish()
 
 
-def handler():
-    endpoints.serverFromString(reactor, "tcp:8000").listen(server.Site(HealthCheck()))
-    return reactor.run()
+def handler(**kwargs):
+    prepare_database()
+    ports = kwargs.get('ports', DEFAULT_PORTS)
+    for port in ports:
+        endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(Web()))
