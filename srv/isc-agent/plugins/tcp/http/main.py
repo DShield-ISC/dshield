@@ -20,9 +20,9 @@ class HealthCheck(resource.Resource):
         request.setHeader('Server', PRODSTRING)
         request.setHeader('Access-Control-Allow-Origin', '*')
         request.setHeader('content-type', 'text/plain')
-        logger.info("Request type is %s", request.method)
-        content = f"I am HEAD request #{self.numberRequests}\n"
-        return content.encode("ascii")
+        logger.info('Request type is %s', request.method)
+        logger.info('Client IP: %s ', request.getClientAddress())
+
 
 
 def handler():
