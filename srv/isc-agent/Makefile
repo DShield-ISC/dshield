@@ -55,7 +55,7 @@ shell s:
 
 .PHONY: test t
 test t:
-	docker run -v $(PWD):/opt/sans-isc-agent --rm $(IMAGE_NAME) sh -c "coverage run --rcfile=./.coveragerc && cd .generated/coverage && coverage html"
+	docker run -v $(PWD):/opt/sans-isc-agent --rm $(IMAGE_NAME) sh -c "coverage run && coverage html && coverage report"
 
 .PHONY: test-path tp
 test-path tp:
