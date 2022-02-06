@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 twisted = {extras = ["all_non_platform", "http2"], version = "*"}
 sqlalchemy = "*"
+pydantic = {extras = ["dotenv", "email"], version = "*"}
 
 [dev-packages]
 pytest = "*"
