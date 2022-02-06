@@ -1,12 +1,11 @@
 import logging
 import json
 import os
-from functools import reduce
 
 from pydantic import ValidationError
-from sqlalchemy import Column, ForeignKey, Integer, Text, String
+from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
-from sqlalchemy.orm import registry, relationship
+from sqlalchemy.orm import registry
 
 import settings
 from plugins.tcp.http import schemas

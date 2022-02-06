@@ -1,6 +1,7 @@
 import logging
 import random
-import re
+import re  # pylint: disable=unused-import
+from ast import literal_eval
 
 from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
@@ -33,9 +34,8 @@ def get_signature_score(rules, attributes):
             attribute = attributes[rule['attribute']]
 
         condition = condition_translator[rule['condition']].format(value, attribute)
-        logger.info(condition)
 
-        if eval(condition):
+        if literal_eval(condition):
             score += rule['score']
     return score
 
@@ -64,7 +64,7 @@ class HTTP(resource.Resource):
                 top_score = score
                 winning_signature = signature
 
-        response = settings.DATABASE_SESSION.query(Response).get(random.choice(winning_signature.responses))
+        response = settings.DATABASE_SESSION.query(Response).get(random.choice(winning_signature.responses))  # nosec
         request.setResponseCode(response.status_code)
         for name, value in response.headers.items():
             request.setHeader(name, value)
