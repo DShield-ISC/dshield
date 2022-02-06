@@ -33,10 +33,10 @@ class RequestLog(Base):
     signature_id = Column(Integer, ForeignKey('signature.id'))
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.ID}: {self})'
+        return f'{self.__class__.__name__}({self.id})'
 
     def __str__(self):
-        return self.headers
+        return self.id
 
 
 class Response(Base):
