@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "headers": {
+      "Server": "Apache/3.2.3",
+      "Access-Control-Allow-Origin": "*",
+      "content-type": "text/plain"
+    },
+    "body": "Hello World",
+    "status_code": 200
+  }
+]
