@@ -1,6 +1,6 @@
-from plugins.tcp.http.main import Web
+from plugins.tcp.http.main import HTTP
 
 
 def test_temporary():
-    Web()
+    HTTP()
     return True
