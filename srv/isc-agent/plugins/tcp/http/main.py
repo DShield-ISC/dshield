@@ -1,7 +1,6 @@
 import logging
 import random
-import re  # pylint: disable=unused-import
-from ast import literal_eval
+import re
 
 from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
@@ -12,10 +11,10 @@ from plugins.tcp.http.models import Response, Signature, prepare_database
 
 default_ports = [80, 8000, 8080]
 condition_translator = {
-    'absent': '"{}" not in {}',
-    'contains': '"{}" in "{}"',
-    'regex': 're.match("{}", "{}")',
-    'equal': '"{}" == "{}"',
+    'absent': lambda x, y: x not in y,
+    'contains': lambda x, y: x in y,
+    'regex': lambda x, y: re.match(x, y),
+    'equal': lambda x, y: x == y
 }
 logger = logging.getLogger(__name__)
 
@@ -33,10 +32,13 @@ def get_signature_score(rules, attributes):
             value = rule['value']
             attribute = attributes[rule['attribute']]
 
-        condition = condition_translator[rule['condition']].format(value, attribute)
-
-        if literal_eval(condition):
+        condition_function = condition_translator[rule['condition']]
+        if condition_function(value, attribute):
             score += rule['score']
+        elif rule['required']:
+            score = 0
+            break
+
     return score
 
 
@@ -46,13 +48,14 @@ class HTTP(resource.Resource):
     def render(self, request: Request):
         request_attributes = {
             'client_ip': request.getClientIP(),
-            'cookies': {k.decode().lower(): v.decode() for k, v in request.received_cookies.items()},
-            'headers': {k.decode().lower(): v.decode() for k, v in request.getAllHeaders().items()},
-            'path': request.path.decode().lower(),
-            'method': request.method.decode().lower(),
-            'user': request.getUser().decode().lower(),
+            'cookies': {k.decode(): v.decode() for k, v in request.received_cookies.items()},
+            'headers': {k.decode(): v.decode() for k, v in request.getAllHeaders().items()},
+            'path': request.path.decode(),
+            'method': request.method.decode(),
+            'user': request.getUser().decode(),
             'password': request.getPassword().decode()
         }
+
         top_score = 0
         winning_signature = None
         signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
@@ -68,7 +71,11 @@ class HTTP(resource.Resource):
         request.setResponseCode(response.status_code)
         for name, value in response.headers.items():
             request.setHeader(name, value)
-        return response.body.encode()
+        content = f'Winning Signature: {winning_signature}\n'
+        content += f'Winning Score: {top_score}\n'
+        content += f'Winning Response: {response}\n'
+        content += f'Response Body: {response.body}'
+        return content.encode()
 
 
 def handler(**kwargs):

@@ -36,4 +36,5 @@ class Signature(BaseModel):
     @root_validator
     def validate_max_score(cls, values):  # pylint: disable=no-self-argument
         values['max_score'] = reduce(lambda x, y: x + y, [rule.score for rule in values['rules']], 0)
+        values['rules'].sort(key=lambda rule: rule.required, reverse=True)
         return values

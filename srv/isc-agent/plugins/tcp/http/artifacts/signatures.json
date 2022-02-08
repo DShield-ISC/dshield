@@ -71,10 +71,17 @@
         "score": 2
       },
       {
-        "condition": "contains",
+        "condition": "equal",
         "attribute": "user",
         "value": "benson",
         "score": 50
+      },
+      {
+        "condition": "contains",
+        "attribute": "path",
+        "value": "nowaysss",
+        "score": 50,
+        "required": true
       }
     ]
   },

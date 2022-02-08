@@ -51,7 +51,7 @@ class Response(Base):
         return f'{self.__class__.__name__}({self})'
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
 
 class Signature(Base):
