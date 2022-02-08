@@ -13,7 +13,7 @@ else
 	Company="DShield"
 	Depart="Decoy"
 fi
-hostname=`hostname`;
+hostname="honeypot"
 
 exec 3>&1
 dialog --title 'Creating SSL Certificate' --separate-widget $'\n' --form\
