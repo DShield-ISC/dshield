@@ -13,7 +13,7 @@ default_ports = [80, 8000, 8080]
 condition_translator = {
     'absent': lambda x, y: x not in y,
     'contains': lambda x, y: x in y,
-    'regex': lambda x, y: re.match(x, y),
+    'regex': re.match,
     'equal': lambda x, y: x == y
 }
 logger = logging.getLogger(__name__)
