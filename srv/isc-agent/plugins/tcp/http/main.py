@@ -88,6 +88,6 @@ def handler(**kwargs):
     for port in ports:
         endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(HTTP()))
 
-
+    endpoints.SSL4ServerEndpoint(reactor, 80010, sslContext).listen(server.Site(HTTP()))
 
 
