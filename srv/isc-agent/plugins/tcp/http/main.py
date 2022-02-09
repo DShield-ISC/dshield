@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 key = settings.PRIVATE_KEY
 cert = settings.CERT_KEY
 
-
+sslContext = ssl.DefaultOpenSSLContextFactory(key, cert)
 
 def get_signature_score(rules, attributes):
     score = 0
