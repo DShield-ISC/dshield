@@ -57,6 +57,10 @@ DATABASE_ENGINE = create_engine(
 )
 DATABASE_SESSION = Session(DATABASE_ENGINE)
 
+# CSS certification key and certificate
+PRIVATE_KEY = os.path.join('key.pem')
+CERT_KEY = os.path.join('cert.pem')
+
 # PLUGINS
 # Eventually this value will be inferred from a settings file of some sort
 PLUGINS = [
@@ -70,3 +74,4 @@ PLUGINS = [
         ]
     }
 ]
+
