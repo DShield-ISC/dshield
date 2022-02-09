@@ -3,11 +3,12 @@ import random
 import re
 
 from twisted.web import server, resource
-from twisted.internet import reactor, endpoints
+from twisted.internet import reactor, endpoints, ssl
 from twisted.web.http import Request
 
 import settings
 from plugins.tcp.http.models import Response, Signature, prepare_database
+
 
 default_ports = [80, 8000, 8080]
 condition_translator = {
@@ -17,6 +18,9 @@ condition_translator = {
     'equal': lambda x, y: x == y
 }
 logger = logging.getLogger(__name__)
+key = settings.PRIVATE_KEY
+cert = settings.CERT_KEY
+
 
 
 def get_signature_score(rules, attributes):
@@ -83,3 +87,7 @@ def handler(**kwargs):
     ports = kwargs.get('ports', default_ports)
     for port in ports:
         endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(HTTP()))
+
+
+
+
