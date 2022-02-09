@@ -9,7 +9,6 @@ from twisted.web.http import Request
 import settings
 from plugins.tcp.http.models import Response, Signature, prepare_database
 
-
 default_ports = [80, 8000, 8080]
 condition_translator = {
     'absent': lambda x, y: x not in y,
@@ -18,10 +17,9 @@ condition_translator = {
     'equal': lambda x, y: x == y
 }
 logger = logging.getLogger(__name__)
-key = settings.PRIVATE_KEY
-cert = settings.CERT_KEY
 
-sslContext = ssl.DefaultOpenSSLContextFactory(key, cert)
+sslContext = ssl.DefaultOpenSSLContextFactory(settings.PRIVATE_KEY, settings.CERT_KEY)
+
 
 def get_signature_score(rules, attributes):
     score = 0
@@ -44,6 +42,15 @@ def get_signature_score(rules, attributes):
             break
 
     return score
+
+
+def http_endpoint(ports):
+    for port in ports:
+        endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(HTTP()))
+
+
+def https_endpoint():
+    endpoints.SSL4ServerEndpoint(reactor, 8001, sslContext).listen(server.Site(HTTP()))
 
 
 class HTTP(resource.Resource):
@@ -85,9 +92,5 @@ class HTTP(resource.Resource):
 def handler(**kwargs):
     prepare_database()
     ports = kwargs.get('ports', default_ports)
-    for port in ports:
-        endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(HTTP()))
-
-    endpoints.SSL4ServerEndpoint(reactor, 8001, sslContext).listen(server.Site(HTTP()))
-
-
+    reactor.callInThread(http_endpoint(ports))
+    reactor.callInThread(https_endpoint)
