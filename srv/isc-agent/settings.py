@@ -57,7 +57,7 @@ DATABASE_ENGINE = create_engine(
 )
 DATABASE_SESSION = Session(DATABASE_ENGINE)
 
-# CSS certification key and certificate
+# SSL certification key and certificate
 PRIVATE_KEY = os.path.join('key.pem')
 CERT_KEY = os.path.join('cert.pem')
 
@@ -71,7 +71,8 @@ PLUGINS = [
             80,
             8000,
             8080,
-        ]
-    }
+        ],
+        'tsl': 8001
+    },
 ]
 
