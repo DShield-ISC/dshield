@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import re
 
@@ -9,8 +10,8 @@ from twisted.web.http import Request
 import settings
 from plugins.tcp.http.models import Response, Signature, prepare_database
 
-default_ports = [80, 8000, 8080]
-tls_ports = [8001]
+default_http_ports = [80, 8000, 8080]
+default_https_ports = [443]
 condition_translator = {
     'absent': lambda x, y: x not in y,
     'contains': lambda x, y: x in y,
@@ -19,7 +20,7 @@ condition_translator = {
 }
 logger = logging.getLogger(__name__)
 
-ssl_context = ssl.DefaultOpenSSLContextFactory(settings.PRIVATE_KEY, settings.CERT_KEY)
+
 
 
 def get_signature_score(rules, attributes):
@@ -43,8 +44,6 @@ def get_signature_score(rules, attributes):
             break
 
     return score
-
-
 
 
 class HTTP(resource.Resource):
@@ -85,9 +84,13 @@ class HTTP(resource.Resource):
 
 def handler(**kwargs):
     prepare_database()
-    ports = kwargs.get('ports', default_ports)
-    tls = kwargs.get('tls', tls_ports)
-    for port in ports:
-        endpoints.serverFromString(reactor, f'tcp:{port}').listen(server.Site(HTTP()))
-    for port in tls:
-        endpoints.SSL4ServerEndpoint(reactor, port, ssl_context).listen(server.Site(HTTP()))
+    http_ports = kwargs.get('http_ports', default_http_ports)
+    https_ports = kwargs.get('https_ports', default_https_ports)
+    for port in http_ports:
+        endpoints.TCP4ServerEndpoint(reactor, port).listen(server.Site(HTTP()))
+    if os.path.exists(settings.PRIVATE_KEY) and os.path.exists(settings.CERT_KEY):
+        ssl_context = ssl.DefaultOpenSSLContextFactory(settings.PRIVATE_KEY, settings.CERT_KEY)
+        for port in https_ports:
+            endpoints.SSL4ServerEndpoint(reactor, port, ssl_context).listen(server.Site(HTTP()))
+    else:
+        logger.warning('Will not start https because cert or key file not found')
