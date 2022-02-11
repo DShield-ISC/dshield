@@ -42,5 +42,5 @@ threading
 time
 traceback
 treq==20.4.1
-twisted==20.3.0
+twisted==22.1.0
 wokkel==18.0.0rc5
