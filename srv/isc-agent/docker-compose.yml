@@ -9,5 +9,6 @@ services:
       - .:/opt/sans-isc-agent
     ports:
       - 80:80
+      - 443:443
       - 8000:8000
       - 8080:8080

@@ -57,16 +57,24 @@ DATABASE_ENGINE = create_engine(
 )
 DATABASE_SESSION = Session(DATABASE_ENGINE)
 
+# SSL certification key and certificate
+PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '~/dshield/etc/CA/keys/honeypot.key')
+CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '~/dshield/etc/CA/certs/honeypot.crt')
+
 # PLUGINS
 # Eventually this value will be inferred from a settings file of some sort
 PLUGINS = [
     {
         'protocol': 'tcp',
         'name': 'http',
-        'ports': [
+        'http_ports': [
             80,
             8000,
             8080,
+        ],
+        'https_ports': [
+            443,
         ]
-    }
+    },
 ]
+
