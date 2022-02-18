@@ -1951,23 +1951,17 @@ run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
 ###########################################################
-## Installation of web honeypot
+## Installation of isc-agent
 ###########################################################
 
 dlog "installing web honeypot"
 
-if [ -d ${WEBDIR} ]; then
-  dlog "old web honeypot installation found, moving"
-  # TODO: warn user, backup dl etc.
-  run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
-fi
-
-run "mkdir -p ${WEBDIR}"
-
-do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}
+do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
+cd ${ISC_AGENT_DIR}
+run "pipenv install --deploy"
 run "systemctl daemon-reload"
-run "systemctl enable webpy.service"
+run "systemctl enable iscagent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
 
