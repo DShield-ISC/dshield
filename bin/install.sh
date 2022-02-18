@@ -729,6 +729,20 @@ fi
 # in case systemd is used
 systemctl stop cowrie
 
+# check if we are behind some kind of proxy and are able to reach ISC
+
+curl -s https://isc.sans.edu > /dev/null
+curlstatus = $?
+
+if [ $curlstatus -gt 0 ]; then
+    outlog "Error connecting to isc.sans.edu"
+    if [ $curlstatus -eq 60 ]; then
+	outlog "Certificate issue. Maybe you are behind a proxy?"
+    fi
+    exit 9
+fi    
+
+
 if [ "$FAST" == "0" ]; then
 
   ###########################################################
