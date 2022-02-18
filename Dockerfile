@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 WORKDIR /usr/src/dshield
 COPY . .
 CMD ["bin/install.sh"]
