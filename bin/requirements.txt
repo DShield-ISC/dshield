@@ -18,6 +18,7 @@ json
 mysqlclient
 optparse
 packaging==20.3
+pipenv
 pyasn1_modules==0.2.8
 pymongo
 pyopenssl==19.1.0
