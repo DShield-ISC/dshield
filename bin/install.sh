@@ -1960,9 +1960,9 @@ run 'systemctl enable cowrie.service'
 outlog "Installing web Honeypot"
 dlog "installing web honeypot"
 
+run "mkdir -p ${ISC_AGENT_DIR}"
 
-
-do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
 outlog "CD to ISC-agent"
 cd ${ISC_AGENT_DIR}
