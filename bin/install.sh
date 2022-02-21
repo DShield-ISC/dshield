@@ -575,6 +575,9 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q remove python2'
     run 'apt -y -q remove python'
     run 'apt -y -q remove python-pip'
+    # 2022-02-17: install python 3.7
+    run 'apt -y -q install python3.7'
+    run 'update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1'
     run 'apt -y -q install python3-pip'
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
@@ -1954,13 +1957,24 @@ run 'systemctl enable cowrie.service'
 ## Installation of isc-agent
 ###########################################################
 
+outlog"Installing web Honeypot"
 dlog "installing web honeypot"
 
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}
 do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
+outlog "CD to ISC-agent"
 cd ${ISC_AGENT_DIR}
+outlog "Pip upgrade"
+run "pip3 install --upgrade pip"
+outlog "Pip installation"
+run "pip3 install pipenv"
+#run "pip3 install twisted"
+#run "pipenv lock"
+outlog "Pip install requirements"
 run "pipenv install --deploy"
+outlog "Daemon reload"
 run "systemctl daemon-reload"
+outlog "Enable ISC-agent"
 run "systemctl enable iscagent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
