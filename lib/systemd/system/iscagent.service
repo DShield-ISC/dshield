@@ -10,7 +10,6 @@ User=cowrie
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=webpy
-ExecStartPre=pipenv install --deploy
 ExecStart=pipenv run python main.py
 
 [Install]
