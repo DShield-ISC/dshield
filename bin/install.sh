@@ -1963,6 +1963,8 @@ dlog "installing web honeypot"
 
 run "mkdir -p ${ISC_AGENT_DIR}"
 
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
+do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
 outlog "CD to ISC-agent"
 cd ${ISC_AGENT_DIR}
 outlog "Pip upgrade"
@@ -1971,11 +1973,7 @@ outlog "Pip installation"
 run "pip3 install pipenv"
 run "pipenv lock"
 outlog "Pip install requirements"
-run "pipenv install --deploy"
-
-do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
-do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
-
+eval "pipenv install --deploy"
 outlog "Daemon reload"
 run "systemctl daemon-reload"
 outlog "Enable ISC-agent"
