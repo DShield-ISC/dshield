@@ -1,0 +1,16 @@
+[Unit]
+Description=DShield Web Honeypot
+After=systemd-networkd-wait-online.service
+Wants=systemd-networkd-wait-online.service
+
+[Service]
+Type=idle
+WorkingDirectory=/srv/isc-agent
+User=cowrie
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=webpy
+ExecStart=pipenv run python main.py
+
+[Install]
+WantedBy=multi-user.target
