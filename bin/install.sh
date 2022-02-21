@@ -593,6 +593,7 @@ if [ "$FAST" == "0" ]; then
         exit 9
       fi
     done
+    run "pip3 install pipenv"
   fi
 
   if [ "$ID" == "amzn" ]; then
