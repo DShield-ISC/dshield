@@ -1962,8 +1962,8 @@ dlog "installing web honeypot"
 
 
 
-do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
-do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/iscagent.service 644
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}
+do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
 outlog "CD to ISC-agent"
 cd ${ISC_AGENT_DIR}
 outlog "Pip upgrade"
