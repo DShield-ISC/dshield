@@ -1965,15 +1965,17 @@ run "mkdir -p ${ISC_AGENT_DIR}"
 
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
+
+run "deactivate"
 outlog "CD to ISC-agent"
 cd ${ISC_AGENT_DIR}
 outlog "Pip upgrade"
 run "pip3 install --upgrade pip"
 outlog "Pip installation"
-eval "pip3 install pipenv"
-eval "pipenv lock"
+run "pip3 install pipenv"
+run "pipenv lock"
 outlog "Pip install requirements"
-eval "PIPENV_IGNORE_VIRTUALENVS=1 pipenv install --deploy"
+run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
 outlog "Daemon reload"
 run "systemctl daemon-reload"
 outlog "Enable ISC-agent"
