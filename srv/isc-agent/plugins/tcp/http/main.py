@@ -1,26 +1,60 @@
+import datetime
+import json
 import logging
 import os
 import random
 import re
+from http import HTTPStatus
+from typing import Dict, Optional
 
+from jinja2 import Environment, BaseLoader
 from twisted.web import server, resource
 from twisted.internet import endpoints, reactor, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database, store_request_log
+from plugins.tcp.http.models import Response, Signature, prepare_database, RequestLog
+from plugins.tcp.http.schemas import Condition
 
+condition_translator = {
+    Condition.absent: lambda x, y: x not in y,
+    Condition.contain: lambda x, y: x in y,
+    Condition.equal: lambda x, y: x == y,
+    Condition.regex: re.match,
+}
 default_http_ports = [80, 8000, 8080]
 default_https_ports = [443]
-condition_translator = {
-    'absent': lambda x, y: x not in y,
-    'contains': lambda x, y: x in y,
-    'regex': re.match,
-    'equal': lambda x, y: x == y
-}
+template_environment = Environment(loader=BaseLoader())
 logger = logging.getLogger(__name__)
 
 
+def extract_request_attributes(request: Request) -> Dict:
+    return {
+        'args': request.args,
+        'client_ip': request.getClientIP(),
+        'cookies': {k.decode(): v.decode() for k, v in request.received_cookies.items()},
+        'headers': {k.decode(): v.decode() for k, v in request.getAllHeaders().items()},
+        'method': request.method.decode(),
+        'password': request.getPassword().decode(),
+        'path': request.path.decode(),
+        'target_ip': settings.LOCAL_IP,
+        'user': request.getUser().decode(),
+        'version': request.clientproto,
+    }
+
+
+def get_winning_signature(request_attributes: Dict) -> Optional[Signature]:
+    top_score = 0
+    winning_signature = None
+    signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
+    for signature in signatures:
+        if top_score >= signature.max_score:
+            break
+        score = get_signature_score(signature.rules, request_attributes)
+        if score >= top_score:
+            top_score = score
+            winning_signature = signature
+    return winning_signature
 
 
 def get_signature_score(rules, attributes):
@@ -42,45 +76,56 @@ def get_signature_score(rules, attributes):
         elif rule['required']:
             score = 0
             break
-
     return score
+
+
+def log_request(request_attributes: Dict, signature_id: Optional[int] = None, response_id: Optional[int] = None):
+    request_log = RequestLog(
+        client_ip=request_attributes['client_ip'],
+        data={'post_data': request_attributes['args']},
+        headers=str(request_attributes['headers']),
+        method=request_attributes['method'],
+        path=request_attributes['path'],
+        response_id=response_id,
+        signature_id=signature_id,
+        target_ip=request_attributes['target_ip'],
+        version=request_attributes['version'],
+    )
+    settings.DATABASE_SESSION.add(request_log)
+    settings.DATABASE_SESSION.commit()
 
 
 class HTTP(resource.Resource):
     isLeaf = True
 
     def render(self, request: Request):
-        request_attributes = {
-            'client_ip': request.getClientIP(),
-            'cookies': {k.decode(): v.decode() for k, v in request.received_cookies.items()},
-            'headers': {k.decode(): v.decode() for k, v in request.getAllHeaders().items()},
-            'path': request.path.decode(),
-            'method': request.method.decode(),
-            'user': request.getUser().decode(),
-            'password': request.getPassword().decode()
-        }
+        request_attributes = extract_request_attributes(request)
+        signature = get_winning_signature(request_attributes)
 
-        top_score = 0
-        winning_signature = None
-        signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
-        for signature in signatures:
-            if top_score >= signature.max_score:
-                break
-            score = get_signature_score(signature.rules, request_attributes)
-            if score >= top_score:
-                top_score = score
-                winning_signature = signature
+        if signature:
+            response = settings.DATABASE_SESSION.query(Response).get(random.choice(signature.responses))  # nosec
+            request.setResponseCode(response.status_code)
 
-        response = settings.DATABASE_SESSION.query(Response).get(random.choice(winning_signature.responses))  # nosec
-        request.setResponseCode(response.status_code)
-        for name, value in response.headers.items():
-            request.setHeader(name, value)
-        content = f'Winning Signature: {winning_signature}\n'
-        content += f'Winning Score: {top_score}\n'
-        content += f'Winning Response: {response}\n'
-        content += f'Response Body: {response.body}'
-        store_request_log(request_attributes)
-        return content.encode()
+            template_variables = {
+                **request_attributes,
+                'datetime': datetime.datetime.now()
+            }
+            body = template_environment.from_string(response.body).render(template_variables)
+            headers = json.loads(
+                template_environment.from_string(
+                    json.dumps(response.headers)
+                ).render(template_variables)
+            )
+            request.write(body.encode())
+            for name, value in headers.items():
+                request.setHeader(name, value)
+            log_request(request_attributes, signature.id, response.id)
+        else:
+            request.setResponseCode(HTTPStatus.BAD_REQUEST)
+            request.write(HTTPStatus.BAD_REQUEST.description.encode())
+            log_request(request_attributes)
+        request.finish()
+        return server.NOT_DONE_YET
 
 
 def handler(**kwargs):

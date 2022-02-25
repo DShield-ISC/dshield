@@ -20,15 +20,13 @@ class RequestLog(Base):
     __tablename__ = 'request_log'
 
     id = Column(Integer, primary_key=True)
-    headers = Column(Text)
-    address = Column(Text)
-    command = Column(Text)
-    path = Column(Text)
-    user_agent = Column(Text)
-    version = Column(Text)
+    client_ip = Column(Text)
     data = Column(JSON)
-    summary = Column(Text)
-    target = Column(Text)
+    headers = Column(Text)
+    method = Column(Text)
+    path = Column(Text)
+    target_ip = Column(Text)
+    version = Column(Text)
     response_id = Column(Integer, ForeignKey('response.id'))
     signature_id = Column(Integer, ForeignKey('signature.id'))
 
@@ -36,14 +34,15 @@ class RequestLog(Base):
         return f'{self.__class__.__name__}({self.id})'
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
 
 class Response(Base):
     __tablename__ = 'response'
 
     id = Column(Integer, primary_key=True)
-    body = Column(String)
+    comment = Column(String)
+    body = Column(Text)
     headers = Column(JSON)
     status_code = Column(Integer)
 

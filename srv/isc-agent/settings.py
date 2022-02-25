@@ -1,6 +1,7 @@
 import logging.config
 import os
 
+import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,7 @@ __all_ = [
 
 # APPLICATION
 BASE_DIR = os.path.join(os.path.dirname(__file__))
+LOCAL_IP = requests.get('https://www4.dshield.org/api/myip?json', verify=True).json()['ip']
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
