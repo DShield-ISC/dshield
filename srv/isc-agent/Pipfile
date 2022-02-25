@@ -7,6 +7,8 @@ name = "pypi"
 twisted = {extras = ["all_non_platform", "http2"], version = "*"}
 sqlalchemy = "*"
 pydantic = {extras = ["dotenv", "email"], version = "*"}
+requests = "*"
+jinja2 = "*"
 
 [dev-packages]
 pytest = "*"

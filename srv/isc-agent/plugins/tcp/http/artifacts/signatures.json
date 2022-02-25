@@ -11,7 +11,7 @@
         "score": 2
       },
       {
-        "condition": "contains",
+        "condition": "contain",
         "attribute": "headers",
         "value": "accept-encoding",
         "score": 3
@@ -51,7 +51,7 @@
         "score": 2
       },
       {
-        "condition": "contains",
+        "condition": "contain",
         "attribute": "cookies",
         "value": "Cookie_1",
         "score": 9
@@ -77,7 +77,7 @@
         "score": 50
       },
       {
-        "condition": "contains",
+        "condition": "contain",
         "attribute": "path",
         "value": "nowaysss",
         "score": 50,
