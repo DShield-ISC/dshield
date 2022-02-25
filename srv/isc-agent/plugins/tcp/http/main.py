@@ -8,7 +8,7 @@ from twisted.internet import endpoints, reactor, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database
+from plugins.tcp.http.models import Response, Signature, prepare_database, store_request_log
 
 default_http_ports = [80, 8000, 8080]
 default_https_ports = [443]
@@ -79,6 +79,7 @@ class HTTP(resource.Resource):
         content += f'Winning Score: {top_score}\n'
         content += f'Winning Response: {response}\n'
         content += f'Response Body: {response.body}'
+        store_request_log(request_attributes)
         return content.encode()
 
 
@@ -94,3 +95,5 @@ def handler(**kwargs):
             endpoints.SSL4ServerEndpoint(reactor, port, ssl_context).listen(server.Site(HTTP()))
     else:
         logger.warning('Will not start https because cert or key file not found')
+
+

@@ -101,3 +101,14 @@ def prepare_database():
             signatures.append(Signature(**signature_schema.dict()))
         settings.DATABASE_SESSION.add_all(signatures)
         settings.DATABASE_SESSION.commit()
+
+
+def store_request_log(request_attributes):
+    # Gets the request attributes and assigned them to RequestLog object
+    request = RequestLog(address=request_attributes['client_ip'])
+    # Adds RequestLog object to the session and commits it to the database
+    settings.DATABASE_SESSION.add(request)
+    settings.DATABASE_SESSION.commit()
+    for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        logger.warning(instance.address)
+    logger.warning('IP is: %s', request_attributes['client_ip'])
