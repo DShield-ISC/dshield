@@ -8,8 +8,8 @@ from pydantic import BaseModel, conlist, root_validator
 
 class Condition(str, Enum):
     absent = 'absent'
-    contain = 'contain'
-    equal = 'equal'
+    contains = 'contains'
+    equal = 'equals'
     regex = 'regex'
 
 
@@ -22,7 +22,7 @@ class Response(BaseModel):
 
 class Rule(BaseModel):
     attribute: str
-    condition: Optional[Condition] = Condition.contain
+    condition: Optional[Condition] = Condition.contains
     value: str
     score: Optional[int] = 1
     required: Optional[bool] = False

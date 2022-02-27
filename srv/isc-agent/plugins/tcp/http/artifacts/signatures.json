@@ -11,7 +11,7 @@
         "score": 2
       },
       {
-        "condition": "contain",
+        "condition": "contains",
         "attribute": "headers",
         "value": "accept-encoding",
         "score": 3
@@ -25,13 +25,13 @@
     ],
     "rules": [
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "headers",
         "value": "user-agent:PostmanRuntime/7.29.0",
         "score": 2
       },
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "method",
         "value": "GET",
         "score": 2
@@ -45,13 +45,13 @@
     ],
     "rules": [
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "method",
         "value": "GET",
         "score": 2
       },
       {
-        "condition": "contain",
+        "condition": "contains",
         "attribute": "cookies",
         "value": "Cookie_1",
         "score": 9
@@ -65,19 +65,19 @@
     ],
     "rules": [
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "method",
         "value": "GET",
         "score": 2
       },
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "user",
         "value": "benson",
         "score": 50
       },
       {
-        "condition": "contain",
+        "condition": "contains",
         "attribute": "path",
         "value": "nowaysss",
         "score": 50,
@@ -91,7 +91,7 @@
     ],
     "rules": [
       {
-        "condition": "equal",
+        "condition": "equals",
         "attribute": "method",
         "value": "GET",
         "score": 2
