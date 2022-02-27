@@ -13,7 +13,7 @@ from twisted.internet import endpoints, reactor, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database, RequestLog
+from plugins.tcp.http.models import Signature, prepare_database, RequestLog
 from plugins.tcp.http.schemas import Condition
 
 condition_translator = {
