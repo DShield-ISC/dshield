@@ -24,7 +24,7 @@ condition_translator = {
 }
 default_http_ports = [80, 8000, 8080]
 default_https_ports = [443]
-template_environment = Environment(loader=BaseLoader())
+template_environment = Environment(loader=BaseLoader(), autoescape=True)
 logger = logging.getLogger(__name__)
 
 
