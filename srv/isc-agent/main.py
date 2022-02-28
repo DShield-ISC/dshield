@@ -16,7 +16,6 @@ if __name__ == '__main__':
         module = importlib.import_module(f'plugins.{plugin["protocol"]}.{plugin["name"]}')
         module.handler(**plugin)
 
-    l = task.LoopingCall(iscagentsubmit.test_post)
-    l.start(10.0)
-
+    l = task.LoopingCall(iscagentsubmit.post)
+    l.start(2.0)
     reactor.run()
