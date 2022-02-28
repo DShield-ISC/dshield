@@ -103,7 +103,7 @@ def prepare_database():
         settings.DATABASE_SESSION.commit()
 
 
-def read_db_and_send_to_dshield():
+def read_db_and_log():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
         log_data = {
             'client_ip': instance.client_ip,
