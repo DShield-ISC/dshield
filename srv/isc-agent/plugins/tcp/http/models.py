@@ -10,10 +10,11 @@ from sqlalchemy.orm import registry
 import settings
 from plugins.tcp.http import schemas
 
+
 logger = logging.getLogger(__name__)
 mapper_registry = registry()
-
 Base = mapper_registry.generate_base()
+logs = []
 
 
 class RequestLog(Base):
@@ -102,12 +103,23 @@ def prepare_database():
         settings.DATABASE_SESSION.commit()
 
 
-def store_request_log(request_attributes):
-    # Gets the request attributes and assigned them to RequestLog object
-    request = RequestLog(address=request_attributes['client_ip'])
-    # Adds RequestLog object to the session and commits it to the database
-    settings.DATABASE_SESSION.add(request)
-    settings.DATABASE_SESSION.commit()
+def read_db_and_send_to_dshield():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
-        logger.warning(instance.address)
-    logger.warning('IP is: %s', request_attributes['client_ip'])
+        logdata = {}
+        logdata['client_ip'] = instance.client_ip
+        logdata['data'] = instance.data
+        logdata['headers'] = instance.headers
+        logdata['method'] = instance.method
+        logdata['path'] = instance.path
+        logdata['response_id'] = instance.response_id
+        logdata['signature_id'] = instance.signature_id
+        logdata['target_ip'] = instance.target_ip
+        logdata['version'] = instance.version
+        logs.append(logdata)
+        logger.warning('READ DB AND SEND TO DSHIELD')
+        logger.warning('ID: %s \n  Client IP: %s \n Headers: %s', instance.id, instance.client_ip, instance.headers)
+    logger.warning('Print Logs')
+    logger.warning(logs)
+
+    return logs
+
