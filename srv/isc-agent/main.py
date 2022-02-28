@@ -1,7 +1,8 @@
 import importlib
 import logging
 
-from twisted.internet import reactor
+from twisted.internet import task, reactor
+from plugins.tcp.http import iscagentsubmit
 
 import settings
 
@@ -14,5 +15,8 @@ if __name__ == '__main__':
         logger.debug('%s options: %s', plugin['name'], plugin)
         module = importlib.import_module(f'plugins.{plugin["protocol"]}.{plugin["name"]}')
         module.handler(**plugin)
+
+    l = task.LoopingCall(iscagentsubmit.test_post)
+    l.start(10.0)
 
     reactor.run()
