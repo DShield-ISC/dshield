@@ -575,9 +575,6 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q remove python2'
     run 'apt -y -q remove python'
     run 'apt -y -q remove python-pip'
-    # 2022-02-17: install python 3.7
-    run 'apt -y -q install python3.7'
-    run 'update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1'
     run 'apt -y -q install python3-pip'
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
