@@ -14,7 +14,7 @@ from twisted.internet import endpoints, reactor, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database, RequestLog, read_db_and_send_to_dshield
+from plugins.tcp.http.models import Response, Signature, prepare_database, RequestLog, read_db_and_log
 from plugins.tcp.http.schemas import Condition
 
 condition_translator = {
@@ -125,7 +125,7 @@ class HTTP(resource.Resource):
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
             request.write(HTTPStatus.BAD_REQUEST.description.encode())
             log_request(request_attributes)
-        read_db_and_send_to_dshield()
+        read_db_and_log()
         request.finish()
         return server.NOT_DONE_YET
 
