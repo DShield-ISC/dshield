@@ -105,21 +105,18 @@ def prepare_database():
 
 def read_db_and_send_to_dshield():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
-        logdata = {}
-        logdata['client_ip'] = instance.client_ip
-        logdata['data'] = instance.data
-        logdata['headers'] = instance.headers
-        logdata['method'] = instance.method
-        logdata['path'] = instance.path
-        logdata['response_id'] = instance.response_id
-        logdata['signature_id'] = instance.signature_id
-        logdata['target_ip'] = instance.target_ip
-        logdata['version'] = instance.version
-        logs.append(logdata)
-        logger.warning('READ DB AND SEND TO DSHIELD')
-        logger.warning('ID: %s \n  Client IP: %s \n Headers: %s', instance.id, instance.client_ip, instance.headers)
-    logger.warning('Print Logs')
-    logger.warning(logs)
+        log_data = {
+            'client_ip': instance.client_ip,
+            'data': instance.data,
+            'headers': instance.headers,
+            'method': instance.method,
+            'path': instance.path,
+            'response_id': instance.response_id,
+            'signature_id': instance.signature_id,
+            'target_ip': instance.target_ip,
+            'version': instance.version
+        }
+        logs.append(log_data)
 
     return logs
 
