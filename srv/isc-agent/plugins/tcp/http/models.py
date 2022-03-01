@@ -5,19 +5,17 @@ import os
 from pydantic import ValidationError
 from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
-from sqlalchemy.orm import registry
+from sqlalchemy.orm import relationship
 
 import settings
 from plugins.tcp.http import schemas
+from utils import BaseModel
 
 
 logger = logging.getLogger(__name__)
-mapper_registry = registry()
-Base = mapper_registry.generate_base()
-logs = []
 
 
-class RequestLog(Base):
+class RequestLog(BaseModel):
     __tablename__ = 'request_log'
 
     id = Column(Integer, primary_key=True)
@@ -31,14 +29,14 @@ class RequestLog(Base):
     response_id = Column(Integer, ForeignKey('response.id'))
     signature_id = Column(Integer, ForeignKey('signature.id'))
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.id})'
+    response = relationship('Response', back_populates='request_logs')
+    signature = relationship('Signature', back_populates='request_logs')
 
     def __str__(self):
         return str(self.id)
 
 
-class Response(Base):
+class Response(BaseModel):
     __tablename__ = 'response'
 
     id = Column(Integer, primary_key=True)
@@ -47,33 +45,48 @@ class Response(Base):
     headers = Column(JSON)
     status_code = Column(Integer)
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self})'
+    request_logs = relationship('RequestLog', back_populates='response')
+    signatures = relationship('Signature', back_populates='responses', secondary='signature_response')
+    signature_responses = relationship('SignatureResponse', back_populates='response', viewonly=True)
 
     def __str__(self):
         return str(self.id)
 
 
-class Signature(Base):
+class Signature(BaseModel):
     __tablename__ = 'signature'
 
     id = Column(Integer, primary_key=True)
     max_score = Column(Integer, nullable=False)
-    responses = Column(JSON, nullable=False)
     rules = Column(JSON, nullable=False)
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self})"
+    responses = relationship('Response', back_populates='signatures', secondary='signature_response')
+    request_logs = relationship('RequestLog', back_populates='signature')
+    signature_responses = relationship('SignatureResponse', back_populates='signature', viewonly=True)
 
     def __str__(self):
         return str(self.id)
 
 
+class SignatureResponse(BaseModel):
+    __tablename__ = 'signature_response'
+
+    response_id = Column(Integer, ForeignKey('response.id'), primary_key=True)
+    signature_id = Column(Integer, ForeignKey('signature.id'), primary_key=True)
+
+    response = relationship('Response',  back_populates='signature_responses', viewonly=True)
+    signature = relationship('Signature',  back_populates='signature_responses', viewonly=True)
+
+    def __str__(self):
+        return f'{repr(self.signature)} : {repr(self.response)}'
+
+
+def create_tables():
+    settings.DATABASE_MAPPER_REGISTRY.metadata.create_all(settings.DATABASE_ENGINE)
+
+
 def prepare_database():
-    # Establish connectivity with SQLAlchemy engine
-    mapper_registry.metadata.create_all(settings.DATABASE_ENGINE)
-    settings.DATABASE_SESSION.query(Signature).delete()
-    settings.DATABASE_SESSION.query(Response).delete()
+    create_tables()
 
     # Hydrate tables
     with open(os.path.join(os.path.dirname(__file__), 'artifacts/responses.json'), 'rb') as fp:
@@ -87,7 +100,6 @@ def prepare_database():
                 continue
             responses.append(Response(**response_schema.dict()))
         settings.DATABASE_SESSION.add_all(responses)
-        settings.DATABASE_SESSION.commit()
 
     with open(os.path.join(os.path.dirname(__file__), 'artifacts/signatures.json'), 'rb') as fp:
         signatures = []
@@ -98,9 +110,13 @@ def prepare_database():
                 logger.warning('Signature failed: %s', signature)
                 logger.warning(e, exc_info=True)
                 continue
-            signatures.append(Signature(**signature_schema.dict()))
+            signature_schema_dict = signature_schema.dict()
+            response_ids = signature_schema_dict.pop('responses')
+            associated_responses = settings.DATABASE_SESSION.query(Response).filter(Response.id.in_(response_ids))
+            signature_schema_dict['responses'] = list(associated_responses)
+            signatures.append(Signature(**signature_schema_dict))
         settings.DATABASE_SESSION.add_all(signatures)
-        settings.DATABASE_SESSION.commit()
+    settings.DATABASE_SESSION.flush()
 
 
 def read_db_and_log():

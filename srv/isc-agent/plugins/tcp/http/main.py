@@ -14,18 +14,18 @@ from twisted.internet import endpoints, reactor, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database, RequestLog, read_db_and_log
+from plugins.tcp.http.models import Signature, prepare_database, RequestLog
 from plugins.tcp.http.schemas import Condition
 
 condition_translator = {
     Condition.absent: lambda x, y: x not in y,
-    Condition.contain: lambda x, y: x in y,
+    Condition.contains: lambda x, y: x in y,
     Condition.equal: lambda x, y: x == y,
     Condition.regex: re.match,
 }
 default_http_ports = [80, 8000, 8080]
 default_https_ports = [443]
-template_environment = Environment(loader=BaseLoader())
+template_environment = Environment(loader=BaseLoader(), autoescape=True)
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +52,7 @@ def get_winning_signature(request_attributes: Dict) -> Optional[Signature]:
         if top_score >= signature.max_score:
             break
         score = get_signature_score(signature.rules, request_attributes)
-        if score >= top_score:
+        if score and score >= top_score:
             top_score = score
             winning_signature = signature
     return winning_signature
@@ -83,7 +83,7 @@ def get_signature_score(rules, attributes):
 def log_request(request_attributes: Dict, signature_id: Optional[int] = None, response_id: Optional[int] = None):
     request_log = RequestLog(
         client_ip=request_attributes['client_ip'],
-        data={'post_data': request_attributes['args']},
+        # data={'post_data': request_attributes['args']},  TODO - convert keys from bytes to strings
         headers=str(request_attributes['headers']),
         method=request_attributes['method'],
         path=request_attributes['path'],
@@ -93,7 +93,7 @@ def log_request(request_attributes: Dict, signature_id: Optional[int] = None, re
         version=request_attributes['version'],
     )
     settings.DATABASE_SESSION.add(request_log)
-    settings.DATABASE_SESSION.commit()
+    settings.DATABASE_SESSION.flush()
 
 
 class HTTP(resource.Resource):
@@ -104,7 +104,7 @@ class HTTP(resource.Resource):
         signature = get_winning_signature(request_attributes)
 
         if signature:
-            response = settings.DATABASE_SESSION.query(Response).get(random.choice(signature.responses))  # nosec
+            response = random.choice(signature.responses)  # nosec
             request.setResponseCode(response.status_code)
 
             template_variables = {
@@ -125,8 +125,6 @@ class HTTP(resource.Resource):
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
             request.write(HTTPStatus.BAD_REQUEST.description.encode())
             log_request(request_attributes)
-        request.finish()
-        return server.NOT_DONE_YET
 
 
 def handler(**kwargs):

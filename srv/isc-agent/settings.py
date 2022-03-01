@@ -3,7 +3,7 @@ import os
 
 import requests
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, registry
 
 __all_ = [
     # DATABASE SETTINGS
@@ -49,6 +49,8 @@ LOGGING = {
 logging.config.dictConfig(LOGGING)
 
 # DATABASE SETTINGS
+DATABASE_MAPPER_REGISTRY = registry()
+DATABASE_BASE = DATABASE_MAPPER_REGISTRY.generate_base()
 DATABASE_DEBUG_LOGGING = os.getenv('DATABASE_DEBUG_LOGGING', False)
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite+pysqlite:///:memory:')
 DATABASE_ENGINE = create_engine(
