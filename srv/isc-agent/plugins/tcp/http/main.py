@@ -125,7 +125,6 @@ class HTTP(resource.Resource):
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
             request.write(HTTPStatus.BAD_REQUEST.description.encode())
             log_request(request_attributes)
-        read_db_and_log()
         request.finish()
         return server.NOT_DONE_YET
 

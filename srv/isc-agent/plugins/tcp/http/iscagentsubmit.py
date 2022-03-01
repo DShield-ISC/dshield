@@ -19,19 +19,7 @@ d = agent.request(
 )
 
 
-def post_response(ignored):
-    print('Data posted')
-    logger.warning('Data posted')
-
-
-def post_Shutdown(ignored):
-    reactor.stop()
-
-
 def post():
-    logs = models.logs
-    d.addCallback(post_response)
-    reactor.run
     logger.warning('ISC-AGENT SUBMIT TO DSHIELD')
     logger.warning('Print Logs')
     logger.warning(logs)

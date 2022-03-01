@@ -104,6 +104,7 @@ def prepare_database():
 
 
 def read_db_and_log():
+
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
         log_data = {
             'client_ip': instance.client_ip,
@@ -117,6 +118,6 @@ def read_db_and_log():
             'version': instance.version
         }
         logs.append(log_data)
-
+        logger.warning(logs)
     return logs
 
