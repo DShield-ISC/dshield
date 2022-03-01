@@ -1954,8 +1954,8 @@ run 'systemctl enable cowrie.service'
 ## Installation of isc-agent
 ###########################################################
 
-outlog "Installing web Honeypot"
-dlog "installing web honeypot"
+outlog "Installing ISC-Agent"
+dlog "installing ISC-Agent"
 
 run "mkdir -p ${ISC_AGENT_DIR}"
 
