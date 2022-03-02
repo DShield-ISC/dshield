@@ -5,7 +5,7 @@ import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, registry
 
-__all_ = [
+__all__ = [
     # DATABASE SETTINGS
     'DATABASE_DEBUG_LOGGING',
     'DATABASE_ENGINE',
