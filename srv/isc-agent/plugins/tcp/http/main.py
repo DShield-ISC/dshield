@@ -110,20 +110,24 @@ class HTTP(resource.Resource):
                 **request_attributes,
                 'datetime': datetime.datetime.now()
             }
-            body = template_environment.from_string(response.body).render(template_variables)
+            body = template_environment.from_string(response.body).render(template_variables).encode()
             headers = json.loads(
                 template_environment.from_string(
                     json.dumps(response.headers)
                 ).render(template_variables)
             )
-            request.write(body.encode())
             for name, value in headers.items():
-                request.setHeader(name, value)
+                request.responseHeaders.setRawHeaders(name, [value])
+            request.responseHeaders.setRawHeaders('Content-Length', [str(len(body))])
+            request.write(body)
             log_request(request_attributes, signature.id, response.id)
         else:
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
-            request.write(HTTPStatus.BAD_REQUEST.description.encode())
+            body = HTTPStatus.BAD_REQUEST.description.encode()
+            request.responseHeaders.setRawHeaders('Content-Length', [str(len(body))])
+            request.write(body)
             log_request(request_attributes)
+        return b''
 
 
 def handler(**kwargs):
