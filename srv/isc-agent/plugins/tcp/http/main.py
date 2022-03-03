@@ -7,14 +7,14 @@ import re
 from http import HTTPStatus
 from typing import Dict, Optional
 
-
 from jinja2 import Environment, BaseLoader
 from twisted.web import server, resource
-from twisted.internet import endpoints, reactor, ssl
+from twisted.internet import endpoints, reactor, task, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Signature, prepare_database, RequestLog
+from plugins.tcp.http import iscagent_submit
+from plugins.tcp.http.models import Signature, prepare_database, RequestLog, read_db_and_log
 from plugins.tcp.http.schemas import Condition
 
 condition_translator = {
@@ -94,6 +94,12 @@ def log_request(request_attributes: Dict, signature_id: Optional[int] = None, re
     )
     settings.DATABASE_SESSION.add(request_log)
     settings.DATABASE_SESSION.flush()
+    read_db_and_log()
+
+
+def timed_task(secs):
+    l = task.LoopingCall(iscagent_submit.post)
+    l.start(secs)
 
 
 class HTTP(resource.Resource):
@@ -129,6 +135,7 @@ class HTTP(resource.Resource):
 
 def handler(**kwargs):
     prepare_database()
+    timed_task(3)
     http_ports = kwargs.get('http_ports', default_http_ports)
     https_ports = kwargs.get('https_ports', default_https_ports)
     for port in http_ports:
@@ -139,5 +146,3 @@ def handler(**kwargs):
             endpoints.SSL4ServerEndpoint(reactor, port, ssl_context).listen(server.Site(HTTP()))
     else:
         logger.warning('Will not start https because cert or key file not found')
-
-
