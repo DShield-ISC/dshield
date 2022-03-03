@@ -24,7 +24,7 @@ class RequestLog(BaseModel):
     time = Column(DateTime, default=datetime.datetime.now())
     client_ip = Column(Text)
     data = Column(JSON)
-    headers = Column(JSON)
+    headers = Column(Text)
     method = Column(Text)
     path = Column(Text)
     target_ip = Column(Text)
@@ -124,7 +124,6 @@ def prepare_database():
 
 def read_db_and_log():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
-        headerdata = {'user-agent': 'Mozilla/5.0'}
         for each in instance.headers:
             pass
         log_data = {
