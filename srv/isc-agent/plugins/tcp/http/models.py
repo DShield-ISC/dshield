@@ -1,12 +1,13 @@
+import ast
+import datetime
 import logging
 import json
 import os
 
 from pydantic import ValidationError
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import current_timestamp
 
 import settings
 from plugins.tcp.http import schemas
@@ -20,10 +21,10 @@ class RequestLog(BaseModel):
     __tablename__ = 'request_log'
 
     id = Column(Integer, primary_key=True)
-    time = Column(Float, default=current_timestamp)
+    time = Column(DateTime, default=datetime.datetime.now())
     client_ip = Column(Text)
     data = Column(JSON)
-    headers = Column(Text)
+    headers = Column(JSON)
     method = Column(Text)
     path = Column(Text)
     target_ip = Column(Text)
@@ -123,18 +124,18 @@ def prepare_database():
 
 def read_db_and_log():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        headerdata = {'user-agent': 'Mozilla/5.0'}
+        for each in instance.headers:
+            pass
         log_data = {
-            'client_ip': instance.client_ip,
-            'data': instance.data,
-            'headers': instance.headers,
+            'time': instance.time,
+            'headers': ast.literal_eval(instance.headers),
+            'sip': instance.client_ip,
+            'dip': instance.target_ip,
             'method': instance.method,
-            'path': instance.path,
-            'response_id': instance.response_id,
-            'signature_id': instance.signature_id,
-            'target_ip': instance.target_ip,
-            'version': instance.version
+            'url': instance.path,
+            'data': instance.data,
+            'useragent': ast.literal_eval(instance.headers)['user-agent'],
         }
         logs.append(log_data)
-        logger.warning(logs)
     return logs
-
