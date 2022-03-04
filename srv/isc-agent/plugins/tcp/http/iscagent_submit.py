@@ -15,7 +15,7 @@ send_to_dshield = True
 logs = []
 
 
-def http_request(data, url=settings.DSHIELD_URL):
+def isc_agent_submit(data, url=settings.DSHIELD_URL):
     logger.warning('HTTP Request')
     agent = Agent(reactor)
     d = agent.request(
@@ -35,7 +35,7 @@ def http_request(data, url=settings.DSHIELD_URL):
     d.addBoth(cbShutdown)
     return d
 
-def post():
+def isc_agent_log():
     if bool(models.logs) is False or len(models.logs) == len(logs):
         logger.warning('No new data')
     else:
@@ -49,7 +49,7 @@ def post():
             logger.warning('Send elsewhere')
         l = {'type': 'webhoneypot', 'logs': logs}
         logger.warning(l)
-        http_request(l)
+        isc_agent_submit(l)
         logger.warning('Data was submitted')
         models.logs.clear()
         logs.clear()

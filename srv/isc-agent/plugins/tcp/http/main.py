@@ -98,7 +98,7 @@ def log_request(request_attributes: Dict, signature_id: Optional[int] = None, re
 
 
 def timed_task(secs):
-    l = task.LoopingCall(iscagent_submit.post)
+    l = task.LoopingCall(iscagent_submit.isc_agent_log)
     l.start(secs)
 
 
