@@ -124,8 +124,6 @@ def prepare_database():
 
 def read_db_and_log():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
-        for each in instance.headers:
-            pass
         log_data = {
             'time': instance.time,
             'headers': ast.literal_eval(instance.headers),
