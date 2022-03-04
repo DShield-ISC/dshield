@@ -6,12 +6,9 @@ from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 
-
 from plugins.tcp.http import models
 
 logger = logging.getLogger(__name__)
-send_to_dshield = True
-
 logs = []
 
 
@@ -28,22 +25,21 @@ def isc_agent_submit(data, url=settings.DSHIELD_URL):
     def handle_response(response):
         logger.warning("handle_response")
 
-    def cbShutdown(ignored):
+    def cb_shutdown(ignored):
         pass
 
     d.addCallback(handle_response)
-    d.addBoth(cbShutdown)
+    d.addBoth(cb_shutdown)
     return d
+
 
 def isc_agent_log():
     if bool(models.logs) is False or len(models.logs) == len(logs):
         logger.warning('No new data')
     else:
         for i in models.logs:
-            logger.warning('Print only one')
-            logger.warning(i['time'])
             logs.append(i)
-        if send_to_dshield is True:
+        if settings.DSHIELD_URL_SEND is True:
             logger.warning('ISC-AGENT SUBMIT TO DSHIELD')
         else:
             logger.warning('Send elsewhere')
