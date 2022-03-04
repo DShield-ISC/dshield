@@ -13,7 +13,7 @@ send_to_dshield = True
 logs = []
 
 
-def http_request(url, data):
+def http_request(data, url=settings.DSHIELD_URL):
     logger.warning('HTTP Request')
     agent = Agent(reactor)
 
@@ -48,7 +48,7 @@ def post():
             logger.warning('Send elsewhere')
         l = {'type': 'webhoneypot', 'logs': logs}
         logger.warning(l)
-        http_request(settings.DSHIELD_URL, l)
+        http_request(l)
         logger.warning('Data was submitted')
         models.logs.clear()
         logs.clear()
