@@ -1,4 +1,5 @@
 import logging
+import settings
 
 from twisted.internet import defer, reactor, protocol
 from twisted.web.client import Agent
@@ -10,7 +11,6 @@ logger = logging.getLogger(__name__)
 send_to_dshield = True
 
 logs = []
-url = b"127.0.0.1:8000"
 
 
 def http_request(url, data):
@@ -48,7 +48,7 @@ def post():
             logger.warning('Send elsewhere')
         l = {'type': 'webhoneypot', 'logs': logs}
         logger.warning(l)
-        http_request(url, l)
+        http_request(settings.DSHIELD_URL, l)
         logger.warning('Data was submitted')
         models.logs.clear()
         logs.clear()
