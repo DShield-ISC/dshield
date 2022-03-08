@@ -1,9 +1,16 @@
+import configparser
+import json
 import logging.config
 import os
 
 import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, registry
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+
 
 __all_ = [
     # DATABASE SETTINGS
@@ -67,18 +74,7 @@ CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '~/dshield/etc/CA/certs/honeypot
 
 # PLUGINS
 # Eventually this value will be inferred from a settings file of some sort
-PLUGINS = [
-    {
-        'protocol': 'tcp',
-        'name': 'http',
-        'http_ports': [
-            80,
-            8000,
-            8080,
-        ],
-        'https_ports': [
-            443,
-        ]
-    },
-]
+PLUGINS = json.loads(config.get("plugin", "plugins"))
+
+
 
