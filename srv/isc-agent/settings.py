@@ -53,7 +53,8 @@ LOGGING = {
         },
     },
 }
-logging.config.dictConfig(LOGGING)
+#logging.config.dictConfig(LOGGING)
+logging.config.dictConfig(json.loads(config.get("logging", "log")))
 
 # DATABASE SETTINGS
 DATABASE_MAPPER_REGISTRY = registry()
