@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, registry
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('settings.ini')
 
 
 
@@ -53,8 +53,8 @@ LOGGING = {
         },
     },
 }
-#logging.config.dictConfig(LOGGING)
-logging.config.dictConfig(json.loads(config.get("logging", "log")))
+logging.config.dictConfig(LOGGING)
+
 
 # DATABASE SETTINGS
 DATABASE_MAPPER_REGISTRY = registry()
@@ -74,8 +74,19 @@ PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '~/dshield/etc/CA/keys/hon
 CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '~/dshield/etc/CA/certs/honeypot.crt')
 
 # PLUGINS
-# Eventually this value will be inferred from a settings file of some sort
-PLUGINS = json.loads(config.get("plugin", "plugins"))
+# Read from settings.ini file
+PLUGINS = []
+for k, v in config.items():
+    protocol_dict = {}
+    if not k.startswith('plugin'):
+        continue
+    _, protocol, name = k.split(":")
+    protocol_dict['protocol'] = protocol
+    protocol_dict['name'] = name
+    for k1, v1 in v.items():
+        v1 = json.loads(v1)
+        protocol_dict[k1] = v1
+    PLUGINS.append(protocol_dict)
 
 
 
