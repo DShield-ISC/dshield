@@ -1,12 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import patch, call, MagicMock
 
-from twisted.internet.defer import succeed, inlineCallbacks
-from twisted.web import server
+from twisted.internet import reactor
 from twisted.web.http import Request
 from twisted.web.test.test_web import DummyRequest
-from twisted.trial import unittest
 
-from plugins.tcp.http.main import HTTP, get_winning_signature
+from plugins.tcp.http.main import HTTP, get_winning_signature, handler
 
 
 class EnhancedDummyRequest(DummyRequest, Request):
@@ -149,3 +147,32 @@ class TestHTTP:
         request.method = b'POST'
         self.http.render(request)
         assert request.responseCode == 200
+
+
+class TestHandler:
+    @patch('plugins.tcp.http.main.ssl')
+    def test_handler_does_not_start_https_if_no_certs(self, ssl_mock):
+        handler()
+        assert not ssl_mock.DefaultOpenSSLContextFactory.called
+
+    @patch('plugins.tcp.http.main.ssl')
+    @patch('plugins.tcp.http.main.os')
+    def test_handler_does_start_https_if_certs_found(self, os_mock, ssl_mock):
+        os_mock.path.exists.return_value = True
+        handler()
+        assert ssl_mock.DefaultOpenSSLContextFactory.called
+
+    @patch('plugins.tcp.http.main.endpoints')
+    @patch('plugins.tcp.http.main.ssl')
+    @patch('plugins.tcp.http.main.os')
+    def test_ports_passed_are_respected(self, os_mock, ssl_mock, endpoints_mock):
+        http_ports = [1, 2, 3]
+        https_ports = [3, 4, 5]
+        os_mock.path.exists.return_value = True
+        ssl_context_mock = MagicMock()
+        ssl_mock.DefaultOpenSSLContextFactory.return_value = ssl_context_mock
+        handler(http_ports=http_ports, https_ports=https_ports)
+        http_calls = [call(reactor, port) for port in http_ports]
+        https_calls = [call(reactor, port, ssl_context_mock) for port in https_ports]
+        endpoints_mock.TCP4ServerEndpoint.assert_has_calls(http_calls, any_order=True)
+        endpoints_mock.SSL4ServerEndpoint.assert_has_calls(https_calls, any_order=True)

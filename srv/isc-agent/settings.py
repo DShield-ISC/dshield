@@ -7,11 +7,6 @@ import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, registry
 
-config = configparser.ConfigParser()
-config.read('settings.ini')
-
-
-
 __all_ = [
     # DATABASE SETTINGS
     'DATABASE_DEBUG_LOGGING',
@@ -22,6 +17,9 @@ __all_ = [
     # PLUGINS
     'PLUGINS',
 ]
+
+config = configparser.ConfigParser()
+config.read('settings.ini')
 
 # APPLICATION
 BASE_DIR = os.path.join(os.path.dirname(__file__))
