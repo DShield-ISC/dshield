@@ -1,9 +1,11 @@
+import ast
+import datetime
 import logging
 import json
 import os
 
 from pydantic import ValidationError
-from sqlalchemy import Column, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
 
@@ -12,12 +14,14 @@ from plugins.tcp.http import schemas
 from utils import BaseModel
 
 logger = logging.getLogger(__name__)
+logs = []
 
 
 class RequestLog(BaseModel):
     __tablename__ = 'request_log'
 
     id = Column(Integer, primary_key=True)
+    time = Column(DateTime, default=datetime.datetime.now())
     client_ip = Column(Text)
     data = Column(JSON)
     headers = Column(Text)
@@ -73,8 +77,8 @@ class SignatureResponse(BaseModel):
     response_id = Column(Integer, ForeignKey('response.id'), primary_key=True)
     signature_id = Column(Integer, ForeignKey('signature.id'), primary_key=True)
 
-    response = relationship('Response',  back_populates='signature_responses', viewonly=True)
-    signature = relationship('Signature',  back_populates='signature_responses', viewonly=True)
+    response = relationship('Response', back_populates='signature_responses', viewonly=True)
+    signature = relationship('Signature', back_populates='signature_responses', viewonly=True)
 
     def __str__(self):
         return f'{repr(self.signature)} : {repr(self.response)}'
@@ -116,3 +120,19 @@ def prepare_database():
             signatures.append(Signature(**signature_schema_dict))
         settings.DATABASE_SESSION.add_all(signatures)
     settings.DATABASE_SESSION.flush()
+
+
+def read_db_and_log():
+    for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        log_data = {
+            'time': instance.time,
+            'headers': ast.literal_eval(instance.headers),
+            'sip': instance.client_ip,
+            'dip': instance.target_ip,
+            'method': instance.method,
+            'url': instance.path,
+            'data': instance.data,
+            'useragent': ast.literal_eval(instance.headers)['user-agent'],
+        }
+        logs.append(log_data)
+    return logs
