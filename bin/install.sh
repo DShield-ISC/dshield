@@ -509,7 +509,7 @@ if [ "$dist" == "invalid" ]; then
   outlog "You are not running a supported operating system. Right now, this script only works for Raspbian,"
   outlog "openSUSE Tumbleweed/Leap and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
-  exit 9
+#  exit 9
 fi
 
 if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ]; then
