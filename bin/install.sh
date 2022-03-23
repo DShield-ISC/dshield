@@ -777,12 +777,12 @@ if [ "$FAST" == "0" ]; then
     #   OR
     # - pip3 below /usr without local
     # -> potential distro pip3 found
-    if [ $(pip3 -V | cut -d " " -f 4 | cut -d "/" -f 3) != "local" -o $(find /usr -name pip3 | grep -v local | wc -l) -gt 0 ]; then
-      # pip3 may be distro pip3
-      outlog "Potential distro pip3 found"
-    else
-      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
-    fi
+#    if [ $(pip3 -V | cut -d " " -f 4 | cut -d "/" -f 3) != "local" -o $(find /usr -name pip3 | grep -v local | wc -l) -gt 0 ]; then
+#      # pip3 may be distro pip3
+#      outlog "Potential distro pip3 found"
+#    else
+#      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
+#    fi
   fi
 
   if [ "$ID" != "opensuse" ]; then
