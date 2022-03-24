@@ -5,6 +5,7 @@ WORKDIR /opt/sans-isc-agent
 COPY . /opt/sans-isc-agent
 
 RUN apt-get update \
+    && apt-get -y install npm nodejs \
     && pip install --upgrade pip \
     && pip install pipenv \
     && pipenv sync --dev --system
