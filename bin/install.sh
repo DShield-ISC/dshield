@@ -509,7 +509,7 @@ if [ "$dist" == "invalid" ]; then
   outlog "You are not running a supported operating system. Right now, this script only works for Raspbian,"
   outlog "openSUSE Tumbleweed/Leap and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
-#  exit 9
+  exit 9
 fi
 
 if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ]; then
@@ -579,7 +579,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git iproute2 jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
+    for b in authbind build-essential curl dialog gcc git iproute2 jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools nodejs npm python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -777,12 +777,12 @@ if [ "$FAST" == "0" ]; then
     #   OR
     # - pip3 below /usr without local
     # -> potential distro pip3 found
-#    if [ $(pip3 -V | cut -d " " -f 4 | cut -d "/" -f 3) != "local" -o $(find /usr -name pip3 | grep -v local | wc -l) -gt 0 ]; then
-#      # pip3 may be distro pip3
-#      outlog "Potential distro pip3 found"
-#    else
-#      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
-#    fi
+    if [ $(pip3 -V | cut -d " " -f 4 | cut -d "/" -f 3) != "local" -o $(find /usr -name pip3 | grep -v local | wc -l) -gt 0 ]; then
+      # pip3 may be distro pip3
+      outlog "Potential distro pip3 found"
+    else
+      outlog "pip found which doesn't seem to be installed as a distro package. Looks ok to me."
+    fi
   fi
 
   if [ "$ID" != "opensuse" ]; then
