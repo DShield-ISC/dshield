@@ -230,10 +230,14 @@ else
   echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
+# raspberry Pis have /var/log/messages. Ubuntu uses /var/log/syslog
+# and this part only applies to Pis
+if [ -f /var/log/messages ]; then
 voltagecount=$(grep -c 'Voltage normalised' /var/log/messages)
 if [ $voltagecount -gt 10 ]; then
     echo "${RED}ERROR${NC}: Your Raspberry Pi's power supply may be too weak."
     TESTS['voltage']=$voltagecount
+fi
 fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
