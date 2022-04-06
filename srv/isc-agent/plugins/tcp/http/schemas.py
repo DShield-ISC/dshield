@@ -9,7 +9,7 @@ from pydantic import BaseModel, conlist, root_validator
 class Condition(str, Enum):
     absent = 'absent'
     contains = 'contains'
-    equal = 'equal'
+    equal = 'equals'
     regex = 'regex'
 
 
@@ -33,7 +33,7 @@ class Signature(BaseModel):
     responses: conlist(int, min_items=1)
     rules: List[Rule]
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def validate_max_score(cls, values):  # pylint: disable=no-self-argument
         values['max_score'] = reduce(lambda x, y: x + y, [rule.score for rule in values['rules']], 0)
         values['rules'].sort(key=lambda rule: rule.required, reverse=True)

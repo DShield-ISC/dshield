@@ -1,26 +1,61 @@
+import datetime
+import json
 import logging
 import os
 import random
 import re
+from http import HTTPStatus
+from typing import Dict, Optional
 
+from jinja2 import Environment, BaseLoader
 from twisted.web import server, resource
-from twisted.internet import endpoints, reactor, ssl
+from twisted.internet import endpoints, reactor, task, ssl
 from twisted.web.http import Request
 
 import settings
-from plugins.tcp.http.models import Response, Signature, prepare_database
+from plugins.tcp.http import iscagent_submit
+from plugins.tcp.http.models import Signature, prepare_database, RequestLog, read_db_and_log
+from plugins.tcp.http.schemas import Condition
 
+condition_translator = {
+    Condition.absent: lambda x, y: x not in y,
+    Condition.contains: lambda x, y: x in y,
+    Condition.equal: lambda x, y: x == y,
+    Condition.regex: re.match,
+}
 default_http_ports = [80, 8000, 8080]
 default_https_ports = [443]
-condition_translator = {
-    'absent': lambda x, y: x not in y,
-    'contains': lambda x, y: x in y,
-    'regex': re.match,
-    'equal': lambda x, y: x == y
-}
+template_environment = Environment(loader=BaseLoader(), autoescape=True)
 logger = logging.getLogger(__name__)
 
 
+def extract_request_attributes(request: Request) -> Dict:
+    return {
+        'args': request.args,
+        'client_ip': request.getClientIP(),
+        'cookies': {k.decode(): v.decode() for k, v in request.received_cookies.items()},
+        'headers': {k.decode(): v.decode() for k, v in request.getAllHeaders().items()},
+        'method': request.method.decode(),
+        'password': request.getPassword().decode(),
+        'path': request.path.decode(),
+        'target_ip': settings.LOCAL_IP,
+        'user': request.getUser().decode(),
+        'version': request.clientproto,
+    }
+
+
+def get_winning_signature(request_attributes: Dict) -> Optional[Signature]:
+    top_score = 0
+    winning_signature = None
+    signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
+    for signature in signatures:
+        if top_score >= signature.max_score:
+            break
+        score = get_signature_score(signature.rules, request_attributes)
+        if score and score >= top_score:
+            top_score = score
+            winning_signature = signature
+    return winning_signature
 
 
 def get_signature_score(rules, attributes):
@@ -42,48 +77,69 @@ def get_signature_score(rules, attributes):
         elif rule['required']:
             score = 0
             break
-
     return score
+
+
+def log_request(request_attributes: Dict, signature_id: Optional[int] = None, response_id: Optional[int] = None):
+    request_log = RequestLog(
+        client_ip=request_attributes['client_ip'],
+        # data={'post_data': request_attributes['args']},  TODO - convert keys from bytes to strings
+        headers=str(request_attributes['headers']),
+        method=request_attributes['method'],
+        path=request_attributes['path'],
+        response_id=response_id,
+        signature_id=signature_id,
+        target_ip=request_attributes['target_ip'],
+        version=request_attributes['version'],
+    )
+    settings.DATABASE_SESSION.add(request_log)
+    settings.DATABASE_SESSION.flush()
+    read_db_and_log()
+
+
+def timed_task(secs):
+    l = task.LoopingCall(iscagent_submit.isc_agent_log)
+    l.start(secs)
 
 
 class HTTP(resource.Resource):
     isLeaf = True
 
     def render(self, request: Request):
-        request_attributes = {
-            'client_ip': request.getClientIP(),
-            'cookies': {k.decode(): v.decode() for k, v in request.received_cookies.items()},
-            'headers': {k.decode(): v.decode() for k, v in request.getAllHeaders().items()},
-            'path': request.path.decode(),
-            'method': request.method.decode(),
-            'user': request.getUser().decode(),
-            'password': request.getPassword().decode()
-        }
+        request_attributes = extract_request_attributes(request)
+        signature = get_winning_signature(request_attributes)
 
-        top_score = 0
-        winning_signature = None
-        signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
-        for signature in signatures:
-            if top_score >= signature.max_score:
-                break
-            score = get_signature_score(signature.rules, request_attributes)
-            if score >= top_score:
-                top_score = score
-                winning_signature = signature
+        if signature:
+            response = random.choice(signature.responses)  # nosec
+            request.setResponseCode(response.status_code)
 
-        response = settings.DATABASE_SESSION.query(Response).get(random.choice(winning_signature.responses))  # nosec
-        request.setResponseCode(response.status_code)
-        for name, value in response.headers.items():
-            request.setHeader(name, value)
-        content = f'Winning Signature: {winning_signature}\n'
-        content += f'Winning Score: {top_score}\n'
-        content += f'Winning Response: {response}\n'
-        content += f'Response Body: {response.body}'
-        return content.encode()
+            template_variables = {
+                **request_attributes,
+                'datetime': datetime.datetime.now()
+            }
+            body = template_environment.from_string(response.body).render(template_variables).encode()
+            headers = json.loads(
+                template_environment.from_string(
+                    json.dumps(response.headers)
+                ).render(template_variables)
+            )
+            for name, value in headers.items():
+                request.responseHeaders.setRawHeaders(name, [value])
+            request.responseHeaders.setRawHeaders('Content-Length', [str(len(body))])
+            request.write(body)
+            log_request(request_attributes, signature.id, response.id)
+        else:
+            request.setResponseCode(HTTPStatus.BAD_REQUEST)
+            body = HTTPStatus.BAD_REQUEST.description.encode()
+            request.responseHeaders.setRawHeaders('Content-Length', [str(len(body))])
+            request.write(body)
+            log_request(request_attributes)
+        return b''
 
 
 def handler(**kwargs):
     prepare_database()
+    timed_task(3)
     http_ports = kwargs.get('http_ports', default_http_ports)
     https_ports = kwargs.get('https_ports', default_https_ports)
     for port in http_ports:

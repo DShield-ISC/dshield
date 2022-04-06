@@ -1,8 +1,11 @@
+import configparser
+import json
 import logging.config
 import os
 
+import requests
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, registry
 
 __all_ = [
     # DATABASE SETTINGS
@@ -15,8 +18,12 @@ __all_ = [
     'PLUGINS',
 ]
 
+config = configparser.ConfigParser()
+config.read('settings.ini')
+
 # APPLICATION
 BASE_DIR = os.path.join(os.path.dirname(__file__))
+LOCAL_IP = requests.get('https://www4.dshield.org/api/myip?json', verify=True).json()['ip']
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -46,7 +53,10 @@ LOGGING = {
 }
 logging.config.dictConfig(LOGGING)
 
+
 # DATABASE SETTINGS
+DATABASE_MAPPER_REGISTRY = registry()
+DATABASE_BASE = DATABASE_MAPPER_REGISTRY.generate_base()
 DATABASE_DEBUG_LOGGING = os.getenv('DATABASE_DEBUG_LOGGING', False)
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite+pysqlite:///:memory:')
 DATABASE_ENGINE = create_engine(
@@ -57,24 +67,28 @@ DATABASE_ENGINE = create_engine(
 )
 DATABASE_SESSION = Session(DATABASE_ENGINE)
 
+#DSHIELD SETTINGS
+DSHIELD_URL = b"127.0.0.1:8000"
+DSHIELD_URL_SEND = True
+
 # SSL certification key and certificate
 PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '~/dshield/etc/CA/keys/honeypot.key')
 CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '~/dshield/etc/CA/certs/honeypot.crt')
 
 # PLUGINS
-# Eventually this value will be inferred from a settings file of some sort
-PLUGINS = [
-    {
-        'protocol': 'tcp',
-        'name': 'http',
-        'http_ports': [
-            80,
-            8000,
-            8080,
-        ],
-        'https_ports': [
-            443,
-        ]
-    },
-]
+# Read from settings.ini file
+PLUGINS = []
+for k, v in config.items():
+    protocol_dict = {}
+    if not k.startswith('plugin'):
+        continue
+    _, protocol, name = k.split(":")
+    protocol_dict['protocol'] = protocol
+    protocol_dict['name'] = name
+    for k1, v1 in v.items():
+        v1 = json.loads(v1)
+        protocol_dict[k1] = v1
+    PLUGINS.append(protocol_dict)
+
+
 

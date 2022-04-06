@@ -233,7 +233,7 @@ DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
-WEBDIR="${TARGETDIR}/www"
+ISC_AGENT_DIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
@@ -579,7 +579,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
+    for b in authbind build-essential curl dialog gcc git iproute2 jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -1965,30 +1965,27 @@ run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
 ###########################################################
-## Installation of web honeypot
+## Installation of isc-agent
 ###########################################################
 
-dlog "installing web honeypot"
+outlog "Installing ISC-Agent"
+dlog "installing ISC-Agent"
 
-if [ -d ${WEBDIR} ]; then
-  dlog "old web honeypot installation found, moving"
-  # TODO: warn user, backup dl etc.
-  run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
-fi
+run "mkdir -p ${ISC_AGENT_DIR}"
 
-run "mkdir -p ${WEBDIR}"
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
+do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
 
-do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
+run "deactivate"
+cd ${ISC_AGENT_DIR}
+run "pip3 install --upgrade pip"
+run "pip3 install pipenv"
+run "pipenv lock"
+run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
 run "systemctl daemon-reload"
-run "systemctl enable webpy.service"
+run "systemctl enable iscagent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
-# change ownership for web databases to cowrie as we will run the
-# web honeypot as cowrie
-touch ${WEBDIR}/DB/webserver.sqlite
-run "chown cowrie ${WEBDIR}/DB"
-run "chown cowrie ${WEBDIR}/DB/*"
 
 ###########################################################
 ## Copying further system files
