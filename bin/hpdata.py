@@ -26,5 +26,5 @@ except configparser.NoSectionError as e:
 nonce = base64.b64encode(os.urandom(8)).decode()
 value = email+':'+key
 hash = hmac.new(nonce.encode('utf-8'), value.encode('utf-8'), digestmod=hashlib.sha512).hexdigest()
-x = requests.get(f"https://devlocalisc.sans.edu/api/hpotsummary/{email}/{nonce}/{hash}?json")
+x = requests.get(f"https://isc.sans.edu/api/hpotsummary/{email}/{nonce}/{hash}?json")
 print(x.text)
