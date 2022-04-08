@@ -97,8 +97,8 @@ def log_request(request_attributes: Dict, signature_id: Optional[int] = None, re
     read_db_and_log()
 
 
-def timed_task(secs):
-    l = task.LoopingCall(iscagent_submit.isc_agent_log)
+def timed_task(secs, function):
+    l = task.LoopingCall(function)
     l.start(secs)
 
 
@@ -139,7 +139,7 @@ class HTTP(resource.Resource):
 
 def handler(**kwargs):
     prepare_database()
-    timed_task(3)
+    timed_task(3, iscagent_submit.isc_agent_log)
     http_ports = kwargs.get('http_ports', default_http_ports)
     https_ports = kwargs.get('https_ports', default_https_ports)
     for port in http_ports:
