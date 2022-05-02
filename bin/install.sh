@@ -1482,7 +1482,7 @@ EOF
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
 
-  if [ -f /etc/ufw/user.rules ]; then
+  if [ -d /etc/ufw ]; then
       dlog "dealing with ufw"
       run "systemctl disable ufw"
       run "ufw disable"
