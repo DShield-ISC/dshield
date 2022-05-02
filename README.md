@@ -65,8 +65,8 @@ sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 ```
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
 ```
-sudo apt-get update
-sudo apt-get -uy dist-upgrade
+sudo apt update
+sudo apt -uy dist-upgrade
 ```
 - reboot
 ```
@@ -74,7 +74,7 @@ sudo reboot
 ```
 - if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
-sudo apt-get -y install git
+sudo apt -y install git
 ```
 - clone the GIT repository (which will create the "dshield" directory)
 ```
