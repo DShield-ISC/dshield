@@ -632,7 +632,7 @@ fi
 ###########################################################
 if [ "$INTERACTIVE" == 1 ]; then
   dlog "Offering user last chance to quit with a nearly untouched system."
-  dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
+  dialog --title '### WARNING ###' --colors --yesno "You are about to turn this system into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
   response=$?
   case $response in
   ${DIALOG_CANCEL})
@@ -1342,6 +1342,8 @@ if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
+
+
 # Further conditions can be inserted below whether iptables of nftables should be used
 
 use_iptables=True
@@ -1480,6 +1482,12 @@ EOF
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
 
+  if [ -f /etc/ufw/user.rules ]; then
+      dlog "dealing with ufw"
+      run 'mv /etc/network/iptables /etc/ufw/user.rules'
+      run 'ufw enable'
+  fi
+  
 else # use_iptables = False -> use nftables
   dlog "using nftables, not iptables"
   cat > /etc/network/ruleset.nft <<EOF
