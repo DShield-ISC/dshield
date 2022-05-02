@@ -34,6 +34,11 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
+# AWS profile (if using multiple) 
+variable "aws_profile" {
+  default = "default"
+}
+
 # Canonical AWS OwnerId
 variable "aws_ami_owner" {
   default = "099720109477"   

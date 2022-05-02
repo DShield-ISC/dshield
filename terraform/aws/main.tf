@@ -23,6 +23,8 @@ terraform {
 provider "aws" {
   shared_credentials_file = var.aws_credentials
   region                  = var.aws_region
+  # if using separate profiles, otherwise leave at "default" or comment out
+  profile                 = var.aws_profile
 }
 
 data "http" "local_ip" {
@@ -44,8 +46,8 @@ data "aws_ami" "ubuntu_ami" {
 
 # switched from template_file to local_file due to: https://github.com/hashicorp/terraform/issues/24616
 resource "local_file" "enable_logging" {
-  content = templatefile("${path.module}/templates/install_honeypot.tpl", {output_logging  = var.output_logging})
-  filename = "${path.module}/scripts/install_honeypot.sh"
+  content = templatefile("${path.module}/../templates/install_honeypot.tpl", {output_logging  = var.output_logging})
+  filename = "${path.module}/../scripts/install_honeypot.sh"
 }
 
 # upload ssh key to provision / configure ec2
@@ -125,7 +127,7 @@ resource "null_resource" "upload" {
 
   provisioner "file" {
     destination = "/tmp/dshield.ini"
-    content     = templatefile("${path.module}/templates/dshield_ini.tpl", {
+    content     = templatefile("${path.module}/../templates/dshield_ini.tpl", {
      dshield_email  = var.dshield_email
      dshield_userid = var.dshield_userid
      dshield_apikey = var.dshield_apikey
@@ -138,7 +140,7 @@ resource "null_resource" "upload" {
   
   provisioner "file" {
     destination = "/tmp/dshield.sslca"
-    content     = templatefile("${path.module}/templates/dshield_sslca.tpl", {
+    content     = templatefile("${path.module}/../templates/dshield_sslca.tpl", {
      dshield_ca_country  = var.dshield_ca_country
      dshield_ca_state    = var.dshield_ca_state
      dshield_ca_city     = var.dshield_ca_city
@@ -149,7 +151,7 @@ resource "null_resource" "upload" {
 
   # upload our provisioning scripts
   provisioner "file" {
-    source      = "${path.module}/scripts/"
+    source      = "${path.module}/../scripts/"
     destination = "/tmp/"
   }
 
@@ -163,7 +165,7 @@ resource "null_resource" "upload" {
 
   # install required packages
   provisioner "remote-exec" {
-    script = "${path.module}/scripts/install_reqs.sh"
+    script = "${path.module}/../scripts/install_reqs.sh"
   }
 
   depends_on = [ aws_instance.honeypot ]
@@ -185,7 +187,7 @@ resource "null_resource" "install" {
 
   # install dshield honeypot
   provisioner "remote-exec" {
-    script = "${path.module}/scripts/install_honeypot.sh"
+    script = "${path.module}/../scripts/install_honeypot.sh"
   }
 
   depends_on = [null_resource.upload]
