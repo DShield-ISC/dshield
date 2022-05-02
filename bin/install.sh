@@ -1488,7 +1488,7 @@ EOF
       run "ufw disable"
       # purge may be a bit harsh, but better safe ..
       run "apt -y purge ufw"
-      do_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.serivce 640
+      do_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.service 640
       run "systemctl daemon-reload"
       run "systemctl enable dshieldfw"
   fi
