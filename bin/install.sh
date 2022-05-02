@@ -1490,7 +1490,7 @@ EOF
       run "apt -y purge ufw"
       do_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.service 640
       run "systemctl daemon-reload"
-      run "systemctl enable dshieldfw"
+      run "systemctl enable dshieldfw.service"
   fi
   
 else # use_iptables = False -> use nftables
