@@ -15,11 +15,15 @@
 
 # version 2022/01/05 01
 
-readonly myversion=91
+readonly myversion=92
 
 #
 # Major Changes (for details see Github):
 #
+# - V92 (Johannes)
+#   - changing firewall install to accomodate ufw/Ubuntu
+#   - merging AWS changes
+#   - updating twistd
 #
 # - V91 (Johannes)
 #   - upgraded cowrie
