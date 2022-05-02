@@ -28,3 +28,4 @@ value = email+':'+key
 hash = hmac.new(nonce.encode('utf-8'), value.encode('utf-8'), digestmod=hashlib.sha512).hexdigest()
 x = requests.get(f"https://isc.sans.edu/api/hpotsummary/{email}/{nonce}/{hash}?json")
 print(x.text)
+print(f"https://isc.sans.edu/api/hpotsummary/{email}/{nonce}/{hash}?json")

@@ -1367,7 +1367,8 @@ case $ID in
 esac
 
 if [ "$use_iptables" = "True" ] ; then
-  cat >/etc/network/iptables <<EOF
+    dlog "using iptables, not nftables"
+    cat >/etc/network/iptables <<EOF
 
 #
 # 
@@ -1494,7 +1495,7 @@ EOF
   drun 'cat /etc/network/iptables'
 
 else # use_iptables = False -> use nftables
-
+  dlog "using nftables not iptables"
   cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
 add table ip filter
