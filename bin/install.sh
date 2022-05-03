@@ -20,6 +20,9 @@ readonly myversion=92
 #
 # Major Changes (for details see Github):
 #
+# - V93 (Johannes)
+#   - cowrie update
+#
 # - V92 (Johannes)
 #   - changing firewall install to accomodate ufw/Ubuntu
 #   - merging AWS changes
