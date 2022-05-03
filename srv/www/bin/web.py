@@ -209,7 +209,7 @@ class myhandler(BaseHTTPRequestHandler):
     def do_POST(self):
         # Parse the form data posted
         # try:
-        dte = self.date_time_string()
+        dte = time.time()
         address = '%s' % self.client_address[0]
         cmd = '%s' % self.command
         path = '%s' % self.path
