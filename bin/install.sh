@@ -15,7 +15,7 @@
 
 # version 2022/01/05 01
 
-readonly myversion=92
+readonly myversion=93
 
 #
 # Major Changes (for details see Github):
