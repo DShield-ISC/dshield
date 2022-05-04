@@ -539,26 +539,9 @@ dlog "setting trap"
 run 'trap "echo Log: ${LOGFILE} && rm -r $TMPDIR" 0 1 2 5 15'
 if [ "$FAST" == "0" ]; then
   outlog "Basic security checks"
-
-  dlog "making sure default password was changed"
-
-  if [ "$ID" == "opensuse" ]; then
-    if $progdir/passwordtest-opensuse.pl | grep -q 1; then
-      outlog "You have not yet changed the default password for the 'root' user"
-      outlog "Change it NOW ..."
-      exit 9
-    fi
-  fi
-
   if [ "$dist" == "apt" ]; then
     dlog "repair any package issues just in case"
     run 'dpkg --configure -a'
-    dlog "we are on pi and should check if password for user pi has been changed"
-    if $progdir/passwordtest.pl | grep -q 1; then
-      outlog "You have not yet changed the default password for the 'pi' user"
-      outlog "Change it NOW ..."
-      exit 9
-    fi
 
     outlog "Updating your Installation (this can take a LOOONG time)"
     drun 'dpkg --list'
@@ -1837,6 +1820,7 @@ fi
 
 run "rm -rf /srv/cowrie.2*"
 run "rm -rf /srv/www.2*"
+run "rm -rf /srv/isc-agent.2"
 
 #
 # pruning logs prior to backup
@@ -1987,39 +1971,6 @@ run "systemctl daemon-reload"
 run "systemctl enable iscagent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
-
-###########################################################
-## Copying further system files
-###########################################################
-
-dlog "copying further system files"
-
-# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
-# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
-# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
-
-###########################################################
-## Remove old mini-httpd stuff (if run as an update)
-###########################################################
-
-dlog "removing old mini-httpd stuff"
-if [ -f /etc/mini-httpd.conf ]; then
-  mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
-fi
-if [ -f /etc/default/mini-httpd ]; then
-  run 'update-rc.d mini-httpd disable'
-  run 'update-rc.d -f mini-httpd remove'
-  mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
-fi
-
-###########################################################
-## Setting up Services
-###########################################################
-
-# setting up services
-# dlog "setting up services: cowrie"
-# run 'update-rc.d cowrie defaults'
-# run 'update-rc.d mini-httpd defaults'
 
 ###########################################################
 ## Setting up postfix

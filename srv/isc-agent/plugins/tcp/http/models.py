@@ -124,6 +124,10 @@ def prepare_database():
 
 def read_db_and_log():
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        try:
+            useragent = ast.literal_eval(instance.headers)['user-agent'],
+        except KeyError:
+            useragent = ''
         log_data = {
             'time': instance.time,
             'headers': ast.literal_eval(instance.headers),
@@ -132,7 +136,7 @@ def read_db_and_log():
             'method': instance.method,
             'url': instance.path,
             'data': instance.data,
-            'useragent': ast.literal_eval(instance.headers)['user-agent'],
+            'useragent': useragent
         }
         logs.append(log_data)
     return logs

@@ -15,10 +15,12 @@ hpfeeds3
 influxdb
 inspect
 json
+jinja2
 mysqlclient
 optparse
 packaging==20.3
 pyasn1_modules==0.2.8
+pydantic
 pymongo
 pyopenssl==19.1.0
 pyparsing==2.4.7
@@ -32,6 +34,7 @@ s3transfer
 select
 service_identity==18.1.0
 slackclient
+sqlalchemy
 socket
 ssl
 struct

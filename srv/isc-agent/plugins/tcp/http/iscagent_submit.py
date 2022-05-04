@@ -18,7 +18,7 @@ def isc_agent_submit(data, url=settings.DSHIELD_URL):
     d = agent.request(
         b"POST",
         url,
-        Headers({'content-type': 'application/json', 'User-Agent': 'DShield PyLib 0.1'}),
+        Headers({'content-type': ['application/json'], 'User-Agent': ['DShield PyLib 0.1']}),
         data,
     )
 

@@ -23,8 +23,8 @@ condition_translator = {
     Condition.equal: lambda x, y: x == y,
     Condition.regex: re.match,
 }
-default_http_ports = [80, 8000, 8080]
-default_https_ports = [443]
+default_http_ports = [8000, 8080]
+default_https_ports = [8443]
 template_environment = Environment(loader=BaseLoader(), autoescape=True)
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class HTTP(resource.Resource):
 
 def handler(**kwargs):
     prepare_database()
-    timed_task(3)
+    timed_task(60)
     http_ports = kwargs.get('http_ports', default_http_ports)
     https_ports = kwargs.get('https_ports', default_https_ports)
     for port in http_ports:

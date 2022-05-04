@@ -16,6 +16,7 @@ if __name__ == '__main__':
             module.handler(**plugin)
             logger.info('Plugin %s activated', plugin['name'])
             logger.debug('%s options: %s', plugin['name'], plugin)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
             logger.info('Plugin %s:%s not found', plugin['protocol'], plugin['name'])
+            logger.info(e)
     reactor.run()
