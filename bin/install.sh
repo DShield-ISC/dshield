@@ -1781,7 +1781,7 @@ run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
