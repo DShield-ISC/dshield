@@ -1,7 +1,7 @@
 # version 2019-11-12
 /var/log/dshield.log
 {
-	rotate 4
+	rotate $logretention
 	daily
 	missingok
 	notifempty
