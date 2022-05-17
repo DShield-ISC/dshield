@@ -69,7 +69,7 @@ if [ $? -eq 0  ]; then
     fi
     touch ../etc/CA/index.txt
     sed -r --in-place=.bak "s|^dir\s=.*$|dir = $cadir|" ../etc/openssl.cnf
-    openssl ca -batch -config ../etc/openssl.cnf -policy signing_policy -extensions signing_req -out ../etc/CA/certs/$hostname.crt -infiles ../etc/CA/requests/$hostname.csr  
+    openssl x509 -req -days 360 -in ../etc/CA/requests/$hostname.csr -CA ../etc/CA/certs/dshieldca.crt -CAkey ../etc/CA/keys/dshieldca.key -CAcreateserial -out ../etc/CA/certs/$hostname.crt -sha256
 fi
 }
 exec 3>&-
