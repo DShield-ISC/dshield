@@ -861,6 +861,21 @@ if [ "$telnet" != "false" ]; then
     telnet="true"
 fi
 
+# default verbosity 0
+if [ "$logverbosity" == "" ]; then
+    logverbosity=0
+fi
+
+# default minimumcowriesize 10
+if [ "$minimumcowriesize" == "" ]; then
+    minimumcowriesize=10
+fi
+
+# number of days for log retention
+
+if [ "$logretention" == "" ]; then
+    logretention=7
+fi
 
 # hmmm - this SHOULD NOT happen
 if ! [ -d $TMPDIR ]; then
@@ -1761,6 +1776,9 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
+run 'echo "logretention=$logretention" >> /etc/dshield.ini'
+run 'echo "minimumcowriesize=$minimumcowriesize" >> /etc/dshield.ini'
+run 'echo "logverbosity=$logverbosity" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 
@@ -1903,7 +1921,11 @@ export arch=$(arch)
 export kernel_version=$(uname -r)
 export kernel_build_string=$(uname -v | sed 's/SMP.*/SMP/')
 export ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
-export ttylog='false'
+if [ $(( logverbosity & 0x1 )) -eq $(( 0x1 )) ]; then
+    export ttylog='true'
+else
+    export ttylog='false'
+fi
 export telnet
 drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
@@ -2127,7 +2149,11 @@ fi
 run 'mkdir -p /var/tmp/dshield'
 
 # rotate dshield firewall logs
-do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
+# do_copy $progdir/../etc/logrotate.d/dshield /etc/logrotate.d 644
+export logretention
+drun "cat $progdir/../etc/logrotate.d/dshield | envsubst > /etc/logrotate.d/dshield"
+drun "chmod 644 /etc/logrotate.d/dshield"
+
 [ "$ID" = "opensuse" ] && sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
 if [ -f "/etc/cron.daily/logrotate" ]; then
   run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
