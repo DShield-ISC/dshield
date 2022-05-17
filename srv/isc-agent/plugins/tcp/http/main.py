@@ -149,4 +149,4 @@ def handler(**kwargs):
         for port in https_ports:
             endpoints.SSL4ServerEndpoint(reactor, port, ssl_context).listen(server.Site(HTTP()))
     else:
-        logger.warning('Will not start https because cert or key file not found')
+        logger.warning(f'Will not start https because cert or key file not found at {settings.CERT_KEY}')

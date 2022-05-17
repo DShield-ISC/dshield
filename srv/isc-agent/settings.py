@@ -72,8 +72,8 @@ DSHIELD_URL = b"127.0.0.1:8000"
 DSHIELD_URL_SEND = True
 
 # SSL certification key and certificate
-PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '~/dshield/etc/CA/keys/honeypot.key')
-CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '~/dshield/etc/CA/certs/honeypot.crt')
+PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '/srv/dshield/CA/keys/honeypot.key')
+CERT_KEY = os.getenv('ISC_AGENT_CERT_KEY_PATH', '/srv/dshield/CA/certs/honeypot.crt')
 
 # PLUGINS
 # Read from settings.ini file

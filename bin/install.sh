@@ -2141,6 +2141,7 @@ if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
   ./makecert.sh
   do_copy $progdir/../etc/CA ${DHIELDDIR}/CA
+  run chmod 644 ${DSHIELDDIR}/CA/keys/honeypot.key
 fi
 
 #
