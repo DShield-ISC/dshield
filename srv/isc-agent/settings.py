@@ -6,7 +6,7 @@ import os
 import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, registry
-
+from DShield import DshieldSubmit
 __all_ = [
     # DATABASE SETTINGS
     'DATABASE_DEBUG_LOGGING',
@@ -17,13 +17,12 @@ __all_ = [
     # PLUGINS
     'PLUGINS',
 ]
-
-config = configparser.ConfigParser()
-config.read('settings.ini')
+d = DshieldSubmit('')
+config = d.config
 
 # APPLICATION
 BASE_DIR = os.path.join(os.path.dirname(__file__))
-LOCAL_IP = requests.get('https://www4.dshield.org/api/myip?json', verify=True).json()['ip']
+LOCAL_IP = d.getmyip()
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -66,10 +65,6 @@ DATABASE_ENGINE = create_engine(
     future=True
 )
 DATABASE_SESSION = Session(DATABASE_ENGINE)
-
-#DSHIELD SETTINGS
-DSHIELD_URL = b"127.0.0.1:8000"
-DSHIELD_URL_SEND = True
 
 # SSL certification key and certificate
 PRIVATE_KEY = os.getenv('ISC_AGENT_PRIVATE_KEY_PATH', '/srv/dshield/CA/keys/honeypot.key')

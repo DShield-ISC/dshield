@@ -37,7 +37,8 @@ class DshieldSubmit:
                    'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
                    'aws': '(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
     authheader = ''
-
+    config = None
+    
     def __init__(self, filename):
         self.honeypotmask = -1
         self.honeypotnet = -1
@@ -65,6 +66,7 @@ class DshieldSubmit:
                       'X-ISC-Authorization': self.authheader, 'X-ISC-LogType': mydata['type']}
             mydata['authheader'] = self.authheader
             r = requests.post(self.url, json=mydata, headers=header)
+            print(f"POST {mydata}")
             if r.status_code != 200:
                 self.log('received status code %d in response' % r.status_code)
             else:
@@ -180,6 +182,8 @@ class DshieldSubmit:
         if os.path.isfile(filename):
             config = configparser.ConfigParser()
             config.read(filename)
+            # keep configuration available
+            self.config = config
             self.id = config.getint('DShield', 'userid')
             if self.id == 0:
                 self.log("no userid configured")
