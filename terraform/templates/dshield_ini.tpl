@@ -1,6 +1,6 @@
 [DShield]
 interface=eth0
-version=91
+version=93
 email=${dshield_email}
 userid=${dshield_userid}
 apikey=${dshield_apikey}
