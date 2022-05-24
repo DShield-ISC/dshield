@@ -866,6 +866,10 @@ if [ "$logverbosity" == "" ]; then
     logverbosity=0
 fi
 
+if [ "$localcopy" == "" ]; then
+    localcopy=""
+fi
+
 # default minimumcowriesize 10
 if [ "$minimumcowriesize" == "" ]; then
     minimumcowriesize=10
@@ -1779,6 +1783,7 @@ run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 run 'echo "logretention=$logretention" >> /etc/dshield.ini'
 run 'echo "minimumcowriesize=$minimumcowriesize" >> /etc/dshield.ini'
 run 'echo "logverbosity=$logverbosity" >> /etc/dshield.ini'
+run 'echo "localcopy=$localcopy" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
 

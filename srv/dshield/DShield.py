@@ -66,7 +66,6 @@ class DshieldSubmit:
                       'X-ISC-Authorization': self.authheader, 'X-ISC-LogType': mydata['type']}
             mydata['authheader'] = self.authheader
             r = requests.post(self.url, json=mydata, headers=header)
-            print(f"POST {mydata}")
             if r.status_code != 200:
                 self.log('received status code %d in response' % r.status_code)
             else:
