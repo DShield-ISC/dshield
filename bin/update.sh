@@ -12,6 +12,9 @@ if [ ! "$userid" = "0" ]; then
    exit 9
 fi
 
+# Ensure TERM is set if running under cron
+export TERM=${TERM:-dump}
+
 # find ini file
 
 if [ -f /usr/local/etc/dshield.ini ]; then
