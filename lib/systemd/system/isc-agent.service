@@ -1,0 +1,20 @@
+[Unit]
+Description=ISC Agent Web Honeypot
+Documentation=https://isc.sans.edu/honeypot.html
+After=network.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+PIDFile=/srv/isc-agent/var/run/isc-agent.pid
+ExecStart=/srv/isc-agent/bin/isc-agent start
+ExecStop=/srv/isc-agent/bin/isc-agent stop
+ExecReload=/srv/isc-agent/bin/isc-agent stop && sleep 10 && /srv/isc-agent/bin/isc-agent start
+WorkingDirectory=/srv/isc-agent
+Restart=on-failure
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+PID=
+
+case $1 in
+     start)
+	startup
+	;;
+     stop)
+        shutdown
+	;;
+     restart|reload|force-reload)
+        shutdown
+	sleep 10
+	startup
+	;;
+     status
+        status
+esac
+exit 0
+     
+	
