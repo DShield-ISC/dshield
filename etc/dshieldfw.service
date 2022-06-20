@@ -1,0 +1,15 @@
+[Unit]
+Description=DShield Firewall Configuration
+Requires=syslog.socket
+Documentation=https://isc.sans.edu
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/iptables-restore /etc/network/iptables
+Restart=on-failure
+RestartSec=60
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+Alias=dshieldfw.service

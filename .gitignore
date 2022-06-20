@@ -23,3 +23,4 @@ etc/dshield.ini
 srv/dshield/lastweblogtime.txt
 *.bak
 env/
+*.lock

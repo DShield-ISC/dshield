@@ -15,11 +15,18 @@
 
 # version 2022/01/05 01
 
-readonly myversion=91
+readonly myversion=93
 
 #
 # Major Changes (for details see Github):
 #
+# - V93 (Johannes)
+#   - cowrie update
+#
+# - V92 (Johannes)
+#   - changing firewall install to accomodate ufw/Ubuntu
+#   - merging AWS changes
+#   - updating twistd
 #
 # - V91 (Johannes)
 #   - upgraded cowrie
@@ -615,7 +622,7 @@ fi
 ###########################################################
 if [ "$INTERACTIVE" == 1 ]; then
   dlog "Offering user last chance to quit with a nearly untouched system."
-  dialog --title '### WARNING ###' --colors --yesno "You are about to turn this Raspberry Pi into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
+  dialog --title '### WARNING ###' --colors --yesno "You are about to turn this system into a honeypot. This software assumes that the device is \ZbDEDICATED\Zn to this task. There is no simple uninstall (e.g. IPv6 will be disabled). If something breaks you may need to reinstall from scratch. This script will try to do some magic in installing and configuring your to-be honeypot. But in the end \Zb\Z1YOU\Zn are responsible to configure it in a safe way and make sure it is kept up to date. An orphaned or non-monitored honeypot will become insecure! Do you want to proceed?" 0 0
   response=$?
   case $response in
   ${DIALOG_CANCEL})
@@ -1358,6 +1365,8 @@ if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
+
+
 # Further conditions can be inserted below whether iptables of nftables should be used
 
 use_iptables=True
@@ -1371,7 +1380,6 @@ esac
 if [ "$use_iptables" = "True" ] ; then
     dlog "using iptables, not nftables"
     cat >/etc/network/iptables <<EOF
-
 #
 # 
 #
@@ -1496,8 +1504,19 @@ EOF
   dlog "/etc/network/iptables follows"
   drun 'cat /etc/network/iptables'
 
+  if [ -d /etc/ufw ]; then
+      dlog "dealing with ufw"
+      run "systemctl disable ufw"
+      run "ufw disable"
+      # purge may be a bit harsh, but better safe ..
+      run "apt -y purge ufw"
+      do_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.service 640
+      run "systemctl daemon-reload"
+      run "systemctl enable dshieldfw.service"
+  fi
+  
 else # use_iptables = False -> use nftables
-  dlog "using nftables not iptables"
+  dlog "using nftables, not iptables"
   cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
 add table ip filter
@@ -1777,7 +1796,7 @@ run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
 nohoneyips=$(quotespace $nohoneyips)
 run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneports=$nohoneyports" >> /etc/dshield.ini'
+run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 run 'echo "logretention=$logretention" >> /etc/dshield.ini'
@@ -1985,6 +2004,13 @@ dlog "installing ISC-Agent"
 
 run "mkdir -p ${ISC_AGENT_DIR}"
 
+dlog "remove old web.py honeypot"
+if [ -d /srv/www ]; then
+  dlog "old web honeypot installation found, moving"
+  # TODO: warn user, backup dl etc.
+  run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
+fi
+
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
 
@@ -2096,7 +2122,7 @@ drun "cat /etc/motd"
 
 ###########################################################
 ## Handling of CERTs
-###########################################################
+##########################################################
 
 #
 # checking / generating certs
@@ -2166,6 +2192,10 @@ if [ -f "/etc/cron.daily/logrotate" ]; then
   run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
 
+
+
+
+
 ###########################################################
 ## POSTINSTALL OPTION
 ###########################################################
@@ -2211,3 +2241,4 @@ outlog " for help, check our slack channel: https://isc.sans.edu/slack "
 outlog
 outlog " In case you are low in disk space, run /srv/dshield/cleanup.sh "
 outlog " This will delete some backups and logs "
+

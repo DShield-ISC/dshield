@@ -5,7 +5,7 @@
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
-- use of a __dedicated__ device (Raspberry Pi, any model as [per](https://isc.sans.edu/forums/diary/Using+a+Raspberry+Pi+honeypot+to+contribute+data+to+DShieldISC/22680/))
+- use of a __dedicated__ device (Raspberry Pi, any model as [per] (https://isc.sans.edu/forums/diary//22680/))
 - current Raspberry Pi OS ("Lite" version will suffice)
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
@@ -18,44 +18,24 @@ If there is the need for other distros, "someone" has to check and maintain the 
 
 ## Installation
 
+** For more detailed instructions with screen shots, see https://isc.sans.edu/honeypotinstall.pdf . **
+
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
-- get [Raspberry Pi OS Lite](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
-- put it onto an SD card (e.g. using procedures [described here](https://www.raspberrypi.org/documentation/installation/installing-images/README.md), note the additional links at the bottom)
-- if you do not have a monitor connected, then you may enable the SSH server by placing an empty file called "ssh" in the boot partition. __IMPORTANT: CHANGE YOUR PASSWORD AS SOON AS POSSIBLE__.
-- boot the pi from the SD card and log into the console using an USB keyboard
-  - hint: when you don't want to connect a display and you haven't enabled SSH server as stated above you may just enter the following (note: US keyboard layout)
-   ```
-   pi
-   raspberry
-   sudo /etc/init.d/ssh start
-   ```
-  - example for German keyboard:
-   ```
-   pi
-   raspberrz
-   sudo -etc-init.d-ssh start
-   ```
-- connect to the device using an ssh client (port 22), log in with user `pi`, password `raspberry`
-- __CHANGE THE DEFAULT PASSWORD__ for the `pi` user (better: use keys to authenticate)
-```
-passwd
-   raspberry
-   new pw
-   new pw
-```
+- Download and install the [Raspberry Pi Imager] (https://www.raspberrypi.com/software/)
+- Select "Raspberry Pi OS Lite (32-bit)" as your operating system. The default selection will work too if you prefer a GUI.
+- Customize the installation by clicking on the "gear" icon in the lower right hand corner of the image.
+- select "Enable SSH"
+- set a username and password (use this username instead of the "pi" user)
+- Optional (but recommended): Set up public-key authentication
+- Select the micro SD Card as "Storage". Be careful to select the right disk.
+- click "WRITE"
+
+![Screen Shot 2022-05-02 at 10 40 51 AM](https://user-images.githubusercontent.com/1626447/166254332-0dd2be8a-0ef6-42a2-8f6d-9610b2664323.png)
+
+- connect to the device using an ssh client (port 22), log in with user user and password you configured above.
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
-- run raspi-config to set up some basic things
-   
-   - enable SSH permanently (only if you haven't done so already)
-   ```
-   sudo touch /boot/ssh
-   ```
-   - make sure the root file system of the Pi is properly expanded (not needed on newer "Raspberry Pi OS" versions)
-   ```
-     sudo raspi-config --expand-rootfs
-   ```
-   - make sure Pi's system time is somewhat reasonable, e.g.
+- make sure Pi's system time is somewhat reasonable, e.g.
 ```
 date
 ```
@@ -65,8 +45,8 @@ sudo date --set='2017-04-21 21:46:00' +'%Y-%m-%d %H:%M:%S'
 ```
 - update your Pi. The install script will do this as well, but it can take **hours**, so you are better off doing it first. 
 ```
-sudo apt-get update
-sudo apt-get -uy dist-upgrade
+sudo apt update
+sudo apt -uy dist-upgrade
 ```
 - reboot
 ```
@@ -74,7 +54,7 @@ sudo reboot
 ```
 - if GIT isn't already installed (will be the case e.g. when using the lite distro): install GIT
 ```
-sudo apt-get -y install git
+sudo apt -y install git
 ```
 - clone the GIT repository (which will create the "dshield" directory)
 ```
