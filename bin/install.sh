@@ -240,7 +240,7 @@ DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
-WEBDIR="${TARGETDIR}/www"
+WEBDIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
@@ -1977,6 +1977,9 @@ run 'systemctl enable cowrie.service'
 
 dlog "installing web honeypot"
 
+
+dlog "remove old web.py honeypot"
+run "rm -rf /srv/www"
 if [ -d ${WEBDIR} ]; then
   dlog "old web honeypot installation found, moving"
   # TODO: warn user, backup dl etc.
@@ -1985,50 +1988,11 @@ fi
 
 run "mkdir -p ${WEBDIR}"
 
-do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
+do_copy $progdir/../srv/isc-agent ${WEBDIR}/../
+do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
 run "systemctl daemon-reload"
-run "systemctl enable webpy.service"
+run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
-
-# change ownership for web databases to cowrie as we will run the
-# web honeypot as cowrie
-touch ${WEBDIR}/DB/webserver.sqlite
-run "chown cowrie ${WEBDIR}/DB"
-run "chown cowrie ${WEBDIR}/DB/*"
-
-###########################################################
-## Copying further system files
-###########################################################
-
-dlog "copying further system files"
-
-# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
-# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
-# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
-
-###########################################################
-## Remove old mini-httpd stuff (if run as an update)
-###########################################################
-
-dlog "removing old mini-httpd stuff"
-if [ -f /etc/mini-httpd.conf ]; then
-  mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
-fi
-if [ -f /etc/default/mini-httpd ]; then
-  run 'update-rc.d mini-httpd disable'
-  run 'update-rc.d -f mini-httpd remove'
-  mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
-fi
-
-###########################################################
-## Setting up Services
-###########################################################
-
-# setting up services
-# dlog "setting up services: cowrie"
-# run 'update-rc.d cowrie defaults'
-# run 'update-rc.d mini-httpd defaults'
 
 ###########################################################
 ## Setting up postfix
@@ -2127,7 +2091,7 @@ drun "cat /etc/motd"
 
 ###########################################################
 ## Handling of CERTs
-###########################################################
+##########################################################
 
 #
 # checking / generating certs
@@ -2191,6 +2155,10 @@ if [ -f "/etc/cron.daily/logrotate" ]; then
   run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
 
+
+
+
+
 ###########################################################
 ## POSTINSTALL OPTION
 ###########################################################
@@ -2236,3 +2204,4 @@ outlog " for help, check our slack channel: https://isc.sans.edu/slack "
 outlog
 outlog " In case you are low in disk space, run /srv/dshield/cleanup.sh "
 outlog " This will delete some backups and logs "
+
