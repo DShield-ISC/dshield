@@ -1,22 +1,62 @@
 #!/bin/bash
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
-PID=
+PIDFILE=/srv/isc-agent/run/isc-agent.pid
+
+function startup() {
+    status
+    s=$?
+    if [[ $s -eq 0 ]]; then
+	echo "starting isc-agent"
+	cd /srv/isc-agent/ && python3 ./main.py > /dev/null 2>/srv/log/isc-agent.err &
+	echo $! > $PIDFILE
+    fi
+    status
+}
+
+function stopagent() {
+    status
+    if [[ $? == 1 ]]; then
+	pid=$(head -1 $PIDFILE)
+	echo $pid
+#       kill $pid
+#       rm $PIDFILE
+    fi
+    status
+}
+
+function status() {
+    if [ -f $PIDFILE ] ; then
+	pid=$(head -1 $PIDFILE)
+	if [ -f /proc/$pid/cmdline ]; then
+            echo "isc-agent is running PID $pid"
+	    return 1
+	fi
+    fi
+    echo "isc-agent is not running"
+    return 0
+}
+    
+    
 
 case $1 in
      start)
 	startup
 	;;
      stop)
-        shutdown
+        stopagent
 	;;
      restart|reload|force-reload)
-        shutdown
+        stopagent
 	sleep 10
 	startup
 	;;
-     status
-        status
+     status)
+         status
+	 ;;
+     *)
+	 usage
+	   
 esac
 exit 0
      
