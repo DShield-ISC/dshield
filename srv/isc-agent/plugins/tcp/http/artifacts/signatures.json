@@ -1,0 +1,109 @@
+[
+  {
+    "id": 1,
+    "responses": [
+	1
+    ],
+    "rules": [
+      {
+        "condition": "regex",
+        "attribute": "headers",
+        "value": "user-agent:^python.*",
+        "score": 2
+      },
+      {
+        "condition": "contains",
+        "attribute": "headers",
+        "value": "accept-encoding",
+        "score": 3
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "responses": [
+      1
+    ],
+    "rules": [
+      {
+        "condition": "equals",
+        "attribute": "headers",
+        "value": "user-agent:PostmanRuntime/7.29.0",
+        "score": 2
+      },
+      {
+        "condition": "equals",
+        "attribute": "method",
+        "value": "GET",
+        "score": 2
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "responses": [
+      1
+    ],
+    "rules": [
+      {
+        "condition": "equals",
+        "attribute": "method",
+        "value": "GET",
+        "score": 2
+      },
+      {
+        "condition": "contains",
+        "attribute": "cookies",
+        "value": "Cookie_1",
+        "score": 9
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "responses": [
+      1
+    ],
+    "rules": [
+      {
+        "condition": "equals",
+        "attribute": "method",
+        "value": "GET",
+        "score": 2
+      },
+      {
+        "condition": "equals",
+        "attribute": "user",
+        "value": "benson",
+        "score": 50
+      },
+      {
+        "condition": "contains",
+        "attribute": "path",
+        "value": "nowaysss",
+        "score": 50,
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": 5,
+      "responses": [
+	  1
+    ],
+    "rules": [
+      {
+        "condition": "equals",
+        "attribute": "method",
+        "value": "GET",
+        "score": 2
+      },
+      {
+        "condition": "absent",
+        "attribute": "headers",
+        "value": "user-agents",
+        "score": 70
+      }
+    ]
+  }
+]

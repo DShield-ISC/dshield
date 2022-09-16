@@ -1,186 +1,151 @@
-from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, Text, BLOB
-from sqlalchemy.orm import registry
+import ast
+import datetime
+import logging
+import json
+import os
 
-mapper_registry = registry()
+from pydantic import ValidationError
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy.orm import relationship
 
-Base = mapper_registry.generate_base()
+import settings
+from plugins.tcp.http import schemas
+from utils import BaseModel
 
-
-# Sigs model
-class Sigs(Base):
-    __tablename__ = 'sigs'
-
-    id = Column(Integer, primary_key=True)
-    # Should this be Text vs String?
-    pattern_description = Column(Text)
-    pattern_string = Column(Text)
-    db_ref = Column(Text)
-    module = Column(Text)
-
-    def __repr__(self):
-        return f'''Sigs(id={self.id!r}, patternDescription={self.patternDescription!r},
-        patternString={self.patternString!r}, db_ref={self.db_ref!r}, module={self.module!r} )'''
+logger = logging.getLogger(__name__)
+logs = []
 
 
-class HdrResponses(Base):
-    __tablename__ = 'hdr_responses'
+class RequestLog(BaseModel):
+    __tablename__ = 'request_log'
 
     id = Column(Integer, primary_key=True)
-    sig_id = Column(Integer)
-    header_field = Column(Text)
-    data_field = Column(Text)
-
-    def __repr__(self):
-        return f'''HdrResponses(id={self.id!r}, SigID={self.SigID!r},
-        HeaderField={self.HeaderField}, dataField={self.dataField!r})'''
-
-
-class Paths(Base):
-    __tablename__ = 'paths'
-
-    sig_id = Column(Integer, primary_key=True)
-    path = Column(Text)
-    os_path = Column(Text)
-
-    def __repr__(self):
-        return f"Paths(SigID={self.SigID!r}, path={self.path!r}, OSPath={self.OSPath!r})"
-
-
-class SQLResp(Base):
-    __tablename__ = 'sql_resp'
-
-    sig_id = Column(Integer, primary_key=True)
-    sql_input = Column(Text)
-    sql_output = Column(Text)
-
-    def __repr__(self):
-        return f"SQLResp(SigID={self.SigID!r}, SQLInput={self.SQLInput!r}, SQLOutput={self.SQLOutput!r})"
-
-
-class XssResp(Base):
-    __tablename__ = 'xss_resp'
-
-    sig_id = Column(Integer)
-    script_req = Column(Text, primary_key=True)
-    script_resp = Column(Text)
-
-    def __repr__(self):
-        return f"XssResp(SigID={self.SigID!r}, ScriptReq={self.ScriptReq!r}, ScriptResp={self.ScriptResp!r})"
-
-
-class RFIResp(Base):
-    __tablename__ = 'rfi_resp'
-
-    sig_id = Column(Integer)
-    protocol = Column(Text, primary_key=True)
-    remote_uri = Column(Text)
-
-    def __repr__(self):
-        return f"RFIResp(SigID={self.SigID!r}, protocol={self.protocol!r}, remoteuri={self.remoteuri!r})"
-
-
-class FileResp(Base):
-    __tablename__ = 'file_resp'
-
-    id = Column(Integer, primary_key=True)
-    sig_id = Column(Integer)
-    file_name_post = Column(Text)
-    file_data_post = Column(BLOB)
-    file_text_post = Column(Text)
-    os_path = Column(Text)
-    file_resp = Column(BLOB)
-    cowrie_ref = Column(Text)
-
-    def __repr__(self):
-        return f'''FileResp(ID={self.ID!r}, SigID={self.SigID!r}, FileNamePost={self.FileNamePost!r},
-        FileDataPost={self.FileDataPost!r}, FileTextPost={self.FileTextPost!r}, OSPath={self.OSPath!r},
-        FileResp={self.FileResp!r}, CowrieRef={self.CowrieRef!r})'''
-
-
-class Postlogs(Base):
-    __tablename__ = 'post_logs'
-
-    id = Column(Integer, primary_key=True)
-    data = Column(Text)
+    time = Column(DateTime, default=datetime.datetime.now())
+    client_ip = Column(Text)
+    data = Column(JSON)
     headers = Column(Text)
-    address = Column(Text)
-    cmd = Column(Text)
+    method = Column(Text)
     path = Column(Text)
-    useragent = Column(Text)
-    vers = Column(Text)
-    formkey = Column(Text)
-    formvalue = Column(Text)
-    summary = Column(Text)
+    target_ip = Column(Text)
+    version = Column(Text)
+    response_id = Column(Integer, ForeignKey('response.id'))
+    signature_id = Column(Integer, ForeignKey('signature.id'))
 
-    def __repr__(self):
-        return f'''Postlogs(ID={self.ID!r}, data={self.data!r}, headers={self.headers!r}, address={self.address!r}
-        cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r}, 
-        formkey={self.formkey!r}, fomrvalue={self.formvalue!r}, summary={self.summary!r})'''
+    response = relationship('Response', back_populates='request_logs')
+    signature = relationship('Signature', back_populates='request_logs')
 
-
-class Files(Base):
-    __tablename__ = 'files'
-
-    id = Column(Integer, primary_key=True)
-    rid = Column(Integer)
-    filename = Column(Text)
-    data = Column(BLOB)
-
-    def __repr__(self):
-        return f"Files(ID={self.ID!r}, RID={self.RID!r}, filename={self.filename!r}, DATA={self.DATA!r})"
+    def __str__(self):
+        return str(self.id)
 
 
-class Requests(Base):
-    __tablename__ = 'requests'
-
-    data = Column(Text, primary_key=True)
-    headers = Column(Text)
-    address = Column(Text)
-    cmd = Column(Text)
-    path = Column(Text)
-    useragent = Column(Text)
-    vers = Column(Text)
-    summery = Column(Text)
-    target = Column(Text)
-
-    def __repr__(self):
-        return f'''Requests(data={self.data!r}, headers={self.headers!r}, address={self.address!r},
-        cmd={self.cmd!r}, path={self.path!r}, useragent={self.useragent!r}, vers={self.vers!r},
-        summary={self.summery!r}, target={self.target!r})'''
-
-
-class Useragents(Base):
-    __tablename__ = 'user_agents'
+class Response(BaseModel):
+    __tablename__ = 'response'
 
     id = Column(Integer, primary_key=True)
-    refid = Column(Integer)
-    useragent = Column(Text, unique=True)
+    comment = Column(String)
+    body = Column(Text)
+    headers = Column(JSON)
+    status_code = Column(Integer)
 
-    def __repr__(self):
-        return f"Useragents(ID={self.ID!r}, refid={self.refid!r}, useragent={self.useragent!r})"
+    request_logs = relationship('RequestLog', back_populates='response')
+    signatures = relationship('Signature', back_populates='responses', secondary='signature_response')
+    signature_responses = relationship('SignatureResponse', back_populates='response', viewonly=True)
+
+    def __str__(self):
+        return str(self.id)
 
 
-class Responses(Base):
-    __tablename__ = 'responses'
+class Signature(BaseModel):
+    __tablename__ = 'signature'
 
     id = Column(Integer, primary_key=True)
-    rid = Column(Integer)
-    header_field = Column(Text)
-    data_field = Column(Text)
+    max_score = Column(Integer, nullable=False)
+    rules = Column(JSON, nullable=False)
 
-    def __repr__(self):
-        return f'''Responses(ID={self.ID!r}, RID={self.RID!r},
-        HeaderField={self.HeaderField!r}, dataField={self.dataField!r})'''
+    responses = relationship('Response', back_populates='signatures', secondary='signature_response')
+    request_logs = relationship('RequestLog', back_populates='signature')
+    signature_responses = relationship('SignatureResponse', back_populates='signature', viewonly=True)
 
-
-def build_models():
-    # create temporary engine in memory
-    # Establish connectivity with SQLalchemy engine
-    engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
-
-    mapper_registry.metadata.create_all(engine)
+    def __str__(self):
+        return str(self.id)
 
 
-if __name__ == "__main__":
-    build_models()
+class SignatureResponse(BaseModel):
+    __tablename__ = 'signature_response'
+
+    response_id = Column(Integer, ForeignKey('response.id'), primary_key=True)
+    signature_id = Column(Integer, ForeignKey('signature.id'), primary_key=True)
+
+    response = relationship('Response', back_populates='signature_responses', viewonly=True)
+    signature = relationship('Signature', back_populates='signature_responses', viewonly=True)
+
+    def __str__(self):
+        return f'{repr(self.signature)} : {repr(self.response)}'
+
+
+def create_tables():
+    settings.DATABASE_MAPPER_REGISTRY.metadata.create_all(settings.DATABASE_ENGINE)
+
+
+def hydrate_tables():
+    # Empty tables
+    settings.DATABASE_SESSION.query(RequestLog).delete()
+    settings.DATABASE_SESSION.query(SignatureResponse).delete()
+    settings.DATABASE_SESSION.query(Signature).delete()
+    settings.DATABASE_SESSION.query(Response).delete()
+
+    # Hydrate
+    with open(os.path.join(os.path.dirname(__file__), 'artifacts/responses.json'), 'rb') as fp:
+        responses = []
+        for response in json.load(fp):
+            try:
+                response_schema = schemas.Response(**response)
+            except ValidationError as e:
+                logger.warning('Response failed: %s', response)
+                logger.warning(e, exc_info=True)
+                continue
+            responses.append(Response(**response_schema.dict()))
+        settings.DATABASE_SESSION.add_all(responses)
+
+    with open(os.path.join(os.path.dirname(__file__), 'artifacts/signatures.json'), 'rb') as fp:
+        signatures = []
+        for signature in json.load(fp):
+            try:
+                signature_schema = schemas.Signature(**signature)
+            except ValidationError as e:
+                logger.warning('Signature failed: %s', signature)
+                logger.warning(e, exc_info=True)
+                continue
+            signature_schema_dict = signature_schema.dict()
+            response_ids = signature_schema_dict.pop('responses')
+            associated_responses = settings.DATABASE_SESSION.query(Response).filter(Response.id.in_(response_ids))
+            signature_schema_dict['responses'] = list(associated_responses)
+            signatures.append(Signature(**signature_schema_dict))
+        settings.DATABASE_SESSION.add_all(signatures)
+    settings.DATABASE_SESSION.flush()
+
+
+def prepare_database():
+    create_tables()
+    hydrate_tables()
+
+
+def read_db_and_log():
+    for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        try:
+            useragent = ast.literal_eval(instance.headers)['user-agent'],
+        except KeyError:
+            useragent = ''
+        log_data = {
+            'time': instance.time,
+            'headers': ast.literal_eval(instance.headers),
+            'sip': instance.client_ip,
+            'dip': instance.target_ip,
+            'method': instance.method,
+            'url': instance.path,
+            'data': instance.data,
+            'useragent': useragent
+        }
+        logs.append(log_data)
+    return logs
