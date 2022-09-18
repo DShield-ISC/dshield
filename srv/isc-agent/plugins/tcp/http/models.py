@@ -4,6 +4,7 @@ import logging
 import json
 import os
 
+import requests
 from pydantic import ValidationError
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
@@ -37,6 +38,18 @@ class RequestLog(BaseModel):
 
     def __str__(self):
         return str(self.id)
+
+    def format_log_for_submission(self):
+        headers = json.loads(self.headers.replace("'", '"'))
+        return {
+            "time": self.time.timestamp(),
+            "headers": headers,
+            "sip": self.client_ip,
+            "dip": self.target_ip,
+            "method": self.method,
+            "url": self.path,
+            "useragent": headers.get("user-agent")
+        }
 
 
 class Response(BaseModel):
@@ -95,34 +108,41 @@ def hydrate_tables():
     settings.DATABASE_SESSION.query(Signature).delete()
     settings.DATABASE_SESSION.query(Response).delete()
 
-    # Hydrate
-    with open(os.path.join(os.path.dirname(__file__), 'artifacts/responses.json'), 'rb') as fp:
-        responses = []
-        for response in json.load(fp):
-            try:
-                response_schema = schemas.Response(**response)
-            except ValidationError as e:
-                logger.warning('Response failed: %s', response)
-                logger.warning(e, exc_info=True)
-                continue
-            responses.append(Response(**response_schema.dict()))
-        settings.DATABASE_SESSION.add_all(responses)
+    resp = requests.get(
+        f'{settings.DSHIELD_URL}/api/honeypotrules/',
+        verify=False
+    )
 
-    with open(os.path.join(os.path.dirname(__file__), 'artifacts/signatures.json'), 'rb') as fp:
-        signatures = []
-        for signature in json.load(fp):
-            try:
-                signature_schema = schemas.Signature(**signature)
-            except ValidationError as e:
-                logger.warning('Signature failed: %s', signature)
-                logger.warning(e, exc_info=True)
-                continue
-            signature_schema_dict = signature_schema.dict()
-            response_ids = signature_schema_dict.pop('responses')
-            associated_responses = settings.DATABASE_SESSION.query(Response).filter(Response.id.in_(response_ids))
-            signature_schema_dict['responses'] = list(associated_responses)
-            signatures.append(Signature(**signature_schema_dict))
-        settings.DATABASE_SESSION.add_all(signatures)
+    if not resp.ok:
+        logger.exception("HTTP plugin failed to download artifacts.")
+        return
+
+    # Hydrate
+    responses = []
+    for response in resp.json()["responses"]:
+        try:
+            response_schema = schemas.Response(**response)
+        except ValidationError as e:
+            logger.warning('Response failed: %s', response)
+            logger.warning(e, exc_info=True)
+            continue
+        responses.append(Response(**response_schema.dict()))
+    settings.DATABASE_SESSION.add_all(responses)
+
+    signatures = []
+    for signature in resp.json()["signatures"]:
+        try:
+            signature_schema = schemas.Signature(**signature)
+        except ValidationError as e:
+            logger.warning('Signature failed: %s', signature)
+            logger.warning(e, exc_info=True)
+            continue
+        signature_schema_dict = signature_schema.dict()
+        response_ids = signature_schema_dict.pop('responses')
+        associated_responses = settings.DATABASE_SESSION.query(Response).filter(Response.id.in_(response_ids))
+        signature_schema_dict['responses'] = list(associated_responses)
+        signatures.append(Signature(**signature_schema_dict))
+    settings.DATABASE_SESSION.add_all(signatures)
     settings.DATABASE_SESSION.flush()
 
 

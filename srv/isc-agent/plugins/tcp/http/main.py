@@ -1,7 +1,4 @@
-import base64
 import datetime
-import hashlib
-import hmac
 import json
 import logging
 import os
@@ -19,7 +16,7 @@ from twisted.web.http import Request
 import settings
 from plugins.tcp.http.models import Signature, prepare_database, RequestLog, read_db_and_log, hydrate_tables
 from plugins.tcp.http.schemas import Condition
-
+from utils import get_auth
 
 condition_translator = {
     Condition.absent: lambda x, y: x not in y,
@@ -29,7 +26,7 @@ condition_translator = {
 }
 default_http_ports = [8000, 8080]
 default_https_ports = [8443]
-default_submit_logs_rate = 3000
+default_submit_logs_rate = 300
 logger = logging.getLogger(__name__)
 template_environment = Environment(loader=BaseLoader(), autoescape=True)
 
@@ -107,24 +104,14 @@ def submit_logs():
     request_logs = settings.DATABASE_SESSION.query(RequestLog).all()
     logger.debug(request_logs)
     if request_logs:
-        nonce = base64.b64encode(os.urandom(8)).decode()
-        myhash = hmac.new(
-            (nonce + settings.DSHIELD_USER_ID).encode('utf-8'),
-            msg=settings.DSHIELD_API_KEY.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).digest()
-        hash64 = base64.b64encode(myhash).decode()
-        auth = 'ISC-HMAC-SHA256 Credentials=%s Userid=%s Nonce=%s' % (
-            hash64,
-            settings.DSHIELD_USER_ID,
-            nonce.rstrip()
-        )
+        auth = get_auth()
         resp = requests.post(
-            f"{settings.DSHIELD_URL}/submitapi/{settings.DSHIELD_EMAIL}/0/{settings.DSHIELD_API_KEY}",
-            data=json.dumps(
-                [dict(rl.to_dict(), type="webhoneypot") for rl in request_logs],
-                default=str
-            ),  # TODO: fix jsonencoder
+            f"{settings.DSHIELD_URL}/submitapi/",
+            json={
+                "type": "webhoneypot",
+                "logs": [rl.format_log_for_submission() for rl in request_logs],
+                "authheader": auth
+            },
             headers={
                 'content-type': 'application/json',
                 'User-Agent': 'DShield PyLib 0.1',
@@ -132,26 +119,13 @@ def submit_logs():
                 'X-ISC-LogType': "httprequest"
             }
         )
-        logger.info(resp.text)
-    # Refresh artifacts
-    resp = requests.get(
-        f'{settings.DSHIELD_URL}/api/honeypotrules'
-    )
-    logger.info(resp.status_code)
-    logger.info(resp.text)
-    logger.info(resp.status_code)
-
-    # if not resp.ok:
-    #     logger.exception("HTTP plugin failed to download artifacts.")
-    #     return
-    #
-    # with open(os.path.join(os.path.dirname(__file__), "artifacts/signatures.json"), "wb") as fp:
-    #     fp.write(resp.json()["signatures"])
-    #
-    # with open(os.path.join(os.path.dirname(__file__), "artifacts/responses.json"), "wb") as fp:
-    #     fp.write(resp.json()["responses"])
-    #
-    # hydrate_tables()
+        if not resp.ok:
+            logger.error(
+                f"Failed to submit logs: (status code: %s) %s",
+                resp.status_code,
+                resp.text
+            )
+    hydrate_tables()
 
 
 class HTTP(resource.Resource):

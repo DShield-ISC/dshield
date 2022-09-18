@@ -1995,7 +1995,7 @@ run "pip3 install pipenv"
 run "pipenv lock"
 run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
 run "systemctl daemon-reload"
-run "systemctl enable iscagent.service"
+run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 
 

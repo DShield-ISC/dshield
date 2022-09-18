@@ -21,9 +21,13 @@ __all_ = [
 config = configparser.ConfigParser()
 config.read('settings.ini')
 
+# TODO: Remvoe when everything gets rolled over
+legacy_config = configparser.ConfigParser()
+legacy_config.read('/etc/dshield.ini')
+
 # APPLICATION
 BASE_DIR = os.path.join(os.path.dirname(__file__))
-LOCAL_IP = requests.get('https://www4.dshield.org/api/myip?json', verify=True).json()['ip']
+LOCAL_IP = requests.get('https://www4.dshield.org/api/myip?json').json()['ip']
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -54,10 +58,25 @@ LOGGING = {
 logging.config.dictConfig(LOGGING)
 
 # AUTH
-DSHIELD_API_KEY = config["auth"]["api_key"]
-DSHIELD_EMAIL = config["auth"]["email"]
-DSHIELD_URL = "https://www.dshield.org"
-DSHIELD_USER_ID = config["auth"]["user_id"]
+DSHIELD_API_KEY = legacy_config.get(
+    'DShield',
+    'apikey',
+    fallback=config.get("auth", "api_key", fallback=None)
+
+)
+DSHIELD_EMAIL = legacy_config.get(
+    'DShield',
+    'email',
+    fallback=config.get("auth", "email", fallback=None)
+
+)
+DSHIELD_URL = config.get("auth", "url", fallback="https://www.dshield.org")
+DSHIELD_USER_ID = legacy_config.get(
+    'DShield',
+    'userid',
+    fallback=config.get("auth", "user_id", fallback=None)
+
+)
 
 # DATABASE SETTINGS
 DATABASE_MAPPER_REGISTRY = registry()
@@ -91,5 +110,7 @@ for k, v in config.items():
         protocol_dict[k1] = v1
     PLUGINS.append(protocol_dict)
 
-
+# TODO: Temp solution to ensure at least http is started if no settings are given
+if not PLUGINS:
+    PLUGINS.append({"protocol": "tcp", "name": "http"})
 
