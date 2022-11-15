@@ -1,4 +1,4 @@
-# dshield
+# DShield
 
 ## DShield Raspberry Pi Sensor
 
@@ -7,7 +7,7 @@ This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi, any model as [per] (https://isc.sans.edu/forums/diary//22680/))
 - current Raspberry Pi OS ("Lite" version will suffice)
-- easy installation / configuration (and therefor not that much configurable)
+- easy installation / configuration (and therefore not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
 - support for IPv4 only (for the internal net)
@@ -163,27 +163,27 @@ apt-get dist-upgrade
 
 ## Hints
 
-### How to place the dshield sensor / honeypot
+### How to place the DShield sensor / honeypot
 
-This dshield sensor and honeypot is meant to only analyze Internet related traffic, i.e. traffic which is issued from public IP addresses:
-- this is due to how the dshield project works (collection of information about the current state of the Internet)
+This DShield sensor and honeypot is meant to only analyze Internet related traffic, i.e. traffic which is issued from public IP addresses:
+- this is due to how the DShield project works (collection of information about the current state of the Internet)
 - only in this way information which is interesting for the Internet security community can be gathered
-- only in this way it can be ensured that no internal, non-public information is leaked from your Pi to Dshield
+- only in this way it can be ensured that no internal, non-public information is leaked from your Pi to DShield
 
 So you must place the Pi on a network where it can be exposed to the Internet (and won't be connected to from the inner networks, except for administrative tasks). For a maximum sensor benefit it is desirable that the Pi is exposed to the whole traffic the Internet routes to a public IP (and not only selected ports).
 
 For SoHo users there is normally an option in the DSL or cable router to direct all traffic from the public IP the router is using (i.e. has been assigned by the ISP) to an internal IP. This has to be the Pi. This feature is named e.g. "exposed host", "DMZ" (here you may have to enable further configuration to ensure ___all___ traffic is being routed to the Pi's internal IP address and not only e.g. port 80).
 
-For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the dhshield project and the community which can be tracked via whois to your company.
+For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the DShield project and the community which can be tracked via whois to your company.
 
-To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your dshield account. Use only for quick and limited testing purposes, please, so that dhshield data isn't falsified.
+To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your DShield account. Use only for quick and limited testing purposes, please, so that DShield data isn't falsified.
 
 ### Navigating in Forms
 - RETURN: submit the form (OK)
 - ESC: exit the form (Cancel)
 - cursor up / down: navigate through form / between input fields
 - cursor left / right: navigate within an input field
-- TAB: swich between input field and "buttons"
+- TAB: switch between input field and "buttons"
 - don't use Pos 1 / End
 
 ## Todos
@@ -220,7 +220,7 @@ Todo:
 - SQL Injection - will likely use separate dorked database
 - Would like to integrate with cowrie for shell attacks - (BHAG)
 
-Any input appreciated - Please file a bug report / issue vai github - thanks!
+Any input appreciated - Please file a bug report / issue via github - thanks!
 
 Slack group invite link: https://www.dshield.org/slack/
 
