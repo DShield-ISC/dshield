@@ -4,8 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-twisted = {extras = ["all_non_platform", "http2"], version = "*"}
-sqlalchemy = "*"
+jinja2 = "~=3.0.3"
+pydantic = {extras = ["dotenv", "email"], version = "~=1.9.0"}
+requests = "~=2.27.1"
+sqlalchemy = "~=1.4.31"
+twisted = {extras = ["all_non_platform", "http2"], version = "~=22.1.0"}
 
 [dev-packages]
 pytest = "*"
@@ -19,4 +22,4 @@ markdown = "*"
 tox = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3"

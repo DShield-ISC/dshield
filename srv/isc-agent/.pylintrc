@@ -1,9 +1,10 @@
 [MASTER]
 
-
+init-hook="from pylint.config import find_pylintrc; import os, sys; sys.path.append(os.path.dirname(find_pylintrc()))"
 ignore-patterns=.*tests.py,.*sql.py,test_settings.py
 ignore=tests,migrations,seeds,scripts
 ignored-argument-names=_|args|kwargs
+extension-pkg-whitelist=pydantic
 disable=missing-docstring,
         too-few-public-methods,
         no-self-use,
