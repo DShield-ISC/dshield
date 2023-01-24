@@ -1,5 +1,5 @@
 CONTAINER_NAME := $(or $(CONTAINER_NAME), 'sans-isc-agent')
-IMAGE_NAME := $(or $(IMAGE_NAME), 'isc-agent_sans-isc-agent')
+IMAGE_NAME := $(or $(IMAGE_NAME), 'isc-agent-sans-isc-agent')
 PWD := $(or $(PWD), `pwd`)
 #Example for Windows: make project PWD=%cd%
 #Example for Mac: not necessary to pass in PWD since it defaults correctly
