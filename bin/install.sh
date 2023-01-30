@@ -498,6 +498,11 @@ if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
   distversion='u20'
 fi
 
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
+  dist='apt'
+  distversion='u22'
+fi
+
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ]; then
   dist='yum'
   distversion=2
