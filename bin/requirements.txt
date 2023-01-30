@@ -24,7 +24,8 @@ rethinkdb
 s3transfer
 service_identity==18.1.0
 slackclient
+sqlalchemy
 tftpy==0.8.0
 treq==22.1.0
-twisted==22.10.0
+twisted
 wokkel==18.0.0rc5
