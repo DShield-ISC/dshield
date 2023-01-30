@@ -1993,7 +1993,8 @@ run "mkdir -p ${ISC_AGENT_DIR}"
 
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
-
+run "chmod +x /srv/isc-agent/bin/isc-agent"
+run "mkdir -m 0700 /srv/isc-agent/run"
 run "deactivate"
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
