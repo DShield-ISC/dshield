@@ -529,11 +529,12 @@ if [ "$dist" == "invalid" ]; then
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ]; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "22.04" ]; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS"
   outlog " - Ubuntu 18.04"
   outlog " - Ubuntu 20.04"
+  outlog " - Ubuntu 22.04"
   outlog " - openSUSE Tumbleweed/Leap."
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
@@ -1156,7 +1157,7 @@ if [ "$INTERACTIVE" == 1 ]; then
   while [ $localnetok -eq 0 ]; do
     dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
-      "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
+      "Additional IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
       2>$TMPDIR/dialog.txt
     response=${?}
@@ -1994,6 +1995,7 @@ do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
 
 run "deactivate"
+OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
 run "pip3 install pipenv"
@@ -2002,7 +2004,7 @@ run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deplo
 run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
-
+cd $OLDPWD
 
 ###########################################################
 ## Copying further system files
@@ -2011,22 +2013,6 @@ run "systemctl enable isc-agent.service"
 dlog "copying further system files"
 
 # do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
-# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
-# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
-
-###########################################################
-## Remove old mini-httpd stuff (if run as an update)
-###########################################################
-
-dlog "removing old mini-httpd stuff"
-if [ -f /etc/mini-httpd.conf ]; then
-  mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
-fi
-if [ -f /etc/default/mini-httpd ]; then
-  run 'update-rc.d mini-httpd disable'
-  run 'update-rc.d -f mini-httpd remove'
-  mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
-fi
 
 ###########################################################
 ## Setting up Services
@@ -2035,7 +2021,6 @@ fi
 # setting up services
 # dlog "setting up services: cowrie"
 # run 'update-rc.d cowrie defaults'
-# run 'update-rc.d mini-httpd defaults'
 
 ###########################################################
 ## Setting up postfix
