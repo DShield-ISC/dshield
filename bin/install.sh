@@ -1991,7 +1991,7 @@ dlog "installing ISC-Agent"
 run "mkdir -p ${ISC_AGENT_DIR}"
 
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
-do_copy $progdir/../lib/systemd/system/iscagent.service ${systemdpref}/lib/systemd/system/ 644
+do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
 
 run "deactivate"
 cd ${ISC_AGENT_DIR}
