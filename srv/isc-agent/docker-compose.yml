@@ -4,9 +4,6 @@ services:
     build:
       dockerfile: Dockerfile
       context: .
-    command: watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- python main.py
-    volumes:
-      - .:/opt/sans-isc-agent
     ports:
 #      - 80:80
 #      - 443:443
