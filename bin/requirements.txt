@@ -5,7 +5,7 @@ awscli
 bcrypt==3.1.7
 botocore
 configparser==4.0.2
-cryptography==3.3.2
+cryptography==39.0.1
 csirtgsdk>=0.0.0a17
 datetime
 elasticsearch
