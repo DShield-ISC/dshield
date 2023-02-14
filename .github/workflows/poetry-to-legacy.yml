@@ -26,4 +26,3 @@ jobs:
           author_name: "GitHub Action"
           author_email: "action@github.com"
           message: "Converted pyproject.toml to requirements.txt"
-        working-directory: /srv/isc-agent/
