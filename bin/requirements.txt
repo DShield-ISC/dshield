@@ -18,7 +18,6 @@ pymongo
 pyopenssl==19.1.0
 pyparsing==2.4.7
 python-dateutil==2.8.1
-python-snappy
 requests
 rethinkdb
 s3transfer
