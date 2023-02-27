@@ -15,10 +15,13 @@
 
 # version 2022/01/05 01
 
-readonly myversion=93
+readonly myversion=94
 
 #
 # Major Changes (for details see Github):
+#
+# - V94 (Johannes)
+#   - switch from web.py to isc-agent.py
 #
 # - V93 (Johannes)
 #   - cowrie update
@@ -598,7 +601,7 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -615,8 +618,7 @@ if [ "$FAST" == "0" ]; then
     outlog "Updating your Operating System"
     run 'yum -q update -y'
     outlog "Installing additional packages"
-    run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
-    outlog "The new script /srv/dshield/webpy.sh needs lsof; it might need to be added here to be installed."
+    run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq iptables-services'
   fi
 
   if [ "$ID" == "opensuse" ]; then
@@ -633,7 +635,7 @@ if [ "$FAST" == "0" ]; then
     run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
     run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip'
     run 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
-    run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
+    run 'zypper --non-interactive install --no-recommends system-user-mail jq'
     [ "$distversion" == "Tumbleweed" ] &&
       run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
     [ "$distversion" == "Leap" ] &&
@@ -1705,7 +1707,6 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
@@ -1854,7 +1855,8 @@ fi
 #
 
 run "rm -rf /srv/cowrie.2*"
-run "rm -rf /srv/www.2*"
+run "rm -rf /srv/www*"
+
 
 #
 # pruning logs prior to backup
