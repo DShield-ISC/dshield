@@ -48,7 +48,7 @@ This script will:
 Inside your "dshield" directory (the directory created above when you run `git clone`), run
 ```
 cd install/dshield
-git pull
+sudo git pull
 sudo bin/install.sh --update
 ```
 The "--update" parameter will automatically use the existing configuration and not prompt the user for any configuration options.
