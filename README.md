@@ -49,8 +49,9 @@ Inside your "dshield" directory (the directory created above when you run `git c
 ```
 cd install/dshield
 git pull
-sudo bin/install.sh
+sudo bin/install.sh --update
 ```
+The "--update" parameter will automatically use the existing configuration and not prompt the user for any configuration options.
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
 
