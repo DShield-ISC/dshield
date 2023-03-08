@@ -20,6 +20,7 @@ jobs:
         run: |
           cd srv/isc-agent
           poetry export -f requirements.txt -o requirements.txt
+          mv requirements.txt ../../bin/
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
         with:
