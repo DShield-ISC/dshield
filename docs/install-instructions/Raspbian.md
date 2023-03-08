@@ -1,4 +1,4 @@
-# dshield
+# Install DShield Sensor on a Raspbian Pi
 
 
 ** For more detailed instructions with screen shots, see https://isc.sans.edu/honeypotinstall.pdf . **
