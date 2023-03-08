@@ -1,12 +1,22 @@
-FROM python:3.7.12-slim-bullseye
+FROM python:3.9
+
+ENV PYTHONUNBUFFERED 1
 
 WORKDIR /opt/sans-isc-agent
 
-COPY . /opt/sans-isc-agent
+COPY . .
+
+SHELL [ "/bin/bash", "-c"]
 
 RUN apt-get update \
     && pip install --upgrade pip \
-    && pip install pipenv \
-    && pipenv sync --dev --system
+    && pip install -U poetry  \
+    && poetry install --no-root \
+    && echo "Done"
 
-CMD ["sh", "-c", "python main.py"]
+EXPOSE 8000
+EXPOSE 8080
+EXPOSE 8443
+EXPOSE 3000
+
+CMD ["poetry", "run", "python", "main.py"]

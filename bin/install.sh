@@ -240,7 +240,7 @@ DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
-WEBDIR="${TARGETDIR}/www"
+ISC_AGENT_DIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
@@ -498,6 +498,11 @@ if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
   distversion='u20'
 fi
 
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
+  dist='apt'
+  distversion='u22'
+fi
+
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ]; then
   dist='yum'
   distversion=2
@@ -524,11 +529,12 @@ if [ "$dist" == "invalid" ]; then
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ]; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "22.04" ]; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS"
   outlog " - Ubuntu 18.04"
   outlog " - Ubuntu 20.04"
+  outlog " - Ubuntu 22.04"
   outlog " - openSUSE Tumbleweed/Leap."
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
@@ -587,11 +593,12 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q remove python2'
     run 'apt -y -q remove python'
     run 'apt -y -q remove python-pip'
+    run 'apt -y -q install python3'
     run 'apt -y -q install python3-pip'
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
 
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof; do
+    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -1151,7 +1158,7 @@ if [ "$INTERACTIVE" == 1 ]; then
   while [ $localnetok -eq 0 ]; do
     dialog --title 'Local Network and Access' --form "Configure admin access: which ports should be opened (separated by blank, at least sshd (${SSHDPORT})) for the local network, and further trused IPs / networks. All other access from these IPs and nets / to the ports will be blocked. Handle with care, use only trusted IPs / networks." 15 60 0 \
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
-      "Further IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
+      "Additional IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
       2>$TMPDIR/dialog.txt
     response=${?}
@@ -1977,30 +1984,29 @@ run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
 ###########################################################
-## Installation of web honeypot
+## Installation of isc-agent
 ###########################################################
 
-dlog "installing web honeypot"
+outlog "Installing ISC-Agent"
+dlog "installing ISC-Agent"
 
-if [ -d ${WEBDIR} ]; then
-  dlog "old web honeypot installation found, moving"
-  # TODO: warn user, backup dl etc.
-  run "mv ${WEBDIR} ${WEBDIR}.${INSTDATE}"
-fi
+run "mkdir -p ${ISC_AGENT_DIR}"
 
-run "mkdir -p ${WEBDIR}"
-
-do_copy $progdir/../srv/www ${WEBDIR}/../
-do_copy $progdir/../lib/systemd/system/webpy.service ${systemdpref}/lib/systemd/system/ 644
+do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
+do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
+run "chmod +x /srv/isc-agent/bin/isc-agent"
+run "mkdir -m 0700 /srv/isc-agent/run"
+run "deactivate"
+OLDPWD=$PWD
+cd ${ISC_AGENT_DIR}
+run "pip3 install --upgrade pip"
+run "pip3 install pipenv"
+run "pipenv lock"
+run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
 run "systemctl daemon-reload"
-run "systemctl enable webpy.service"
+run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
-
-# change ownership for web databases to cowrie as we will run the
-# web honeypot as cowrie
-touch ${WEBDIR}/DB/webserver.sqlite
-run "chown cowrie ${WEBDIR}/DB"
-run "chown cowrie ${WEBDIR}/DB/*"
+cd $OLDPWD
 
 ###########################################################
 ## Copying further system files
@@ -2009,22 +2015,6 @@ run "chown cowrie ${WEBDIR}/DB/*"
 dlog "copying further system files"
 
 # do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
-# do_copy $progdir/../etc/mini-httpd.conf /etc/mini-httpd.conf 644
-# do_copy $progdir/../etc/default/mini-httpd /etc/default/mini-httpd 644
-
-###########################################################
-## Remove old mini-httpd stuff (if run as an update)
-###########################################################
-
-dlog "removing old mini-httpd stuff"
-if [ -f /etc/mini-httpd.conf ]; then
-  mv /etc/mini-httpd.conf /etc/mini-httpd.conf.${INSTDATE}
-fi
-if [ -f /etc/default/mini-httpd ]; then
-  run 'update-rc.d mini-httpd disable'
-  run 'update-rc.d -f mini-httpd remove'
-  mv /etc/default/mini-httpd /etc/default/.mini-httpd.${INSTDATE}
-fi
 
 ###########################################################
 ## Setting up Services
@@ -2033,7 +2023,6 @@ fi
 # setting up services
 # dlog "setting up services: cowrie"
 # run 'update-rc.d cowrie defaults'
-# run 'update-rc.d mini-httpd defaults'
 
 ###########################################################
 ## Setting up postfix

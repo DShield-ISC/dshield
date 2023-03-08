@@ -40,13 +40,13 @@ if [ ! -f /etc/dshield.sslca ] ; then
 	echo "Depart=\"$department\"" >> /etc/dshield.sslca
 fi
 echo $country
-if [ ! -f $d/../etc/CA/keys/$hostname.key ]; then
-    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/$hostname.key -out $d/../etc/CA/requests/$hostname.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
-    openssl req -in $d/../etc/CA/requests/$hostname.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/$hostname.keypin
+if [ ! -f $d/../etc/CA/keys/honeypot.key ]; then
+    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot.key -out $d/../etc/CA/requests/honeypot.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
+    openssl req -in $d/../etc/CA/requests/honeypot.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot.keypin
 fi
-if [ ! -f $d/../etc/CA/keys/$hostname-spare.key ]; then
-    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/$hostname-spare.key -out $d/../etc/CA/requests/$hostname-spare.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
-    openssl req -in $d/../etc/CA/requests/$hostname-spare.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/$hostname-spare.keypin
+if [ ! -f $d/../etc/CA/keys/honeypot-spare.key ]; then
+    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot-spare.key -out $d/../etc/CA/requests/honeypot-spare.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
+    openssl req -in $d/../etc/CA/requests/honeypot-spare.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot-spare.keypin
 fi
 
 cadir=$d/../etc/CA
@@ -74,7 +74,7 @@ if [ $? -eq 0  ]; then
     # we will only sign the primary CSR, not the spare one for now.
     touch ../etc/CA/index.txt
     sed -r --in-place=.bak "s|^dir\s=.*$|dir = $cadir|" ../etc/openssl.cnf
-    openssl ca -batch -config ../etc/openssl.cnf -policy signing_policy -extensions signing_req -out ../etc/CA/certs/$hostname.crt -infiles ../etc/CA/requests/$hostname.csr    
+    openssl ca -batch -config ../etc/openssl.cnf -policy signing_policy -extensions signing_req -out ../etc/CA/certs/honeypot.crt -infiles ../etc/CA/requests/honeypot.csr    
     
 fi
 

@@ -1,4 +1,7 @@
 .*
+
+settings.ini
+
 !.bandit
 !.coveragerc
 !.gitignore

@@ -5,4 +5,3 @@ CMD ["bin/install.sh"]
 EXPOSE 2223
 EXPOSE 2222
 EXPOSE 8000
-
