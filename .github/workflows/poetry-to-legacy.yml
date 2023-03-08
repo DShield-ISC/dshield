@@ -21,7 +21,7 @@ jobs:
       - name: Convert poetry file to requirements.txt
         run: |
           poetry export -f requirements.txt -o main/bin/requirements.txt
-        working-directory: main/bin
+        working-directory: srv/isc-agent
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
         with:
