@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-          with:
-             path: main
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -20,8 +18,9 @@ jobs:
           pip install poetry
       - name: Convert poetry file to requirements.txt
         run: |
-          poetry export -f requirements.txt -o main/bin/requirements.txt
-        working-directory: main/bin
+          cd srv/isc-agent
+          poetry export -f requirements.txt -o requirements.txt
+          mv requirements.txt ../../bin/
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
         with:
