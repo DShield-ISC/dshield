@@ -222,6 +222,15 @@ fi
 if [ ${TESTS['fw']} -eq 0 ] ; then
     echo "${RED}MISSING${NC}: firewall rules"
 fi
+x=$(ps -ef | grep -c 'isc-agent\sstart')
+if [ $x -eq 1 ]]; then
+  echo "${GREEN}OK${NC}: isc-agent running"
+  TESTS['iscagentrunnint']=1		   
+else
+  echo "${RED}ERROR${NC}: isc-agent not running"
+  TESTS['exposed']=0
+fi    
+
 port=$(curl -s 'https://isc.sans.edu/api/portcheck?json' | jq .port80 | tr -d '"')
 if [[ "$port" == "open" ]]; then
   echo "${GREEN}OK${NC}: webserver exposed"
