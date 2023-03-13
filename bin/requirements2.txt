@@ -36,8 +36,7 @@ setuptools
 six
 sortedcontainers
 sqlalchemy
-twisted-iocpsupport
-twisted[all-non-platform,http2]
+twisted
 typing-extensions
 urllib3
 zope-interface
