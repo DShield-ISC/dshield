@@ -223,7 +223,7 @@ if [ ${TESTS['fw']} -eq 0 ] ; then
     echo "${RED}MISSING${NC}: firewall rules"
 fi
 x=$(ps -ef | grep -c 'isc-agent\sstart')
-if [ $x -eq 1 ]]; then
+if [ $x -eq 1 ]; then
   echo "${GREEN}OK${NC}: isc-agent running"
   TESTS['iscagentrunnint']=1		   
 else
