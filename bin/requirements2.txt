@@ -30,7 +30,6 @@ pyhamcrest
 pyopenssl
 pyserial
 python-dotenv
-pywin32
 requests
 service-identity
 setuptools
