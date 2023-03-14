@@ -1767,6 +1767,10 @@ if [ -f /etc/dshield.ini ]; then
   run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
 fi
 
+if [ ! -d /srv/db ]; then
+  run 'mkdir -m 1777 /srv/db'
+fi
+
 # new shiny config file
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
@@ -1796,8 +1800,17 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
+run 'echo "[plugin:tcp:http]" >> /etc/dshield.ini'
+run 'echo "http_ports = [8000]" >> /etc/dshield.ini'
+run 'echo "https_ports = [8443]" >> /etc/dshield.ini'
+run 'echo "submit_logs_rate = 30" >> /etc/dshield.ini'
+run 'echo "[iscagent]" >> /etc/dshield.ini'
+run 'echo "database=sqlite+pysqlite:///srv/db/isc-agent.sqlite" >> /etc/dshield.ini'
+run 'echo "debug=false" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
+
+
 
 ###########################################################
 ## Installation of cowrie
@@ -1894,7 +1907,7 @@ if [ "$FAST" == "0" ]; then
     dlog "installing dependencies: requirements.txt"
     run 'pip3 install --upgrade pip'
     run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade -r requirements.txt'
+    run 'pip3 install --upgrade -r requirements2.txt'
     run 'pip3 install --upgrade requests'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
