@@ -1805,7 +1805,7 @@ run 'echo "http_ports = [8000]" >> /etc/dshield.ini'
 run 'echo "https_ports = [8443]" >> /etc/dshield.ini'
 run 'echo "submit_logs_rate = 30" >> /etc/dshield.ini'
 run 'echo "[iscagent]" >> /etc/dshield.ini'
-run 'echo "database=sqlite+pysqlite:///srv/db/isc-agent.sqlite" >> /etc/dshield.ini'
+run 'echo "database=sqlite+pysqlite:////srv/db/isc-agent.sqlite" >> /etc/dshield.ini'
 run 'echo "debug=false" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
