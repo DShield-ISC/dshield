@@ -1907,7 +1907,7 @@ if [ "$FAST" == "0" ]; then
     dlog "installing dependencies: requirements.txt"
     run 'pip3 install --upgrade pip'
     run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade -r requirements2.txt'
+    run 'pip3 install --upgrade -r requirements.txt'
     run 'pip3 install --upgrade requests'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
