@@ -19,7 +19,6 @@ function startup() {
     s=$?
     if [[ $s -eq 0 ]]; then
 	echo "starting isc-agent"
-	activate_venv .venv	
 	cd /srv/isc-agent/ && python3 ./main.py > /dev/null 2>/srv/log/isc-agent.err &
 	echo $! > $PIDFILE
     fi
