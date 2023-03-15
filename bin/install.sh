@@ -305,8 +305,8 @@ quotespace() {
 do_log() {
   if [ ! -d ${LOGDIR} ]; then
     mkdir -p ${LOGDIR}
-    chmod 700 ${LOGDIR}
   fi
+  chmod 1777 ${LOGDIR}
   if [ ! -f ${LOGFILE} ]; then
     touch ${LOGFILE}
     chmod 600 ${LOGFILE}

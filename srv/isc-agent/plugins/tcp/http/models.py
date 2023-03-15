@@ -3,6 +3,7 @@ import datetime
 import logging
 import json
 import os
+import sys
 
 import requests
 from pydantic import ValidationError
@@ -108,11 +109,13 @@ def hydrate_tables():
     settings.DATABASE_SESSION.query(Signature).delete()
     settings.DATABASE_SESSION.query(Response).delete()
 
-    resp = requests.get(
-        f'{settings.DSHIELD_URL}/api/honeypotrules/',
-        verify=False
-    )
-
+    try:
+        resp = requests.get(
+            f'{settings.DSHIELD_URL}/api/honeypotrules/', verify=False
+        )
+    except requests.exceptions.ConnectionError as e:
+        logger.exception(f"unable to connect to DShield {e}")
+        sys.exit()
     if not resp.ok:
         logger.exception("HTTP plugin failed to download artifacts.")
         return
