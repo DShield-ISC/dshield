@@ -240,6 +240,7 @@ DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
+SCRIPTDIR=$( cd -- "$(dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 ISC_AGENT_DIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
@@ -1895,25 +1896,27 @@ else
     fi
 fi
 
-run 'pip3 install --upgrade -r requirements.txt'
+
 
 # step 4 (Setup Virtual Environment)
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
 OLDDIR=$(pwd)
-cd ${COWRIEDIR}
 
+
+cd ${COWRIEDIR}
+dlog "installing global rependencies from ${SCRIPTDIR}/requirements.txt"
+run 'pip3 install --upgrade pip'
+run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
 dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
-    dlog "installing dependencies: requirements.txt"
+    dlog "installing cowrie dependencies: requirements.txt"
     run 'pip3 install --upgrade pip'
     run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade sqlalchemy'
-    run 'pip3 install --upgrade twisted'
-    run 'pip3 install --upgrade testresources'
     run 'pip3 install --upgrade requests'
+    run 'pip3 install -r requirements.txt'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
        exit 9
