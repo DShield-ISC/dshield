@@ -31,14 +31,12 @@ pyhamcrest
 pyopenssl
 pyserial
 python-dotenv
-pywin32
 requests
 service-identity
 setuptools
 six
 sortedcontainers
 sqlalchemy
-twisted-iocpsupport
 twisted[all-non-platform,http2]
 typing-extensions
 urllib3
