@@ -1895,10 +1895,13 @@ else
     fi
 fi
 
+run 'pip3 install --upgrade -r requirements.txt'
+
 # step 4 (Setup Virtual Environment)
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
 OLDDIR=$(pwd)
 cd ${COWRIEDIR}
+
 dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
@@ -1909,7 +1912,7 @@ if [ "$FAST" == "0" ]; then
     run 'pip3 install --upgrade bcrypt'
     run 'pip3 install --upgrade sqlalchemy'
     run 'pip3 install --upgrade twisted'
-    run 'pip3 install --upgrade -r requirements.txt'
+    run 'pip3 install --upgrade testresources'
     run 'pip3 install --upgrade requests'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
