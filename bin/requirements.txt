@@ -1,46 +1,46 @@
-appdirs==1.4.4 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-attrs==22.2.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-automat==22.10.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-bcrypt==4.0.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-certifi==2022.12.7 ; python_full_version >= "3.7.1" and python_version < "4"
-cffi==1.15.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-charset-normalizer==3.1.0 ; python_full_version >= "3.7.1" and python_version < "4"
-constantly==15.1.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-cryptography==39.0.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-cython-test-exception-raiser==1.0.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-dnspython==2.3.0 ; python_full_version >= "3.7.1" and python_version < "4.0"
-email-validator==1.3.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-exceptiongroup==1.1.1 ; python_full_version >= "3.7.1" and python_version < "3.11"
-greenlet==2.0.2 ; python_full_version >= "3.7.1" and platform_machine == "aarch64" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "ppc64le" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "x86_64" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "amd64" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "AMD64" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "win32" and python_full_version < "4.0.0" or python_full_version >= "3.7.1" and platform_machine == "WIN32" and python_full_version < "4.0.0"
-h2==4.1.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-hpack==4.0.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-hyperframe==6.0.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-hyperlink==21.0.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-hypothesis==6.70.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-idna==3.4 ; python_full_version >= "3.7.1" and python_version < "4"
-importlib-metadata==6.0.0 ; python_full_version >= "3.7.1" and python_version < "3.8"
-incremental==22.10.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-jinja2==3.1.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-markupsafe==2.1.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-priority==1.3.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pyasn1-modules==0.2.8 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pyasn1==0.4.8 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pycparser==2.21 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pydantic[dotenv,email]==1.10.6 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pyhamcrest==2.0.4 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pyopenssl==23.0.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pyserial==3.5 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-python-dotenv==0.21.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-pywin32==305 ; platform_system == "Windows" and python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-requests==2.28.2 ; python_full_version >= "3.7.1" and python_version < "4"
-service-identity==21.1.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-setuptools==67.6.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-six==1.16.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-sortedcontainers==2.4.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-sqlalchemy==2.0.6 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-twisted-iocpsupport==1.0.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0" and platform_system == "Windows"
-twisted[all-non-platform,http2]==22.10.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-typing-extensions==4.5.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-urllib3==1.26.15 ; python_full_version >= "3.7.1" and python_version < "4"
-zipp==3.15.0 ; python_full_version >= "3.7.1" and python_version < "3.8"
-zope-interface==5.5.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
+appdirs
+attrs
+automat
+bcrypt
+certifi
+cffi
+charset-normalizer
+constantly
+cryptography
+cython-test-exception-raiser
+dnspython
+email-validator
+exceptiongroup
+greenlet
+h2
+hpack
+hyperframe
+hyperlink
+hypothesis
+idna
+importlib-metadata
+incremental
+jinja2
+markupsafe
+priority
+pyasn1-modules
+pyasn1
+pycparser
+pydantic[dotenv,email]
+pyhamcrest
+pyopenssl
+pyserial
+python-dotenv
+pywin32
+requests
+service-identity
+setuptools
+six
+sortedcontainers
+sqlalchemy
+twisted-iocpsupport
+twisted[all-non-platform,http2]
+typing-extensions
+urllib3
+zipp
+zope-interface
