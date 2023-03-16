@@ -20,7 +20,7 @@ jobs:
         run: |
           cd srv/isc-agent
           poetry export -f requirements.txt -o requirements.txt --without-hashes
-          cut -f1 -d '=' < requirements.txt > ../../bin/requirements.txt
+          cut -f1 -d '=' < requirements.txt | grep -v 'Windows' > ../../bin/requirements.txt
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
         with:
