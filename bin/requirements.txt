@@ -37,7 +37,7 @@ setuptools
 six
 sortedcontainers
 sqlalchemy
-twisted[all-non-platform,http2]
+twisted
 typing-extensions
 urllib3
 zipp
