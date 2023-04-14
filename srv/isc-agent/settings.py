@@ -91,8 +91,8 @@ DATABASE_SESSION = Session(DATABASE_ENGINE)
 
 # SSL certification key and certificate
 
-PRIVATE_KEY = config.get('isc-agent', 'tlskey', fallback='/srv/isc-agent/honeypot.key')
-CERT_KEY = config.get('isc-agent', 'tlscert', fallback='/srv/isc-agent/honeypot.crt')
+PRIVATE_KEY = config.get('iscagent', 'tlskey', fallback='/srv/isc-agent/honeypot.key')
+CERT_KEY = config.get('iscagent', 'tlscert', fallback='/srv/isc-agent/honeypot.crt')
 
 # PLUGINS
 # Read from /etc/dshield.ini file
