@@ -2207,8 +2207,8 @@ if [ ${GENCERT} -eq 1 ]; then
   ./makecert.sh
 
   dlog "moving certs to /srv/isc-agent"
-  run "mv $SCRIPTDIR/dshield/etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
-  run "mv $SCRIPTDIR/dshield/etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
+  run "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
+  run "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
 
   dlog "updating /etc/dshield.ini"
   run 'echo "tlskey=/srv/isc-agent/honeypot.key" >> /etc/dshield.ini'
