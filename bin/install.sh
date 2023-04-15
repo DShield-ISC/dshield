@@ -2004,6 +2004,10 @@ find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
+dlog 'deactivate cowrie venv'
+run 'deactivate'
+
+
 ###########################################################
 ## Installation of isc-agent
 ###########################################################
@@ -2011,23 +2015,33 @@ run 'systemctl enable cowrie.service'
 outlog "Installing ISC-Agent"
 dlog "installing ISC-Agent"
 
-run "mkdir -p ${ISC_AGENT_DIR}"
+# support for ubuntu server 22.04.2 LTS
+dlog "(re)installing python attrs package"
+run "pip3 install --ignore-installed attrs"
 
+run "mkdir -p ${ISC_AGENT_DIR}"
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
 run "chmod +x /srv/isc-agent/bin/isc-agent"
 run "mkdir -m 0700 /srv/isc-agent/run"
-run "deactivate"
+
+dlog "activate isc-agent venv"
+run "source /srv/isc-agent/.venv/bin/activate"
+
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
 run "pip3 install pipenv"
+run "pip3 install --ignore-installed -r requirements.txt --prefix /srv/isc-agent/.venv"
 run "pipenv lock"
 run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
 run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd $OLDPWD
+
+dlog "deactivate isc-agent venv"
+run "deactivate"
 
 ###########################################################
 ## Copying further system files
@@ -2191,6 +2205,15 @@ clear
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
   ./makecert.sh
+
+  dlog "moving certs to /srv/isc-agent"
+  run "mv $SCRIPTDIR/dshield/etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
+  run "mv $SCRIPTDIR/dshield/etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
+
+  dlog "updating /etc/dshield.ini"
+  run 'echo "tlskey=/srv/isc-agent/honeypot.key" >> /etc/dshield.ini'
+  run 'echo "tlscert=/srv/isc-agent/honeypot.crt" >> /etc/dshield.ini'
+
 fi
 
 #
