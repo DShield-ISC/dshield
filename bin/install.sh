@@ -791,11 +791,8 @@ if [ "$FAST" == "0" ]; then
     fi
   fi
 
-  if [ "$ID" != "opensuse" ]; then
-    drun 'pip3 list --format=legacy'
-  else
-    drun 'pip3 list --format=columns'
-  fi
+  drun 'pip3 list --format=columns'
+  
 else
   outlog "Skipping PIP check in FAST mode"
 fi
@@ -1904,7 +1901,7 @@ OLDDIR=$(pwd)
 
 
 cd ${COWRIEDIR}
-dlog "installing global rependencies from ${SCRIPTDIR}/requirements.txt"
+dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
 run 'pip3 install --upgrade pip'
 run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
 dlog "setting up virtual environment"
