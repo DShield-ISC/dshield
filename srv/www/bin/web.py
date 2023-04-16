@@ -163,9 +163,11 @@ class myhandler(BaseHTTPRequestHandler):
             pass
         else:  # default
             message_parts = [
-                '<title>Upload</title>\
+                '<!DOCTYPE html>\
+                <title>Upload</title>\
                 <form action=/ method=POST ENCTYPE=multipart/form-data>\
                 <input type=file name=upfile> <input type=submit value=Upload>\
+                </form>\
                 <fieldset>\
                 <legend>Form Using GET</legend>\
                 <form method="get">\
@@ -175,7 +177,7 @@ class myhandler(BaseHTTPRequestHandler):
                 </form>\
                 </fieldset>\
                 <p>&nbsp;</p>\
-                <fieldset>'
+                </html>'
             ]
             message = '\r\n'.join(message_parts)
             try:
