@@ -2025,9 +2025,6 @@ do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/syst
 run "chmod +x /srv/isc-agent/bin/isc-agent"
 run "mkdir -m 0700 /srv/isc-agent/run"
 
-dlog "activate isc-agent venv"
-run "source /srv/isc-agent/.venv/bin/activate"
-
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
@@ -2039,9 +2036,6 @@ run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd $OLDPWD
-
-dlog "deactivate isc-agent venv"
-run "deactivate"
 
 ###########################################################
 ## Copying further system files
