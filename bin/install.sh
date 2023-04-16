@@ -2029,9 +2029,9 @@ OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
 run "pip3 install pipenv"
-run "pip3 install --ignore-installed -r requirements.txt --prefix /srv/isc-agent/.venv"
 run "pipenv lock"
 run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
+run "pip3 install --ignore-installed -r requirements.txt --prefix /srv/isc-agent/.venv"
 run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
