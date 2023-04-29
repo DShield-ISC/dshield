@@ -163,7 +163,7 @@ def read_db_and_log(file_name="/srv/db/webhoneypot.json"):
 
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
         signature = settings.DATABASE_SESSION.query(Signature).filter(Signature.id == instance.signature_id).first()
-        signature_rules = {"max score": signature.max_score, "rules": signature.rules} if signature else None
+        signature_rules = {"max_score": signature.max_score, "rules": signature.rules} if signature else None
 
         resp = settings.DATABASE_SESSION.query(Response).filter(Response.id == instance.response_id).first()
         resp_details = {"comment": resp.comment, "headers": resp.headers, "status_code": resp.status_code} if resp else None
