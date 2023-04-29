@@ -102,8 +102,8 @@ def log_request(request_attributes: Dict, signature_id: Optional[int] = None, re
 def submit_logs():
     # Submit logs
     request_logs = settings.DATABASE_SESSION.query(RequestLog).all()
-    settings.DATABASE_SESSION.add_all(request_logs) # adds logs to current session
-    settings.DATABASE_SESSION.commit() # commits the change to the db (/srv/db/isc-agent.sqlite)
+    #settings.DATABASE_SESSION.add_all(request_logs) # adds logs to current session
+    #settings.DATABASE_SESSION.commit() # commits the change to the db (/srv/db/isc-agent.sqlite)
     logger.debug(request_logs)
     if request_logs:
         auth = get_auth()
