@@ -153,22 +153,45 @@ def prepare_database():
     create_tables()
     hydrate_tables()
 
+def read_db_and_log(file_name="/srv/db/webhoneypot.json"):
+    unique_logs = set()
+    logs = []
 
-def read_db_and_log():
+    if os.path.exists(file_name):
+        with open(file_name, "r") as file:
+            unique_logs = set(json.load(file))
+
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
+        signature = settings.DATABASE_SESSION.query(Signature).filter(Signature.id == instance.signature_id).first()
+        signature_rules = {"max_score": signature.max_score, "rules": signature.rules} if signature else None
+
+        resp = settings.DATABASE_SESSION.query(Response).filter(Response.id == instance.response_id).first()
+        resp_details = {"comment": resp.comment, "headers": resp.headers, "status_code": resp.status_code} if resp else None
+
         try:
             useragent = ast.literal_eval(instance.headers)['user-agent'],
         except KeyError:
             useragent = ''
         log_data = {
-            'time': instance.time,
+            'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
             'headers': ast.literal_eval(instance.headers),
             'sip': instance.client_ip,
             'dip': instance.target_ip,
             'method': instance.method,
             'url': instance.path,
             'data': instance.data,
-            'useragent': useragent
+            'useragent': useragent,
+            'version': (instance.version).decode("utf-8"),
+            'response_id': resp_details,
+            'signature_id': signature_rules
         }
-        logs.append(log_data)
+        log_data_str = json.dumps(log_data)
+
+        if log_data_str not in unique_logs:
+            unique_logs.add(log_data_str)
+            logs.append(log_data)
+
+    with open(file_name, "w") as file:
+        json.dump(list(unique_logs), file)
+
     return logs
