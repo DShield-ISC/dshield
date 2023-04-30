@@ -173,7 +173,7 @@ def read_db_and_log(file_name="/srv/db/webhoneypot.json"):
         except KeyError:
             useragent = ''
         log_data = {
-            'time': instance.time.isoformat(),
+            'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
             'headers': ast.literal_eval(instance.headers),
             'sip': instance.client_ip,
             'dip': instance.target_ip,
