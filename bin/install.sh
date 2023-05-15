@@ -617,7 +617,6 @@ if [ "$FAST" == "0" ]; then
     run 'yum -q update -y'
     outlog "Installing additional packages"
     run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
-    outlog "The new script /srv/dshield/webpy.sh needs lsof; it might need to be added here to be installed."
   fi
 
   if [ "$ID" == "opensuse" ]; then
@@ -1211,6 +1210,13 @@ adminports="'${ADMINPORTS}'"
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
+if [ "${database}" == "" ]; then
+    database='sqlite+pysqlite:////srv/db/isc-agent.sqlite'
+fi
+if [ "${archivedatabase}" == "" ]; then
+    archivedatabase='none'
+fi    
+
 if [ "${nofwlogging}" == "" ]; then
   # default: local net & connected IPs (as the user confirmed)
   nofwlogging="${localnet} ${CONIPS}"
@@ -1702,8 +1708,6 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
@@ -1733,7 +1737,6 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; sleep 10; ./webpy.sh" >/etc/cron.d/dshield
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
@@ -1803,7 +1806,10 @@ run 'echo "http_ports = [8000]" >> /etc/dshield.ini'
 run 'echo "https_ports = [8443]" >> /etc/dshield.ini'
 run 'echo "submit_logs_rate = 300" >> /etc/dshield.ini'
 run 'echo "[iscagent]" >> /etc/dshield.ini'
-run 'echo "database=sqlite+pysqlite:////srv/db/isc-agent.sqlite" >> /etc/dshield.ini'
+database=$(quotespace $database)
+run 'echo "database=$database" >> /etc/dshield.ini'
+archivedatabase=$(quotespace $archivedatabase)
+run 'echo "archivedatabase=$archivedatabase" >> /etc/dshield.ini'
 run 'echo "debug=false" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'

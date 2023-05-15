@@ -138,6 +138,13 @@ echo API Key: $apikey
 echo User-ID: $userid
 echo My Internal IP: $myip
 echo My External IP: $honeypotip
+defaultinterface=$(ip -4 route show | grep '^default ' | head -1 | cut -f5 -d' ')
+if [ $defaultinterface == $interface ]; then
+    echo Interface: $interface ${GREEN}OK${NC}
+else
+    echo Interface: $interface ${RED}ERROR: interface should be $defaultinterface${NC}
+fi
+
 
 echo "
 ###### Are My Reports Received? ######
@@ -239,6 +246,12 @@ else
   echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
+if [ $defaultinterface == $interface ]; then
+    echo ${GREEN}OK${NC}: correct interface
+else
+    echo ${RED}ERROR${NC}: wrong interface. Should be $defaultinterface but is $interface. See /etc/dshield.ini
+fi
+
 if [ -f "/var/log/messages" ]; then
     voltagecount=$(grep -c 'Voltage normalised' /var/log/messages)
 if [ $voltagecount -gt 10 ]; then
