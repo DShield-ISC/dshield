@@ -19,4 +19,4 @@ EXPOSE 8080
 EXPOSE 8443
 EXPOSE 3000
 
-CMD ["poetry", "run", "python", "main.py"]
+CMD ["poetry", "run", "python", "isc-agent.py"]

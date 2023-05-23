@@ -2021,7 +2021,6 @@ dlog "installing ISC-Agent"
 # support for ubuntu server 22.04.2 LTS
 dlog "(re)installing python attrs package"
 run "pip3 install --ignore-installed attrs"
-
 run "mkdir -p ${ISC_AGENT_DIR}"
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
@@ -2031,13 +2030,14 @@ run "mkdir -m 0700 /srv/isc-agent/run"
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
-run "pip3 install pipenv"
-run "pipenv lock"
-run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
-run "python -m venv /srv/isc-agent/.venv"
-run "pip3 install --ignore-installed -r requirements.txt --prefix /srv/isc-agent/.venv"
+ISCAGENTENV="/srv/isc-agent/virtenv"
+run "virtualenv --python=python3 $ISCAGENTENV"
+run "pip3 install --ignore-installed -r requirements.txt --prefix $ISCAGENTENV"
 run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
+dlog 'deactivate isc-agent venv'
+run 'deactivate'
+
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd $OLDPWD
 

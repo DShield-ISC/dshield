@@ -20,8 +20,8 @@ function startup() {
     if [[ $s -eq 0 ]]; then
 	echo "starting isc-agent"
 	cd /srv/isc-agent
-	activate_venv .venv
-	python3 ./main.py > /dev/null 2>/srv/log/isc-agent.err &
+	activate_venv virtenv
+	python3 ./isc-agent.py > /dev/null 2>/srv/log/isc-agent.err &
 	echo $! > $PIDFILE
     fi
     status

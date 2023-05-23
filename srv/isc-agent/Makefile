@@ -43,7 +43,7 @@ install-prod-package ipp:
 
 .PHONY: lint l
 lint l:
-	docker run -v $(PWD):/opt/sans-isc-agent --rm $(IMAGE_NAME) sh -c "pylint main.py ./plugins"
+	docker run -v $(PWD):/opt/sans-isc-agent --rm $(IMAGE_NAME) sh -c "pylint isc-agent.py ./plugins"
 
 .PHONY: security sec
 security sec:
