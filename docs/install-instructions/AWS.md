@@ -82,3 +82,16 @@ git clone https://github.com/DShield-ISC/dshield.git
 cd dshield/bin
 sudo ./install.sh
 ```
+
+Post-Install Notes
+-------------------
+Once dshield is installed, adjust security group settings to allow internet traffic to hit it.
+1. Navigate to the instance's summary page
+2. Select the "Security" tab
+3. Select the security group name  
+![Navigate to instance security group](https://github.com/MHeezy/images/blob/main/ec2_securitygroup_navigate.png)
+4. On the security group page, with "Inbound rules" tab selected, select "Edit inbound rules"  
+![Edit inbound rules](https://github.com/MHeezy/images/blob/main/securitygroup_edit_inbound.png)
+5. For enhanced security, change the existing inbound SSH rule to "Type" -> "Custom TCP", "Port range" -> 12222, "Source" -> "My IP"
+  - Recall that dshield adjusts the true SSH service to port 12222; restrict this port to only your management IP
+6. To allow all internet traffic to hit the honeypot, select "Add rule", with the settings "Type" -> "All traffic", "Source" -> "Anywhere"
