@@ -18,11 +18,12 @@ class SockHandler(BaseRequestHandler):
     def handle(self):
         # self.request is the TCP socket connected to the client
         self.data = self.request.recv(1024)
-        print "Passing data from: {}".format(self.client_address[0])
-        print self.data
+        print("Passing data from: {}".format(self.client_address[0]))
+        print(self.data)
 
         # Create a socket to the localhost server
         sock = socket(AF_INET, SOCK_STREAM)
+        sock.settimeout(30.0)
         # Try to connect to the server and send data
         try:
             sock.connect((HOST, PORT))

@@ -13,6 +13,7 @@ pydantic = {extras = ["dotenv", "email"], version = "~=1.9.0"}
 requests = "~=2.27.1"
 sqlalchemy = "~=1.4.31"
 twisted = {extras = ["all_non_platform", "http2"], version = "~=22.10.0"}
+defusedxml = "~=0.7.1"
 
 
 [tool.poetry.group.dev.dependencies]
