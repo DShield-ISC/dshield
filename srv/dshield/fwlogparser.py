@@ -79,6 +79,7 @@ def parse(logline,logformat,linere):
 
 # checking if PID in lock file is valid
 def checklock(lockfile):
+    # deepcode ignore MissingClose: Resultant code deletes the file or kills the process.
     fileh = open(lockfile, 'r')
     pid = int(fileh.read())
     try:
@@ -88,7 +89,7 @@ def checklock(lockfile):
         return True
     else:
         sys.exit('PID file found. Am I already running?')
-
+   
 
 
 # define paramters

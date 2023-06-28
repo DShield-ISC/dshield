@@ -37,7 +37,7 @@ try:
         starttime = int(starttime.strip())
 except:
     pass
-if (starttime==''):
+if not starttime:
     starttime=0
 lasttime = starttime
 print("Starttime: %d" % (starttime,))

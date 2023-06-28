@@ -22,3 +22,4 @@ etc/CA/index.txt
 etc/dshield.ini
 srv/dshield/lastweblogtime.txt
 env/
+.venv/
