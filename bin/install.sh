@@ -240,6 +240,7 @@ DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
+SCRIPTDIR=$( cd -- "$(dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 ISC_AGENT_DIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
@@ -305,8 +306,8 @@ quotespace() {
 do_log() {
   if [ ! -d ${LOGDIR} ]; then
     mkdir -p ${LOGDIR}
-    chmod 700 ${LOGDIR}
   fi
+  chmod 1777 ${LOGDIR}
   if [ ! -f ${LOGFILE} ]; then
     touch ${LOGFILE}
     chmod 600 ${LOGFILE}
@@ -616,7 +617,6 @@ if [ "$FAST" == "0" ]; then
     run 'yum -q update -y'
     outlog "Installing additional packages"
     run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
-    outlog "The new script /srv/dshield/webpy.sh needs lsof; it might need to be added here to be installed."
   fi
 
   if [ "$ID" == "opensuse" ]; then
@@ -790,11 +790,8 @@ if [ "$FAST" == "0" ]; then
     fi
   fi
 
-  if [ "$ID" != "opensuse" ]; then
-    drun 'pip3 list --format=legacy'
-  else
-    drun 'pip3 list --format=columns'
-  fi
+  drun 'pip3 list --format=columns'
+  
 else
   outlog "Skipping PIP check in FAST mode"
 fi
@@ -1212,6 +1209,13 @@ adminports="'${ADMINPORTS}'"
 ##---------------------------------------------------------
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
+
+if [ "${database}" == "" ]; then
+    database='sqlite+pysqlite:////srv/db/isc-agent.sqlite'
+fi
+if [ "${archivedatabase}" == "" ]; then
+    archivedatabase='none'
+fi    
 
 if [ "${nofwlogging}" == "" ]; then
   # default: local net & connected IPs (as the user confirmed)
@@ -1704,8 +1708,6 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 
 run "mkdir -p ${DSHIELDDIR}"
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/weblogsubmit.py ${DSHIELDDIR} 700
-do_copy $progdir/../srv/dshield/webpy.sh ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
@@ -1735,7 +1737,6 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-echo "${offset1},${offset2} * * * * root cd ${DSHIELDDIR}; ./weblogsubmit.py ; sleep 10; ./webpy.sh" >/etc/cron.d/dshield
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
@@ -1767,6 +1768,10 @@ if [ -f /etc/dshield.ini ]; then
   run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
 fi
 
+if [ ! -d /srv/db ]; then
+  run 'mkdir -m 1777 /srv/db'
+fi
+
 # new shiny config file
 run 'touch /etc/dshield.ini'
 run 'chmod 600 /etc/dshield.ini'
@@ -1796,8 +1801,20 @@ nohoneyports=$(quotespace $nohoneyports)
 run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
+run 'echo "[plugin:tcp:http]" >> /etc/dshield.ini'
+run 'echo "http_ports = [8000]" >> /etc/dshield.ini'
+run 'echo "https_ports = [8443]" >> /etc/dshield.ini'
+run 'echo "submit_logs_rate = 300" >> /etc/dshield.ini'
+run 'echo "[iscagent]" >> /etc/dshield.ini'
+database=$(quotespace $database)
+run 'echo "database=$database" >> /etc/dshield.ini'
+archivedatabase=$(quotespace $archivedatabase)
+run 'echo "archivedatabase=$archivedatabase" >> /etc/dshield.ini'
+run 'echo "debug=false" >> /etc/dshield.ini'
 dlog "new /etc/dshield.ini follows"
 drun 'cat /etc/dshield.ini'
+
+
 
 ###########################################################
 ## Installation of cowrie
@@ -1882,20 +1899,27 @@ else
     fi
 fi
 
+
+
 # step 4 (Setup Virtual Environment)
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
 OLDDIR=$(pwd)
+
+
 cd ${COWRIEDIR}
+dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
+run 'pip3 install --upgrade pip'
+run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
 dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
-    dlog "installing dependencies: requirements.txt"
+    dlog "installing cowrie dependencies: requirements.txt"
     run 'pip3 install --upgrade pip'
     run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade -r requirements.txt'
     run 'pip3 install --upgrade requests'
+    run 'pip3 install -r requirements.txt'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
        exit 9
@@ -1983,6 +2007,10 @@ find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
+dlog 'deactivate cowrie venv'
+run 'deactivate'
+
+
 ###########################################################
 ## Installation of isc-agent
 ###########################################################
@@ -1990,21 +2018,26 @@ run 'systemctl enable cowrie.service'
 outlog "Installing ISC-Agent"
 dlog "installing ISC-Agent"
 
+# support for ubuntu server 22.04.2 LTS
+dlog "(re)installing python attrs package"
+run "pip3 install --ignore-installed attrs"
 run "mkdir -p ${ISC_AGENT_DIR}"
-
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
 run "chmod +x /srv/isc-agent/bin/isc-agent"
 run "mkdir -m 0700 /srv/isc-agent/run"
-run "deactivate"
+
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
 run "pip3 install --upgrade pip"
-run "pip3 install pipenv"
-run "pipenv lock"
-run "PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy"
+ISCAGENTENV="/srv/isc-agent/virtenv"
+run "virtualenv --python=python3 $ISCAGENTENV"
+run "pip3 install --ignore-installed -r requirements.txt --prefix $ISCAGENTENV"
 run "systemctl daemon-reload"
 run "systemctl enable isc-agent.service"
+dlog 'deactivate isc-agent venv'
+run 'deactivate'
+
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd $OLDPWD
 
@@ -2170,6 +2203,15 @@ clear
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
   ./makecert.sh
+
+  dlog "moving certs to /srv/isc-agent"
+  run "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
+  run "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
+
+  dlog "updating /etc/dshield.ini"
+  run 'echo "tlskey=/srv/isc-agent/honeypot.key" >> /etc/dshield.ini'
+  run 'echo "tlscert=/srv/isc-agent/honeypot.crt" >> /etc/dshield.ini'
+
 fi
 
 #

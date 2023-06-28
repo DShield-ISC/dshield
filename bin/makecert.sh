@@ -44,10 +44,6 @@ if [ ! -f $d/../etc/CA/keys/honeypot.key ]; then
     openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot.key -out $d/../etc/CA/requests/honeypot.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
     openssl req -in $d/../etc/CA/requests/honeypot.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot.keypin
 fi
-if [ ! -f $d/../etc/CA/keys/honeypot-spare.key ]; then
-    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot-spare.key -out $d/../etc/CA/requests/honeypot-spare.csr -nodes -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=$hostname"
-    openssl req -in $d/../etc/CA/requests/honeypot-spare.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot-spare.keypin
-fi
 
 cadir=$d/../etc/CA
 
@@ -58,7 +54,7 @@ dialog --title "Signing Certificate" --yesno "Would you like me to create a CA t
 
 
 if [ $? -eq 0  ]; then
-
+    
     
     # creating key without passphrase since this is just a simple self signed certificate.
     # if you want more security, then please use a "real" certificate authority or
@@ -73,6 +69,7 @@ if [ $? -eq 0  ]; then
     fi
     # we will only sign the primary CSR, not the spare one for now.
     touch ../etc/CA/index.txt
+    echo "unique_subject = no" > ../etc/CA/index.txt.attr
     sed -r --in-place=.bak "s|^dir\s=.*$|dir = $cadir|" ../etc/openssl.cnf
     openssl ca -batch -config ../etc/openssl.cnf -policy signing_policy -extensions signing_req -out ../etc/CA/certs/honeypot.crt -infiles ../etc/CA/requests/honeypot.csr    
     
