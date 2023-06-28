@@ -4,6 +4,7 @@
 import re
 import os
 import sqlite3
+import time
 
 
 def sigmatch(self, pattern, module):
@@ -49,7 +50,7 @@ def sigmatch(self, pattern, module):
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
-                        f.close
+                        f.close()
                         print(self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern)
@@ -70,8 +71,8 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
             if module == 'xss':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -81,7 +82,7 @@ def sigmatch(self, pattern, module):
                         f = open(responsepath)
                         message = f.read().replace('Hello world', script,1)
                         self.wfile.write(message)
-                        f.close
+                        f.close()
                         print(self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern)
@@ -102,8 +103,8 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
             if module == 'phpmyadmin':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -111,7 +112,7 @@ def sigmatch(self, pattern, module):
                         responsepath = eval(str(i[2]))
                         f = open(responsepath)
                         self.wfile.write(f.read())
-                        f.close
+                        f.close()
                         print(self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern)
@@ -132,8 +133,8 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
             if module == 'robots':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -141,7 +142,7 @@ def sigmatch(self, pattern, module):
                         responsepath = eval(str(i[2]))
                         f = open(responsepath, 'rb')
                         self.wfile.write(f.read())
-                        f.close
+                        f.close()
                         print(self.client_address[
                                   0] + " - - [" + self.date_time_string() + "] - - Malicious pattern detected: " + \
                               sigDescription[0] + " - - " + pattern)
@@ -162,8 +163,8 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
             if module == 'rfi':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -197,8 +198,8 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
             if module == 'sqli':
                 for i in response:
                     if re.match(i[1], pattern) is not None:
@@ -229,8 +230,9 @@ def sigmatch(self, pattern, module):
                             )
                         )
                         conn.commit()
+                        conn.close()
                         return match
-                        break
+    conn.close()
 
 if __name__ == '__main__':
     #Create a web server and define the handler to manage the

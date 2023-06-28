@@ -146,13 +146,12 @@ def hydrate_tables():
     settings.DATABASE_SESSION.query(Signature).delete()
     settings.DATABASE_SESSION.query(Response).delete()
 
-    try:
-        resp = requests.get(
-            f'{settings.DSHIELD_URL}/api/honeypotrules/', verify=False
-        )
-    except requests.exceptions.ConnectionError as err:
-        logger.exception(f"unable to connect to DShield {err}")
-        sys.exit()
+    # deepcode ignore SSLVerificationBypass: We do not want to verify SSL with the honeypot
+    resp = requests.get(
+        f'{settings.DSHIELD_URL}/api/honeypotrules/',
+        verify=False
+    )
+
     if not resp.ok:
         logger.exception("HTTP plugin failed to download artifacts.")
         return

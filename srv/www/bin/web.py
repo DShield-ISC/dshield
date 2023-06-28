@@ -126,6 +126,7 @@ class myhandler(BaseHTTPRequestHandler):
                 self.end_headers()
         except:
             self.send_response(200)
+            # file deepcode ignore TooPermissiveCors: Not worried about CORS policy as this is intentionally vulnerable to web exploits.
             self.send_header('Access-Control-Allow-Origin','*')
             self.send_header('Content-type', 'text/html')
             self.server_version=PRODSTRING
@@ -333,6 +334,7 @@ class myhandler(BaseHTTPRequestHandler):
         line = self.rfile.readline()
         remainbytes -= len(line)
         try:
+            # deepcode ignore PT: Snyk interperets this as taking unsantized input. False positive.
             out = open(fn, 'wb')
             #magic.from_file(out)
         except IOError:
@@ -385,7 +387,7 @@ if __name__ == "__main__":
         server.serve_forever()
         if _USE_SSL:
             server.socket = ssl.wrap_socket(server.socket, keyfile=keypath,
-                                            certfile=certpath, server_side=True)
+                                            certfile=certpath, server_side=True, ssl_version=ssl.PROTOCOL_TLSv1_2)
             print("using SSL")
 
         print('Started httpserver on port ', PORT_NUMBER)
@@ -394,3 +396,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print('^C received, shutting down the web server')
     os.remove(pidfile)
+    try:
+        conn.close()
+    except NameError:
+        pass
