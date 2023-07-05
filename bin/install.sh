@@ -281,7 +281,7 @@ LINE="##########################################################################
 : ${DIALOG_ESC=255}
 
 export NCURSES_NO_UTF8_ACS=1
-
+export CURL="curl -s"
 ###########################################################
 ## FUNCTION SECTION
 ###########################################################
@@ -760,7 +760,7 @@ if [ "$FAST" == "0" ]; then
 
   if [ ${?} -gt 0 ]; then
     outlog "no pip3 found, installing pip3"
-    run 'curl -s https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py'
+    run "$CURL https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py"
     if [ ${?} -ne 0 ]; then
       outlog "Error downloading get-pip, aborting."
       exit 9
@@ -948,7 +948,7 @@ if [ "$INTERACTIVE" == 1 ]; then
           # TODO: urlencode($user)
           user=$(echo $email | sed 's/+/%2b/' | sed 's/@/%40/')
           dlog "Checking API key ..."
-          run 'curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion/$piid > $TMPDIR/checkapi'
+          run "$CURL https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion/$piid > $TMPDIR/checkapi"
 
           dlog "Curl return code is ${?}"
 
@@ -1060,7 +1060,7 @@ drun "ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' 
 validifs=$(ip link show | grep '^[0-9]' | cut -f2 -d':' | cut -f1 -d'@' | tr -d '\n' | sed 's/^ //')
 
 # get honeypot external IPv4 address
-honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
+honeypotip=$($CURL https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
 
 dlog "validifs: ${validifs}"
 
@@ -1802,9 +1802,9 @@ run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
 run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
 run 'echo "telnet=$telnet" >> /etc/dshield.ini'
 run 'echo "[plugin:tcp:http]" >> /etc/dshield.ini'
-run 'echo "http_ports = [8000]" >> /etc/dshield.ini'
-run 'echo "https_ports = [8443]" >> /etc/dshield.ini'
-run 'echo "submit_logs_rate = 300" >> /etc/dshield.ini'
+run 'echo "http_ports=[8000]" >> /etc/dshield.ini'
+run 'echo "https_ports=[8443]" >> /etc/dshield.ini'
+run 'echo "submit_logs_rate=300" >> /etc/dshield.ini'
 run 'echo "[iscagent]" >> /etc/dshield.ini'
 database=$(quotespace $database)
 run 'echo "database=$database" >> /etc/dshield.ini'
@@ -1850,9 +1850,9 @@ fi
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
 if [ "$BETA" == 1 ]; then
-  run "curl -s https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
+  run "$CURL https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
 else
-  run "curl -s https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
+  run "$CURL https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
 fi
 
 if [ ${?} -ne 0 ]; then
