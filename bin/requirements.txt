@@ -8,6 +8,7 @@ charset-normalizer
 constantly
 cryptography
 cython-test-exception-raiser
+defusedxml
 dnspython
 email-validator
 exceptiongroup
@@ -18,7 +19,6 @@ hyperframe
 hyperlink
 hypothesis
 idna
-importlib-metadata
 incremental
 jinja2
 markupsafe
@@ -40,5 +40,4 @@ sqlalchemy
 twisted[all-non-platform,http2]
 typing-extensions
 urllib3
-zipp
 zope-interface
