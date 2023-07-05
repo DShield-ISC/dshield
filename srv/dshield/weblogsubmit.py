@@ -30,7 +30,7 @@ f.close()
 
 config = '..' + os.path.sep + 'www'+os.path.sep+'DB' + os.path.sep + 'webserver.sqlite'
 try :
-    conn = sqlite3.connect(config)
+    conn = sqlite3.connect(config, 10.5)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS submissions
             (
