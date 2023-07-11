@@ -6,7 +6,7 @@ description = ""
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.7"
 jinja2 = "~=3.0.3"
 pydantic = {extras = ["dotenv", "email"], version = "~=1.9.0"}
 requests = "~=2.27.1"
