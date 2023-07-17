@@ -14,6 +14,7 @@ first try (as root!):
 curl https://sh.rustup.rs -sSf | sh
 cd /srv/isc-agent
 source ./virtenv/bin/activate
+pip3 install cryptography==3.4.6
 pip3 install -r ./requirements.txt
 ```
 
