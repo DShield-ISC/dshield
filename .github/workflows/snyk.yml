@@ -13,6 +13,6 @@ jobs:
     - run:
         cd ../..
     - name: Snyk test
-      run: snyk test --all-projects --detection-depth=10
+      run: DEBUG=*snyk* snyk test --all-projects --detection-depth=10
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
