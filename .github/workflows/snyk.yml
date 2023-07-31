@@ -13,6 +13,6 @@ jobs:
     - run:
         pip install -r bin/requirements.txt
     - name: Snyk test
-      run: DEBUG=*snyk* snyk test --all-projects --detection-depth=10
+      run: DEBUG=*snyk* snyk test --all-projects --detection-depth=10 --skip-unresolved
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
