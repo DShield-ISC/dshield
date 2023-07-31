@@ -13,6 +13,10 @@ jobs:
     - run:
         pip install -r bin/requirements.txt
     - name: Snyk test
-      run: DEBUG=*snyk* snyk test --all-projects --detection-depth=10 --skip-unresolved
+      run: snyk test --all-projects --detection-depth=10 --skip-unresolved --sarif-file-output=snyk.sarif
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Upload result to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: snyk.sarif
