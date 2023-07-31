@@ -8,7 +8,7 @@ authors = ["Your Name <you@example.com>"]
 [tool.poetry.dependencies]
 python = "^3.7.1"
 jinja2 = "~=3.0.3"
-pydantic = {extras = ["dotenv", "email"], version = "~=1.9.0"}
+pydantic = {extras = ["email"], version = "~=1.9.0"}
 requests = "~=2.27.1"
 sqlalchemy = "~=1.4.31"
 cryptography = "==3.4.6"
