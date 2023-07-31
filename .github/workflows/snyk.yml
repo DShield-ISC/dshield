@@ -11,7 +11,7 @@ jobs:
       with:
         go-version: "1.13"
     - run:
-        cd ../..
+        pip install -r bin/requirements.txt
     - name: Snyk test
       run: DEBUG=*snyk* snyk test --all-projects --detection-depth=10
       env:
