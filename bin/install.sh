@@ -1737,7 +1737,8 @@ fi
 dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
-echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >>/etc/cron.d/dshield
+# important: first line overwrites old file to avoid duplication
+echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >/etc/cron.d/dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
 echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >>/etc/cron.d/dshield
