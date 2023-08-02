@@ -9,7 +9,7 @@ import os
 import re
 import socket
 from dateutil import parser
-import json
+import sys
 
 myip = socket.gethostbyname(socket.gethostname())
 maxlines = 5000
@@ -30,11 +30,11 @@ f.close()
 parseline = re.compile('^(\S+)\s(\S+) \S+ \S+ \[([^\]]+)\]\s"([^"]+)" ([0-9]{3}) [0-9]+ "[^"]+" "([^"]+)"$')
 isip = re.compile('^([0-9\.]+)')
 logs = []
-starttime = int(0)
+starttime = 0
 try:
     with open("lastweblogtime.txt") as file:
-        starttime = file.read()
-        starttime = int(starttime.strip())
+        starttime = file.read().strip()
+        starttime = int(starttime)
 except:
     pass
 if not starttime:

@@ -124,7 +124,7 @@ if '-c' in args:  # alternate config file
 try:
     os.stat(piddir)
 except:
-    os.mkdir(piddir)
+    os.mkdirs(piddir)
 
 try:
     os.stat(lastdir)
