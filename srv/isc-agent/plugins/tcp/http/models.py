@@ -146,10 +146,9 @@ def hydrate_tables():
     settings.DATABASE_SESSION.query(Signature).delete()
     settings.DATABASE_SESSION.query(Response).delete()
 
-    # deepcode ignore SSLVerificationBypass: We do not want to verify SSL with the honeypot
     resp = requests.get(
         f'{settings.DSHIELD_URL}/api/honeypotrules/',
-        verify=False
+        verify=True
     )
 
     if not resp.ok:
