@@ -191,7 +191,7 @@ def prepare_database():
 
 def read_db_and_log(file_name=""):
     if file_name == '':
-        todaydate = datetime.today().strftime('%Y-%m-%d')
+        todaydate = datetime.datetime.today().strftime('%Y-%m-%d')
         file_name = f"/srv/db/webhoneypot-{todaydate}.json";
     logs = []
     for instance in settings.DATABASE_SESSION.query(RequestLog).order_by(RequestLog.id):
