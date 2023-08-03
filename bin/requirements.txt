@@ -4,7 +4,6 @@ automat
 bcrypt
 certifi
 cffi
-chardet
 charset-normalizer
 constantly
 cryptography
