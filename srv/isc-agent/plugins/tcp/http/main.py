@@ -126,7 +126,7 @@ def submit_logs():
                 resp.text
             )
         else:
-            logger.info("succesfully submitted logs {request_logs}")
+            logger.info(f"succesfully submitted logs {request_logs}")
             
     hydrate_tables()
 
