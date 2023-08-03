@@ -14,7 +14,7 @@ Current design goals and prerequisites for using the automated installation proc
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is tested on Raspberry Pi OS, Ubuntu 20.04 LTS Server and on openSUSE Leap 15.3 and Tumbleweed,
+The current version is tested on Raspberry Pi OS, Ubuntu 22.04 LTS Server and on openSUSE Leap 15.3 and Tumbleweed,
 not on other distros, sorry.
 If there is the need for other distros, "someone" has to check and maintain the installation script.
 

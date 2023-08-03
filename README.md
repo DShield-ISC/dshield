@@ -13,7 +13,7 @@ Current design goals and prerequisites for using the automated installation proc
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is only tested on Raspberry Pi OS and Ubuntu 20.04 LTS Server, not on other distros, sorry.
+The current version is only tested on Raspberry Pi OS and Ubuntu 22.04 LTS Server, not on other distros, sorry.
 If there is the need for other distros, "someone" has to check and maintain the installation script.
 
 ## Installation
