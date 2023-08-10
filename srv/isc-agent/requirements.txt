@@ -39,7 +39,7 @@ setuptools==68.0.0 ; python_full_version >= "3.7.1" and python_full_version < "4
 six==1.16.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 sortedcontainers==2.4.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 sqlalchemy==1.4.49 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-twisted-iocpsupport==1.0.3 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0" and platform_system == "Windows"
+twisted-iocpsupport==1.0.4 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0" and platform_system == "Windows"
 twisted[all-non-platform,http2]==22.10.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 typing-extensions==4.7.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 urllib3==1.26.16 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
