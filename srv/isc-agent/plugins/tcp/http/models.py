@@ -50,16 +50,20 @@ class RequestLog(BaseModel):
         """
         format logs in the json format needed to submit them
         """
-        headers = json.loads(self.headers.replace("'", '"'))
-        return {
-            "time": self.time.timestamp(),
-            "headers": headers,
-            "sip": self.client_ip,
-            "dip": self.target_ip,
-            "method": self.method,
-            "url": self.path,
-            "useragent": headers.get("user-agent")
-        }
+        try: 
+            headers = json.loads(self.headers.replace("'", '"'))
+            return {
+                "time": self.time.timestamp(),
+                "headers": headers,
+                "sip": self.client_ip,
+                "dip": self.target_ip,
+                "method": self.method,
+                "url": self.path,
+                "useragent": headers.get("user-agent")
+            }
+        except json.decoder.JSONDecodeError:
+            logger.warning('JSON Decode Failed for '+self.headers)
+            return ''
 
 
 class Response(BaseModel):
