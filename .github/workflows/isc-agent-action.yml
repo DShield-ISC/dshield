@@ -9,7 +9,7 @@ jobs:
     name: Code Check
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Code scan
       run: make ops-scan
       working-directory: ./srv/isc-agent

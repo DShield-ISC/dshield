@@ -22,7 +22,7 @@ jobs:
           poetry export -f requirements.txt -o requirements.txt --without-hashes
           grep -v 'Windows' requirements.txt | cut -f1 -d '=' | sed 's/all-non-platform/all_non_platform/'  > ../../bin/requirements.txt
       - name: Commit changes
-        uses: EndBug/add-and-commit@v7
+        uses: EndBug/add-and-commit@v9
         with:
           author_name: "GitHub Action"
           author_email: "action@github.com"
