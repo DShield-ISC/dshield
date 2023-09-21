@@ -290,5 +290,8 @@ echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
 echo "to see that your reports arrive."
 echo "It may take an hour for new reports to show up."
-
+echo
+echo "In case you see errors, check"
+echo "    https://github.com/DShield-ISC/dshield/blob/main/STATUSERRORS.md"
+echo "for help."
 
