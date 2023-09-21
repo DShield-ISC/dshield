@@ -256,7 +256,14 @@ else
     echo "${RED}ERROR${NC}: webserver misconfigured. try reboot"
     TESTS['webconfig']=0
 fi
-
+diskspace=$(df --output=pcent . | tail -1 | tr -d '% ')
+if [[ $d -lt 80 ]]; then
+    echo "${GREEN}OK${NC}: diskspace ok"
+    TESTS['diskspace']=1
+else
+    echo "${RED}ERROR${NC}: diskspace low. Delete old logs in /srv/log"
+    TESTS['diskspace']=0
+fi
 
 if [ $defaultinterface == $interface ]; then
     echo ${GREEN}OK${NC}: correct interface
