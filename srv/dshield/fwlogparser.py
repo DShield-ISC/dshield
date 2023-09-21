@@ -45,8 +45,9 @@ def parse(logline,logformat,linere):
 
         else:
             d.log("Bad format specified: {}".format(logformat))
-            
         if logdata['time'] > startdate:
+            if debug>0:
+                print("processing ", logdata['time'], startdate)
             parts = fwdata.split()
             logdata['flags'] = ''
             for part in parts:
@@ -153,11 +154,16 @@ if os.path.isfile(lastcount):
         d.log("New Startdate")
         startdate = 0
     f.close()
+if startdate>10000000000:
+    if debug>0:
+        print("resetting startdate to lower value ",startdate)
+    startdate = 0
 if debug > 0:
     d.log("Startdate %d file %s" % (startdate,lastcount))
 skip=1
 currenttime=round(time())
 d.log("Current Time %s" % (currenttime))
+
 if ( startdate<currenttime-86400):
     startdate=currenttime-86400;
     d.log("Correcting Startdate to %d" % (startdate) )
@@ -211,7 +217,7 @@ else:
     d.log("processed %d lines total and %d new lines and ended at %s" % (i, j, lastdate))
 
 f = open(lastcount, 'w')
-f.write(str(lastdate))
+f.write("%.0f" % lastdate)
 f.close()
 if ( j == maxlines ):
     d.log("incrementing skip value from %d" % (skip))
