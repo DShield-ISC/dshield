@@ -238,7 +238,10 @@ else
   TESTS['exposed']=0
 fi    
 
-port=$(curl -s 'https://isc.sans.edu/api/portcheck?json' | jq .port80 | tr -d '"')
+portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json')
+port=$(echo $portcheck | jq .port80 | tr -d '"')
+webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
+
 if [[ "$port" == "open" ]]; then
   echo "${GREEN}OK${NC}: webserver exposed"
   TESTS['exposed']=1
@@ -246,6 +249,15 @@ else
   echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
   TESTS['exposed']=0
 fi
+if [[ "$webconfig" == "ok" ]] ; then
+    echo "${GREEN}OK${NC}: webserver configuration"
+    TESTS['webconfig']=1
+else
+    echo "${RED}ERROR${NC}: webserver misconfigured. try reboot"
+    TESTS['webconfig']=0
+fi
+
+
 if [ $defaultinterface == $interface ]; then
     echo ${GREEN}OK${NC}: correct interface
 else
