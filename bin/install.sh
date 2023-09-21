@@ -15,10 +15,14 @@
 
 # version 2022/01/05 01
 
-readonly myversion=93
+readonly myversion=94
 
 #
 # Major Changes (for details see Github):
+#
+# - V94 (Johannes)
+#   - major, major switch to isc-agent
+#   - better status.sh reporting
 #
 # - V93 (Johannes)
 #   - cowrie update
