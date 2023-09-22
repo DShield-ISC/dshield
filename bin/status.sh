@@ -28,9 +28,9 @@ declare -A TESTS
 
 # clean up disk space
 find /srv/log -ctime +30 -type f -delete
-find /srv/cowrie/var/log/cowrie -ctime +30 type f -delete
-find /srv/cowrie/log/tty -ctime +30 type f -delete
-find /srv/cowrie/var/lib/cowrie/tty -ctime +30 type f -delete
+find /srv/cowrie/var/log/cowrie -ctime +30 -type f -delete
+find /srv/cowrie/log/tty -ctime +30 -type f -delete
+find /srv/cowrie/var/lib/cowrie/tty -ctime +30 -type f -delete
 
 myip=$(netstat -nt | grep ESTABLISHED | awk '{print $4}' | cut -f1 -d':' | head -1)
 
