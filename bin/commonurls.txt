@@ -1,0 +1,7 @@
+phpMyAdmin
+phpmyadmin
+/master/.env
+/.env
+/GponForm/diag_Form
+/wp-admin/
+/wp-content/
