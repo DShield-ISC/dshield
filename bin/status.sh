@@ -116,7 +116,7 @@ if [ "$status" = "" ]; then
   echo "curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid"
 fi
 
-if echo $status | grep -q '<result>ok<\/result>'; then
+if echo $status | grep -q '<result>ok</result>'; then
   echo "${GREEN}API Key configuration ok${NC}"
   if [ "$version" != "" ]; then
     currentversion=$(echo $status | egrep -o '<version>([0-9\.]+)</version>' | egrep -o '[0-9\.]+')
