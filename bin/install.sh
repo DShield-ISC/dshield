@@ -493,6 +493,11 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "11" ]; then
   distversion=r11
 fi
 
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "12" ]; then
+  dist='apt'
+  distversion=r12
+fi
+
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ]; then
   dist='apt'
   distversion='u18'
