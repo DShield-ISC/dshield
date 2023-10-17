@@ -19,9 +19,9 @@ If there is the need for other distros, "someone" has to check and maintain the 
 ## Installation
 
 Reference the following files for OS-specific installation instructions:
-[Raspbian](docs/install-instructions/Raspbian.md) (Recommended)
-[Ubuntu](docs/install-instructions/Ubuntu.md)
-[openSUSE](docs/install-instructions/openSUSE.md)
+[Raspbian](docs/install-instructions/Raspbian.md) (Recommended),
+[Ubuntu](docs/install-instructions/Ubuntu.md),
+[openSUSE](docs/install-instructions/openSUSE.md) and
 [AWS](docs/install-instructions/AWS.md)
 
 ## Background: `install.sh`

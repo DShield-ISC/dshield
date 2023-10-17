@@ -1,7 +1,7 @@
-﻿
+
 # dshield
 
-## DShield Raspberry Pi Sensor for openSUSE Leap 15.3 and Tumbleweed system
+## DShield Raspberry Pi Sensor for openSUSE Tumbleweed system
 
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
@@ -14,15 +14,13 @@ Current design goals and prerequisites for using the automated installation proc
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is tested on Raspberry Pi OS, Ubuntu 22.04 LTS Server and on openSUSE Leap 15.3 and Tumbleweed,
-not on other distros, sorry.
-If there is the need for other distros, "someone" has to check and maintain the installation script.
+The current version is tested on openSUSE Tumbleweed.
 
 ## Installation
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it. For openSUSE it is assumed that you are using openSUSE for this preparation.
 
-- get the openSUSE image for your Raspberry Pi for Leap 15.3 [RPI3 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-ARM-JeOS-raspberrypi3.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/distribution/leap/15.3/appliances/openSUSE-Leap-15.3-ARM-JeOS-raspberrypi4.aarch64.raw.xz) for Tumbleweed [RPi3 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi4.aarch64.raw.xz) or [RPi4 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi3.aarch64.raw.xz)
+- get the openSUSE image for your Raspberry Pi for Tumbleweed [RPi3 and RPi4 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi3.aarch64.raw.xz)
   
 - put it onto a micro-SD card (e.g. using procedures described [here for RPi3](https://en.opensuse.org/HCL:Raspberry_Pi3) or [here for RPi4](https://en.opensuse.org/HCL:Raspberry_Pi4)
 - insert the micro-SD card in the Pi and power it on, to boot the Pi from the micro-SD card.
@@ -38,13 +36,9 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - you may use the command *yast language* to set your language as the default language, the layout of the keyboard and the timezone.
 - The first thing the install script will do is update the system.  
-    - For Leap 15.3 it uses:  
+    - For Tumbleweed it uses:  
 
-        *zypper up --no-recommends*  
-
-    - For Tumbleweed use:  
-
-        *zypper dup --no-recommends*  
+        *zypper dup --no-interactive --no-recommends*  
 
 - reboot  
 
@@ -56,7 +50,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
     
 - get GIT repository  
 
-    <em>git clone <span>https</span>://github.com/Dshield-ISC/dshield.git<em>
+    <em>git clone <span>https</span>://github.com/Dshield-ISC/dshield.git</em>
 
 – in case you do a reinstall of a previous system, you should have saved the files `/etc/dshield.ini` and `/etc/dshield.sslca`, copy these files in the same locations; when you run the installation script answers are filled in and you only need to acknowledge the questions
     
@@ -76,7 +70,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - from now on you have to use port 12222 to connect to the device by SSH
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
-  you will be able to configure it as a "DMZ Hosts", "exposed devices", ... see [hints below](#how-to-place-the-dshield-sensor--honeypot) for - well - hints ...
+  you will be able to configure it as a "DMZ Host", "exposed devices", ... see [hints below](#how-to-place-the-dshield-sensor--honeypot) for - well - hints ...
 
 ## Background: `install.sh`
 
@@ -87,15 +81,13 @@ This script will:
 – openSUSE, from version 88 on, will use nftables instead of the depricated iptables
 - change your ssh server to listen on port 12222 for you as administator (access only from configurable IP addresses)
 - install the ssh honeypot cowrie (for ssh and telnet)
-- install honeypot web server
+- install honeypot web server (isc-agent)
 - install needed environment (Perl and Python3 packages, bash scripts...)
 
 ## Troubleshooting
 
 - logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by ['My Account' -> 'My Reports'](https://www.dshield.org/myreports.html)
-- have a look at the output from the status script: `/root/install/dshield/bin/status.sh`
-- if you get strange python / pip errors during installation / updates you may try the following commands as root:  
-`pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs -n1 pip install -U`
+- have a look at the output from the status script: `/root/install/dshield/bin/status.sh`or /srv/dshield/status.sh
 
 ## Updates
 
@@ -103,20 +95,24 @@ This script will:
 
 Inside your "dshield" directory (the directory created above when you run `git clone`), run
 
-*cd install/dshield*  
+*cd ~/dshield*  
 *git pull*  
-*bin/install.sh*  
+*bin/install.sh --update*  
 
+The "--update" parameter will automatically use the existing configuration and not prompt the user for any configuration options.
 
 Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, rerun the install.sh script to configure the firewall. Editing `/etc/network/iptables` or `/etc/network/ruleset.nft` is not recommended (note: nat table is also used).
+
 Also certificate information is saved in `/etc/dshield.sslca`.
 Save these two `/etc/dshield.*` files on another system, and put these back in `/etc/` before you run the installation script, when you start allover again.
+
+A feature is available, especially for automatic updates. At the end of the installation the install.sh script will search for the file `/root/bin/postinstall.sh` and execute its content, if it exists. If you need some extra changes in the newly installed files, this is the location to put them. This file NEEDS execute rights
 
 Please make sure to keep special port and network configuration up to date (e.g. manually configure recently added telnet / web ports in firewall config), e.g. no-log config, no-honey config, ... unfortunately this can't be done automagically as of now. If unsure delete respective lines in `/etc/dshield.ini` and re-run the installation script.
 
 Testing of update procedure is normally done (between two releases) as follows:
 - update on Pi 3 from the last version to current
-- install on a current clean image of raspbian lite on a Pi 3
+- install on a current clean image of openSUSE Tumbleweed on a Pi 4
 
 ## Hints
 
@@ -141,7 +137,7 @@ To test your set up you may use a public port scanner and point it to the router
 - cursor up / down: navigate through form / between input fields
 - cursor left / right: navigate within an input field
 - TAB: swich between input field and "buttons"
-- don't use Pos 1 / End
+- don't use Home / End
 
 ## Todos
 
@@ -151,18 +147,7 @@ To test your set up you may use a public port scanner and point it to the router
 
 - see comments in install.sh
 - see GIT commit comments
-
-
-## DEV Instance - web.py
-
-- It will not change the links at this time - to do
-- Any data posted or user request strings will be logged to DB\webserver.sqlite
-
-web.py - it will serve up a very basic page that can accept input and files. 
-Todo:
-- Need to figure out how to serve up vulnerable pages - probably from the path
-- SQL Injection - will likely use separate dorked database
-- Would like to integrate with cowrie for shell attacks - (BHAG)
+- An earlier version did support openSUSE Leap 15.3, which is end of life. The version 15.5 has Python 3.6, which is too old to support the current version of this software, so support for openSUSE Leap has been withdrawn.
 
 Any input appreciated - Please file a bug report / issue via github - thanks!
 
