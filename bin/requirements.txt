@@ -40,6 +40,5 @@ sortedcontainers
 sqlalchemy
 twisted[all_non_platform,http2]
 typing-extensions
-urllib3
 zipp
 zope-interface
