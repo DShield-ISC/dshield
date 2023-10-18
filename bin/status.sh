@@ -109,7 +109,9 @@ fi
 nonce=$(openssl rand -hex 10)
 hash=$(echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' ')
 user=$(urlencode "${email}")
-url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid"
+osversionplain=$(grep 'VERSION=' /etc/os-release | cut -f2- -d'"')
+osversion=$(echo $osversionplain | jq -sRr @uri)
+url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid/$osversion"
 status=$(curl -s $url)
 if [ "$status" = "" ]; then
   echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
@@ -125,6 +127,7 @@ if echo $status | grep -q '<result>ok</result>'; then
 ${RED}Software Version Mismatch
 Current Version: $currentversion
 Your Version: $version
+OS Version: $osversionplain
 Details: https://dshield.org/updatehoneypot.html${NC}
 "
     else
@@ -238,29 +241,34 @@ fi
 x=$((systemctl is-active isc-agent > /dev/null && echo 1) || echo 0)
 if [ $x -eq 1 ]; then
   echo "${GREEN}OK${NC}: isc-agent running"
-  TESTS['iscagentrunnint']=1		   
+  TESTS['iscagentrunning']=1		   
 else
-  echo "${RED}ERROR${NC}: isc-agent not running"
-  TESTS['exposed']=0
+    echo "${RED}ERROR${NC}: isc-agent not running"
+  TESTS['iscagentrunning']=0		       
 fi    
 
-portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json')
-port=$(echo $portcheck | jq .port80 | tr -d '"')
-webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
-
-if [[ "$port" == "open" ]]; then
-  echo "${GREEN}OK${NC}: webserver exposed"
-  TESTS['exposed']=1
-else
-  echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
-  TESTS['exposed']=0
-fi
-if [[ "$webconfig" == "ok" ]] ; then
+# no need to test if the server is exposed, if isc-agent is not running
+if [ TESTS['iscagentrunning'] -eq 1 ]; then
+  portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json')
+  port=$(echo $portcheck | jq .port80 | tr -d '"')
+  webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
+  if [[ "$port" == "open" ]]; then
+    echo "${GREEN}OK${NC}: webserver exposed"
+    TESTS['exposed']=1
+  else
+    echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
+    TESTS['exposed']=0
+  fi
+  if [[ "$webconfig" == "ok" ]] ; then
     echo "${GREEN}OK${NC}: webserver configuration"
     TESTS['webconfig']=1
-else
+  else
     echo "${RED}ERROR${NC}: webserver misconfigured. try reboot"
     TESTS['webconfig']=0
+  fi
+else
+    TESTS['exposed'] = 0
+    TESTS['webconfig'] = 0
 fi
 diskspace=$(df --output=pcent . | tail -1 | tr -d '% ')
 if [[ $d -lt 80 ]]; then
