@@ -524,17 +524,11 @@ if [ "$ID" == "opensuse-tumbleweed" ]; then
   distversion=Tumbleweed
 fi
 
-if [ "$ID" == "opensuse-leap" ]; then
-  ID="opensuse"
-  dist='yum'
-  distversion=Leap
-fi
-
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
   outlog "You are not running a supported operating system. Right now, this script only works for Raspbian,"
-  outlog "openSUSE Tumbleweed/Leap and Amazon Linux AMI."
+  outlog "openSUSE Tumbleweed and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
   exit 9
 fi
@@ -545,7 +539,7 @@ if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ]
   outlog " - Ubuntu 18.04"
   outlog " - Ubuntu 20.04"
   outlog " - Ubuntu 22.04"
-  outlog " - openSUSE Tumbleweed/Leap."
+  outlog " - openSUSE Tumbleweed."
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
   read lala
@@ -630,23 +624,15 @@ if [ "$FAST" == "0" ]; then
 
   if [ "$ID" == "opensuse" ]; then
     outlog "Updating your openSUSE Operating System will now be done."
-    [ "$distversion" = "Tumbleweed" ] && run 'zypper --non-interactive dup --no-recommends'
-    [ "$distversion" = "Leap" ] && run 'zypper --non-interactive up --no-recommends'
+    run 'zypper --non-interactive dup --no-recommends'
     outlog "Installing additional packages"
-    [ "$distversion" == "Leap" ] && run 'zypper --non-interactive remove systemd-logger'
-    [ "$distversion" == "Tumbleweed" ] &&
-      run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python38-devel libopenssl-devel rsyslog dialog'
-    [ "$distversion" == "Leap" ] &&
-      run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
+    run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python311-devel libopenssl-devel rsyslog dialog'
     run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
     run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
-    run 'zypper --non-interactive install --no-recommends python3-zope.interface python3-pip rng-tools curl openssh unzip'
+    run 'zypper --non-interactive install --no-recommends python3-zope.interface python311-pip rng-tools curl openssh unzip'
     run 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
     run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
-    [ "$distversion" == "Tumbleweed" ] &&
-      run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
-    [ "$distversion" == "Leap" ] &&
-      run 'zypper --non-interactive install --no-recommends snappy-devel gcc-c++'
+    run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
     # opensuse does not have packet wamerican so copy it
     mkdir -p /usr/share/dict
     cp $progdir/../dict/american-english /usr/share/dict/
@@ -1720,7 +1706,7 @@ do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
-[ "$ID" = "opensuse" -a "$distversion" = "Tumbleweed" ] &&
+[ "$ID" = "opensuse" ] &&
   run "patch ${DSHIELDDIR}/DShield.py $progdir/../srv/dshield/DShield.patch"
 
 # check: automatic updates allowed?
@@ -1918,8 +1904,11 @@ OLDDIR=$(pwd)
 
 cd ${COWRIEDIR}
 dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
-run 'pip3 install --upgrade pip'
-run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
+# openSUSE does not support installation with pip ouside environments
+if [ "$ID" != "opensuse" ] ; then
+    run "pip3 install --upgrade pip"
+    run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
+fi
 dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
@@ -1943,10 +1932,12 @@ fi
 # we only need 'requests'
 # dlog "installing dependencies requirements-output.txt"
 # run 'pip3 install --upgrade -r requirements-output.txt'
-run 'pip3 install --upgrade requests'
-if [ ${?} -ne 0 ]; then
-  outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
-  exit 9
+if [ "$ID" != "opensuse" ] ; then
+    run "pip3 install --upgrade requests"
+    if [ ${?} -ne 0 ]; then
+	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+	exit 9
+    fi
 fi
 cd ${OLDDIR}
 
@@ -1995,12 +1986,7 @@ run 'chown -R cowrie:cowrie ${COWRIEDIR}'
 
 dlog "copying cowrie system files"
 
-if [ "$ID" != "opensuse" ]; then
-  systemdpref=""
-else # openSUSE
-  systemdpref="/usr"
-fi
-do_copy $progdir/../lib/systemd/system/cowrie.service ${systemdpref}/lib/systemd/system/cowrie.service 644
+do_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
 do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 # make sure to remove old cowrie start if they exist
@@ -2013,7 +1999,7 @@ run 'chown cowrie:cowrie ${COWRIEDIR}/log'
 run 'mkdir -p ${COWRIEDIR}/log/tty'
 run 'chmod 755 ${COWRIEDIR}/log/tty'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
-find /etc/rc?.d -name '*cowrie*' -delete
+[ -d /etc/rc?.d ] && find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
@@ -2029,8 +2015,8 @@ outlog "Installing ISC-Agent"
 dlog "installing ISC-Agent"
 
 # support for ubuntu server 22.04.2 LTS
-dlog "(re)installing python attrs package"
-run "pip3 install --ignore-installed attrs"
+[ "$ID" != "opensuse" ] && dlog "(re)installing python attrs package"
+[ "$ID" != "opensuse" ] && run "pip3 install --ignore-installed attrs"
 run "mkdir -p ${ISC_AGENT_DIR}"
 do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
 do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
@@ -2039,7 +2025,7 @@ run "mkdir -m 0700 /srv/isc-agent/run"
 
 OLDPWD=$PWD
 cd ${ISC_AGENT_DIR}
-run "pip3 install --upgrade pip"
+[ "$ID" != "opensuse" ] && run "pip3 install --upgrade pip"
 ISCAGENTENV="/srv/isc-agent/virtenv"
 run "virtualenv --python=python3 $ISCAGENTENV"
 run "pip3 install --ignore-installed -r requirements.txt --prefix $ISCAGENTENV"
