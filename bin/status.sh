@@ -248,7 +248,7 @@ else
 fi    
 
 # no need to test if the server is exposed, if isc-agent is not running
-if [ TESTS['iscagentrunning'] -eq 1 ]; then
+if [ ${TESTS['iscagentrunning']} -eq 1 ]; then
   portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json')
   port=$(echo $portcheck | jq .port80 | tr -d '"')
   webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
