@@ -267,8 +267,8 @@ if [ ${TESTS['iscagentrunning']} -eq 1 ]; then
     TESTS['webconfig']=0
   fi
 else
-    TESTS['exposed'] = 0
-    TESTS['webconfig'] = 0
+    TESTS['exposed']=0
+    TESTS['webconfig']=0
 fi
 diskspace=$(df --output=pcent . | tail -1 | tr -d '% ')
 if [[ $d -lt 80 ]]; then
