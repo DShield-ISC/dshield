@@ -34,6 +34,13 @@ find /srv/cowrie/var/lib/cowrie/tty -ctime +30 -type f -delete
 
 myip=$(netstat -nt | grep ESTABLISHED | awk '{print $4}' | cut -f1 -d':' | head -1)
 
+# in case the user is logged in on the console and no established
+# connections can be found
+
+if [ "$myip" == "" ]; then
+   myip=$(ip -4 route | grep '^default' | cut -f9 -d' ')
+fi    
+
 echo "
 
 #########
