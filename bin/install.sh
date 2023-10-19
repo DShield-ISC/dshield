@@ -1155,15 +1155,13 @@ else
     ssexists=0
 fi
 
-if [ ${ssexists} -eq 0 && $[netstatexists} -eq 0 ]; then
+if [ ${ssexists} -eq 0 ] && [ ${netstatexists} -eq 0 ]; then
     dlog "Neither netstat nor ss exists. Need at least one of them."
     exit 5
 fi
 
-echo $ssexists $netstatexists
+# TODO: using ss instead of netstat if necessary
 
-exit
-	
 drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'"
 CONIPS=$(netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//')
 
