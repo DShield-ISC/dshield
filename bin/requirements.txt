@@ -27,7 +27,7 @@ priority
 pyasn1-modules
 pyasn1
 pycparser
-pydantic[email]==1.10
+pydantic[email]
 pyhamcrest
 pyopenssl
 pyserial
