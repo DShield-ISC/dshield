@@ -62,9 +62,11 @@ missing this file usally indicates a failed install. Reinstall the honeypot.
 
 see /var/log/dshield.log
 
-## isc-agent running
+## isc-agent running error
 
 ### Quick Fix ###
+
+If the last line of /srv/log/isc-agent.err is ```ModuleNotFoundError: No module named 'twisted'``` try:
 
 ```
 cd /srv/isc-agent
@@ -74,7 +76,18 @@ pip install -r requirements.txt
 reboot
 ```
 
-If that doesn't work, see below, or send the content of /srv/log/isc-agent.err to handlers@isc.sans.edu.
+if the last line of /srv/log/isc-agent.err is ```TypeError: conlist() got an unexpected keyword argument 'min_items'``` try:
+
+```
+sudo su -
+cd /srv/isc-agent/
+source virtenv/bin/activate
+pip uninstall pydantic
+pip install pydantic==1.10
+reboot
+```
+
+If that doesn't work, see below or send the content of /srv/log/isc-agent.err to handlers@isc.sans.edu.
 
 ### Details ###
 
