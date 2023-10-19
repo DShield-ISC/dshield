@@ -1131,6 +1131,39 @@ drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
 CURSSHDPORT=$(grep '^Port' /etc/ssh/sshd_config | awk '{print $2}')
 # current ssh port already known
 adminports=$CURSSHDPORT
+
+#
+# figure out if netstat is installed, or if we have to use ss
+#
+
+netstatexists=0
+ssexists=0
+
+if netstat 2>/dev/null >/dev/null  ; then
+    netstatexists=1
+else
+    netstatexists=0
+fi
+
+if [ ${netstatexists} -eq 0 ]; then
+    if ss 2>/dev/null >/dev/null; then
+	ssexists=1
+    else
+	ssexists=0
+    fi
+else
+    ssexists=0
+fi
+
+if [ ${ssexists} -eq 0 && $[netstatexists} -eq 0 ]; then
+    dlog "Neither netstat nor ss exists. Need at least one of them."
+    exit 5
+fi
+
+echo $ssexists $netstatexists
+
+exit
+	
 drun "netstat -an | grep ':${CURSSHDPORT}' | grep ESTABLISHED | awk '{print \$5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//'"
 CONIPS=$(netstat -an | grep ":${CURSSHDPORT}" | grep ESTABLISHED | awk '{print $5}' | cut -d ':' -f 1 | sort -u | tr '\n' ' ' | sed 's/ $//')
 
