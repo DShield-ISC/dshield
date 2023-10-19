@@ -1,0 +1,17 @@
+[Unit]
+Description=DShield nft phase 2
+After=network.target nfs-client.target ypbind.service nfs-server.service rpcbind.service dshieldnft_init.service
+Wants=dshieldnft_init.service
+Conflicts=firewalld.service
+Conflicts=dshieldfirewall.service
+
+[Service]
+ExecStart=/usr/sbin/nft -f /etc/network/ruleset.nft
+ExecStop=/usr/sbin/nft -f /etc/network/ruleset-stop.nft
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+Alias=dshieldnft_setup.service
+Also=dshieldnft_init.service

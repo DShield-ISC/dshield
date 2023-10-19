@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  sans-isc-agent:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+#      - 80:80
+#      - 443:443
+      - 3000:3000
+      - 8000:8000
+      - 8080:8080
+      - 8443:8443

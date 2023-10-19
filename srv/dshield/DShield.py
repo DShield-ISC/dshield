@@ -19,13 +19,13 @@ import hmac
 import hashlib
 import base64
 import requests
-import json
 import configparser
 import sys
 import socket
 import struct
 import syslog
-
+import json
+from datetime import datetime
 
 class DshieldSubmit:
     id = 0
@@ -67,6 +67,15 @@ class DshieldSubmit:
             r = requests.post(self.url, json=mydata, headers=header)
             if r.status_code != 200:
                 self.log('received status code %d in response' % r.status_code)
+            else:
+                self.log('sent %d bytes to %s' % (sys.getsizeof(mydata)+sys.getsizeof(mydata['logs']),self.url))
+                if self.localcopy != '' :
+                    f = open(self.localcopy,'a')
+                    now = datetime.now()                    
+                    f.write("\n# %s\n" % now.strftime("%s %Y-%m-%d %H:%M:%S"))
+                    f.write(json.dumps(mydata))
+                    f.write("\n")
+                    f.close()
         else:
             self.log('no valid type defined in post')
 
@@ -130,7 +139,7 @@ class DshieldSubmit:
     # convert a long integer back to an IP address string
     @staticmethod
     def long2ip4(ip):
-        asciiip='127.0.0.1';
+        asciiip='127.0.0.1'
         try:
             asciiip=socket.inet_ntoa(struct.pack('!I', ip))
         except:
@@ -177,11 +186,16 @@ class DshieldSubmit:
                 sys.exit()
             key = config.get('DShield', 'apikey')
             apikeyre = re.compile('^[a-zA-Z0-9=+/]+$')
+            try: 
+                self.localcopy = config.get('DShield','localcopy')
+            except:
+                self.localcopy = ''
             if apikeyre.match(key):
                 self.key = key
             else:
                 self.log("no api key configured")
                 sys.exit()
+                        
 
             # extract translate internal IP settings
 
@@ -217,9 +231,9 @@ class DshieldSubmit:
 
     def check_pid(self,pidfile):        
         """ Check For the existence of a unix pid. """
-        f=open(pidfile,'r')
-        pid=f.readline()
-        pid=pid.rstrip('\n')	
+        with open(pidfile, 'r') as file:
+            pid = file.readline()
+            pid = pid.rstrip('\n')
         try:
             os.kill(int(pid), 0)
         except OSError:
@@ -231,7 +245,7 @@ class DshieldSubmit:
         for type in self.logtypesregex:
             m=re.match(self.logtypesregex[type],line)
             if m:
-                 return type
+                return type
         return ''
             
     def log(self,line):

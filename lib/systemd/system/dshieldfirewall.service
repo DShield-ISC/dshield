@@ -1,0 +1,16 @@
+[Unit]
+Description=DShield firewall phase 2
+After=network.target nfs-client.target ypbind.service nfs-server.service rpcbind.service dshieldfirewall_init.service
+Wants=dshieldfirewall_init.service
+Conflicts=firewalld.service
+
+[Service]
+ExecStart=/usr/sbin/iptables-restore /etc/network/iptables
+ExecStop=/usr/sbin/iptables-restore /etc/network/iptables-stop
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+Alias=dshieldfirewall_setup.service
+Also=dshieldfirewall_init.service

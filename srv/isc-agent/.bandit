@@ -1,0 +1,3 @@
+[bandit]
+skips: B601,B603,B607,B611,B608,B402,B403,B404,B405,B301,B314
+exclude: /tests,/settings,/.tox,/.venv

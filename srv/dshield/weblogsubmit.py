@@ -30,7 +30,7 @@ f.close()
 
 config = '..' + os.path.sep + 'www'+os.path.sep+'DB' + os.path.sep + 'webserver.sqlite'
 try :
-    conn = sqlite3.connect(config)
+    conn = sqlite3.connect(config, 10.5)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS submissions
             (
@@ -38,6 +38,19 @@ try :
               linessent integer 
             )
           ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS requests
+                (
+                    date text,
+                    headers text,
+                    address text,
+                    cmd text,
+                    path text,
+                    useragent text,
+                    vers text,
+                    summary text,
+                    targetip text
+                )
+            ''')
 
     maxid = c.execute("""SELECT max(timestamp) from submissions""").fetchone()
 except sqlite3.Error as e:
@@ -58,7 +71,7 @@ for r in rsx:
     headerdata = {}
     logdata['time']=float(r[0])
     for each in r[1].split('\r\n'): # Header data was stored as a string with extra characters, so some clean-up needed.
-        if (each and ipaddr not in each): # scrubbing local IP from data before submission
+        if (each and ipaddr in each): # scrubbing local IP from data before submission
             try:
                 headerdata['header_'+str(each.split(': ')[0])] = each.split(': ')[1]
             except IndexError:

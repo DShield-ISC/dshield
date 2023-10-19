@@ -1,0 +1,29 @@
+name: Convert isc-agent's Poetry file to requirements.txt
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  convert_poetry_to_requirements:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install python3-pip -y
+          pip install poetry
+      - name: Convert poetry file to requirements.txt
+        run: |
+          cd srv/isc-agent
+          poetry export -f requirements.txt -o requirements.txt --without-hashes
+          grep -v 'Windows' requirements.txt | cut -f1 -d '=' | sed 's/all-non-platform/all_non_platform/'  > ../../bin/requirements.txt
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GitHub Action"
+          author_email: "action@github.com"
+          message: "Converted pyproject.toml to requirements.txt"

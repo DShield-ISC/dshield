@@ -1,0 +1,8 @@
+.*
+
+settings.ini
+
+!.bandit
+!.coveragerc
+!.gitignore
+!.pylintrc
