@@ -64,6 +64,20 @@ see /var/log/dshield.log
 
 ## isc-agent running
 
+### Quick Fix ###
+
+```
+cd /srv/isc-agent
+source virtenv/bin/activate
+virtualenv virtenv --no-setuptools
+pip install -r requirements.txt
+reboot
+```
+
+If that doesn't work, see below, or send the content of /srv/log/isc-agent.err to handlers@isc.sans.edu.
+
+### Details ###
+
 Check the file ```/srv/log/isc-agent.err```. It should display any startup errors. Often the issue is caused by a missing python module. For example:
 
 ```
