@@ -24,11 +24,10 @@ Here are some tips to fix any errors:
 
 This file contains the firewall logs. It will be created as soon as your
 honeypot receives traffic. It may be missing right after the honeypot is
-started, but should be created within a few minutes if your honeypot is
-exposed. Check if the later test, "webserver exposed", passed.
+started but should be created within a few minutes if your honeypot is
+exposed. Check if the later test, "webserver exposed," passed.
 
-If "webserver exposed" passed, but there is still no dshield.log, start
-by rebooting the honeypot. If there is still no dshield.log after 10
+If "webserver exposed" passed, but there is still no dshield.log, reboot the honeypot. If there is still no dshield.log after 10
 minutes, check if the firewall rules are configured correctly.
 
 Run: ```iptables -L -n -t nat | grep DSHIELDLOG```. The output should look
@@ -65,7 +64,77 @@ see /var/log/dshield.log
 
 ## isc-agent running
 
-[more debugging steps needed here]
+### Quick Fix ###
+
+```
+cd /srv/isc-agent
+source virtenv/bin/activate
+virtualenv virtenv --no-setuptools
+pip install -r requirements.txt
+reboot
+```
+
+If that doesn't work, see below, or send the content of /srv/log/isc-agent.err to handlers@isc.sans.edu.
+
+### Details ###
+
+Check the file ```/srv/log/isc-agent.err```. It should display any startup errors. Often the issue is caused by a missing python module. For example:
+
+```
+Traceback (most recent call last):
+  File "/srv/isc-agent/./isc-agent.py", line 5, in <module>
+    from twisted.internet import reactor
+ModuleNotFoundError: No module named 'twisted'
+```
+In this case, the module "twisted" is missing or can not be loaded for some reason.
+
+isc-agent is using a virtual environment. For additional debugging (or fixing), activate the environment
+```
+cd /srv/isc-agent
+source virtenv/bin/activate
+```
+The prompt should now change to ```(virtenv) root@honeypot:/srv/isc-agent``` (instead of "honeypot", you will see your hostname)
+
+Try to install the missing module. For example:
+
+```
+pip install twisted
+```
+
+If yout get the error ```ModuleNotFoundError: No module named 'pip'```, run:
+
+```
+virtualenv virtenv --no-setuptools
+```
+
+(careful. Run this in the /srv/isc-agent directory, not anywhere else)
+
+Next, try again:
+
+```
+pip install twisted
+```
+
+Now try to start isc-agent again while still in the activated virtual environments:
+
+```
+./isc-agent.py
+```
+
+If you see an additional missing module, try first to reinstall the entire requirements.txt file:
+
+```
+pip install -r requirements.txt
+```
+
+If successful, you should see this line:
+
+```
+DEBUG :: 2023-10-19 13:57:52,064 :: <PID 1180:MainProcess> :: __main__ :: L:19 :: http options: {'protocol': 'tcp', 'name': 'http', 'http_ports': [8000], 'https_ports': [8443], 'submit_logs_rate': 300}
+```
+
+Exit with CTRL-C and reboot the honeypot to check if it works again.
+
 
 ## webserver exposed
 
