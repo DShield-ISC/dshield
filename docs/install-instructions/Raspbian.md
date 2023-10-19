@@ -6,13 +6,15 @@
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it.
 
 - Download and install the [Raspberry Pi Imager] (https://www.raspberrypi.com/software/)
-- Select "Raspberry Pi OS Lite (32-bit)" as your operating system. The default selection will work too if you prefer a GUI.
+- Select "Raspberry Pi OS Lite (64-bit)" as your operating system. The default selection will work too if you prefer a GUI.
 - Customize the installation by clicking on the "gear" icon in the lower right hand corner of the image.
 - select "Enable SSH"
 - set a username and password (use this username instead of the "pi" user)
 - Optional (but recommended): Set up public-key authentication
 - Select the micro SD Card as "Storage". Be careful to select the right disk.
 - click "WRITE"
+
+  [Note: The 64 Bit version of Raspberry Pi OS currently works better than the 32 Bit version]
 
 ![Screen Shot 2022-05-02 at 10 40 51 AM](https://user-images.githubusercontent.com/1626447/166254332-0dd2be8a-0ef6-42a2-8f6d-9610b2664323.png)
 
