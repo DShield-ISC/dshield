@@ -2035,7 +2035,7 @@ run 'chown cowrie:cowrie ${COWRIEDIR}/log'
 run 'mkdir -p ${COWRIEDIR}/log/tty'
 run 'chmod 755 ${COWRIEDIR}/log/tty'
 run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
-[ -d /etc/rc?.d ] && find /etc/rc?.d -name '*cowrie*' -delete
+find /etc/rc?.d -name '*cowrie*' -delete
 run 'systemctl daemon-reload'
 run 'systemctl enable cowrie.service'
 
