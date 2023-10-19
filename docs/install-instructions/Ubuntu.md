@@ -8,7 +8,7 @@ Install the default version Ubuntu Server 22.04 LTS. Don't select any additional
 **Deploying As VPS**
 Select the appropriate Ubuntu Server 22.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well:
 
-```sudo adduser dshield```
+```adduser --disabled-password --gecos "DShield Honeypot" dshield```
 
 **After Completing Installation**
 Upgrade the base system and ensure git and openssh-server are already installed:
