@@ -266,12 +266,15 @@ if [ ${TESTS['iscagentrunning']} -eq 1 ]; then
     echo "${RED}ERROR${NC}: webserver not exposed. check network firewall"
     TESTS['exposed']=0
   fi
+  TESTS['webconfig']=0  
+  if [[ "$port" == "open" ]]; then  
   if [[ "$webconfig" == "ok" ]] ; then
     echo "${GREEN}OK${NC}: webserver configuration"
     TESTS['webconfig']=1
   else
     echo "${RED}ERROR${NC}: webserver misconfigured. try reboot"
     TESTS['webconfig']=0
+  fi
   fi
 else
     TESTS['exposed']=0
