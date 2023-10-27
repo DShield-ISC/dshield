@@ -1417,13 +1417,18 @@ if [ "$use_iptables" = "True" ] ; then
 #
 
 *filter
+:LOCALINPUT [0:0]
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
+
 # allow all on loopback
 -A INPUT -i lo -j ACCEPT
 # allow all for established connections
 -A INPUT -i $interface -m state --state ESTABLISHED,RELATED -j ACCEPT
+# add rule to allow for custom rules
+-A INPUT -j LOCALINPUT
+-A LOCALINPUT -j RETURN
 EOF
 
   # allow pings from localnet
