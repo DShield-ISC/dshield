@@ -1793,6 +1793,8 @@ else
   fi
 fi
 echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >>/etc/cron.d/dshield
+echo "0 6 * * * root find /srv/db -name 'webhoneypot*json' -ctime +7 -delete" >> /etc/cron.d/dshield
+echo "0 10 * * * root find /srv/cowrie/var/log/cowrie -name 'cowrie.*' -ctime +7 -delete" >> /etc/cron.d/dshield
 drun 'cat /etc/cron.d/dshield'
 
 #
