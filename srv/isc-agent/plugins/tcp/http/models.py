@@ -224,4 +224,5 @@ def read_db_and_log(file_name=""):
         }
         with open(file_name, "a") as file:
             json.dump(log_data, file)
+            file.write("\n")
     return logs
