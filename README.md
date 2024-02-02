@@ -5,8 +5,9 @@
 This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
-- use of a __dedicated__ device (Raspberry Pi, any model as [per] (https://isc.sans.edu/diary/22680/))
-- current Raspberry Pi OS ("Lite" version will suffice)
+- use of a __dedicated__ device (Raspberry Pi 3 or later, n100 mini PC or a virtual machine work fine)
+- minimum of 1GB of RAM and 16GB of Disk (SD Card for Raspberry Pis). 4GB of RAM works better. Larger SD Cards (e.g. 64 GB) are recommended for longevity and to prevent logs from filling up the disk.
+- current Raspberry Pi OS ("Lite" version will suffice) or current version of Ubuntu Linux
 - easy installation / configuration (and therefore not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
