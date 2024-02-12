@@ -42,6 +42,8 @@ This script will:
 - if you get strange python / pip errors during installation / updates you may try the following commands as root:
 `pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs -n1 pip install -U`
 
+- Check our [Trouble Shooting Guide](https://github.com/DShield-ISC/dshield/blob/main/docs/general-guides/Troubleshooting.md) for help identifying issues.
+
 ## Updates
 
 ### Normal Updates
