@@ -13,12 +13,17 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2022/01/05 01
+# version 2024/05/22 01
 
-readonly myversion=94
+readonly myversion=95
 
 #
 # Major Changes (for details see Github):
+#
+#
+# - V95 (Johannes)
+#   - removed support for Ubuntu 20.04 and 18.04
+#   - added support for Ubuntu 24.04
 #
 # - V94 (Johannes)
 #   - major, major switch to isc-agent
@@ -503,19 +508,14 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "12" ]; then
   distversion=r12
 fi
 
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "18.04" ]; then
-  dist='apt'
-  distversion='u18'
-fi
-
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
-  dist='apt'
-  distversion='u20'
-fi
-
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
   dist='apt'
   distversion='u22'
+fi
+
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "24.04" ]; then
+  dist='apt'
+  distversion='u24'
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ]; then
@@ -538,12 +538,11 @@ if [ "$dist" == "invalid" ]; then
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "18.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "22.04" ]; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ]; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS"
-  outlog " - Ubuntu 18.04"
-  outlog " - Ubuntu 20.04"
   outlog " - Ubuntu 22.04"
+  outlog " - Ubuntu 24.04"  
   outlog " - openSUSE Tumbleweed."
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
