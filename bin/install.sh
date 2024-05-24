@@ -15,11 +15,12 @@
 
 # version 2024/05/22 01
 
-readonly myversion=95
+readonly myversion=96
 
 #
 # Major Changes (for details see Github):
-#
+# - V96 (Johannes)
+#   - added 20.04 back again
 #
 # - V95 (Johannes)
 #   - removed support for Ubuntu 20.04 and 18.04
@@ -508,6 +509,11 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "12" ]; then
   distversion=r12
 fi
 
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
+  dist='apt'
+  distversion='u20'
+fi
+
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
   dist='apt'
   distversion='u22'
@@ -532,15 +538,16 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
-  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian,"
+  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian, Ubuntu 20.04/22.04/24.04, "
   outlog "openSUSE Tumbleweed and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ]; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ] && [ "$VERSION_ID" != "20.04" ]; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS"
+  outlog " - Ubuntu 20.04"  
   outlog " - Ubuntu 22.04"
   outlog " - Ubuntu 24.04"  
   outlog " - openSUSE Tumbleweed."
