@@ -1423,7 +1423,7 @@ if [ "$use_iptables" = "True" ] ; then
 #
 
 *filter
-:LOCALINPUT [0:0]
+:LOCALINPUT - [0:0]
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
