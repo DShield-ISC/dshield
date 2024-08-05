@@ -35,6 +35,7 @@ class DshieldSubmit:
     types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest', 'webhoneypot']
     logtypesregex={'generic': '^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
                    'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                   'iptables': '(^\d+) \S+ kernel:\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
                    'aws': '(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
     authheader = ''
 

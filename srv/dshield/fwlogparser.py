@@ -22,12 +22,18 @@ def parse(logline,logformat,linere):
     logline=logline.strip("\000")
     m = linere.match(logline)
     if m:
+        # pi covers older (pre 24.04) iptables logs
         if logformat == 'pi':
             logdata['time'] = int(m.group(1))
             fwdata=m.group(2)
+        # AWS is essentially IPtables but only one space after kernel:
         elif logformat == 'aws':
             logdata['time'] = int(m.group(1))
-            fwdata=m.group(2)            
+            fwdata=m.group(2)
+        # iptables is for newer (Ubuntu 24.04) systems
+        elif logformat == 'iptables':
+            logdata['time'] = int(m.group(1))
+            fwdata=m.group(2)                        
         elif logformat == 'generic':
             month = strptime(m.group(1), '%b').tm_mon
             if month == 12 and now.month == 1:
