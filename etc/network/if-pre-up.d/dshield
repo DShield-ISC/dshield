@@ -1,3 +1,6 @@
 #!/bin/sh
-iptables-restore < /etc/network/iptables
+iptables-restore /etc/network/iptables
+if [ -f /etc/network/iptables.local ]; then
+    iptables-restore -n /etc/network/iptables.local
+fi
 exit 0
