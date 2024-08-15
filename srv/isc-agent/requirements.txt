@@ -1,5 +1,5 @@
 appdirs==1.4.4 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-attrs==24.1.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
+attrs==24.2.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 automat==22.10.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 bcrypt==4.2.0 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 certifi==2024.7.4 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
