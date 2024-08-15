@@ -1416,6 +1416,23 @@ esac
 
 if [ "$use_iptables" = "True" ] ; then
     dlog "using iptables not nftables"
+    cat >/etc/network/iptables.local <<EOF
+#
+# use this for local iptables rules not to be overwriten
+# by the honeypot configuration. Use "-I" to insert rules
+# for example, to allow all traffic from a wireguard VPN
+# interface, use:
+#
+# *filter
+# -I INPUT 1 -i wg0 -j ACCEPT
+# COMMIT
+#
+# first line must be "*filter"
+# last line must be "COMMIT"
+# to test, run
+# iptables -n iptables.local
+#
+EOF
   cat >/etc/network/iptables <<EOF
 
 #
