@@ -1416,6 +1416,8 @@ esac
 
 if [ "$use_iptables" = "True" ] ; then
     dlog "using iptables not nftables"
+    # do not overwrite existing local file
+    if [ ! -f /etc/network/iptables.local ]; then
     cat >/etc/network/iptables.local <<EOF
 #
 # use this for local iptables rules not to be overwriten
@@ -1433,6 +1435,7 @@ if [ "$use_iptables" = "True" ] ; then
 # iptables -n iptables.local
 #
 EOF
+    fi
   cat >/etc/network/iptables <<EOF
 
 #
