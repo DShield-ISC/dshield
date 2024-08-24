@@ -51,6 +51,8 @@ def get_winning_signature(request_attributes: Dict) -> Optional[Signature]:
     winning_signature = None
     signatures = settings.DATABASE_SESSION.query(Signature).order_by(Signature.max_score.desc()).all()
     for signature in signatures:
+        if signature.max_score is None:
+            signature.max_score = 10000
         if top_score >= signature.max_score:
             break
         score = get_signature_score(signature.rules, request_attributes)
