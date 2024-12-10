@@ -605,6 +605,7 @@ if [ "$FAST" == "0" ]; then
     # 2020-08-03: Added python install outside the loop for Ubuntu 18 vs 20
     #             these two installs may fail depending on ubuntu flavor
     # 2020-09-21: remove python2
+    # 2024-08-23: pip will no longer install systemwide packages on apt managed systems. Added most packages here in "experimental" section.
     run 'apt -y -q remove python2'
     run 'apt -y -q remove python'
     run 'apt -y -q remove python-pip'
@@ -612,7 +613,24 @@ if [ "$FAST" == "0" ]; then
     run 'apt -y -q install python3-pip'
     run 'apt -y -q install python3-requests'
     run 'apt -y -q remove python-requests'
-
+    # experimental to try avoid dependency issues
+    run 'apt -y -q install python3-appdirs'
+    run 'apt -y -q install python3-attr'
+    run 'apt -y -q install python3-certifi'
+    run 'apt -y -q install python3-automat'
+    run 'apt -y -q install python3-cffi-backend'
+    run 'apt -y -q install python3-bcrypt'
+    run 'apt -y -q install python3-cffi'
+    run 'apt -y -q install python3-ply'
+    run 'apt -y -q install python3-pycparser'
+    run 'apt -y -q install python3-constantly'
+    run 'apt -y -q install python3-cryptography'
+    run 'apt -y -q install python3-constantly'
+    run 'apt -y -q install python3-defusedxml'
+    run 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
+    run 'apt -y -q install python3-hamcrest python3-openssl python3-pyasn1 python3-pyasn1-modules python3-service-identity python3-twisted python3-zope.interface'
+    run 'apt -y -q install python3-priority'
+    
     for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog; do
       run "apt -y -q install $b"
       if ! dpkg -l $b >/dev/null 2>/dev/null; then
@@ -1393,11 +1411,16 @@ dlog "creating /etc/network/iptables"
 if [ ! -d /etc/network ]; then
   run 'mkdir /etc/network'
 fi
+# cleanup iptables/nftables backups older than 60 days
+run "find /etc/network -name 'iptables.????-??-??_*' -ctime +60 -delete"
+run "find /etc/network -name 'iptables.nft.????-??-??_*' -ctime +60 -delete"
 
+# backup old iptables rules
 if [ -f /etc/network/iptables ]; then
   run "mv /etc/network/iptables /etc/network/iptables.${INSTDATE}"
 fi
 
+# backup old nftables rules
 if [ -f /etc/network/ruleset.nft ]; then
   run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
