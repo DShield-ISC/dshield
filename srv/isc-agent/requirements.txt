@@ -9,7 +9,7 @@ constantly==15.1.0 ; python_full_version >= "3.7.1" and python_full_version < "4
 cryptography==3.4.6 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 cython-test-exception-raiser==1.0.2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 defusedxml==0.7.1 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
-dnspython==2.3.0 ; python_full_version >= "3.7.1" and python_version < "4.0"
+dnspython==2.6.1 ; python_full_version >= "3.7.1" and python_version < "4.0"
 email-validator==2.0.0.post2 ; python_full_version >= "3.7.1" and python_full_version < "4.0.0"
 exceptiongroup==1.2.2 ; python_full_version >= "3.7.1" and python_version < "3.11"
 greenlet==3.0.3 ; python_full_version >= "3.7.1" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32") and python_full_version < "4.0.0"
