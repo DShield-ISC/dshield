@@ -1,0 +1,351 @@
+[
+    {
+        "method": "GET",
+        "uri": "/.git/config",
+        "headers": {
+            "User-Agent": "curl/7.68.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/",
+        "headers": {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Encoding": "gzip"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/something-with-cookie_1",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        },
+        "cookies": {"Cookie_1":"cookie value"}
+    },
+    {
+        "method": "GET",
+        "uri": "/favicon.ico",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/robots.txt",
+        "headers": {
+            "User-Agent": "Googlebot"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/sitemap.xml",
+        "headers": {
+            "User-Agent": "Bingbot"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/about",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/contact",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/products",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/blog",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/api/v1/users",
+        "headers": {
+            "User-Agent": "PostmanRuntime/7.29.0"
+        }
+    },
+    {
+        "method": "POST",
+        "uri": "/api/v1/login",
+        "headers": {
+            "User-Agent": "python-requests/2.25.1"
+        },
+        "body": "{\"username\": \"user\", \"password\": \"pass\"}"
+    },
+    {
+        "method": "GET",
+        "uri": "/cart",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "POST",
+        "uri": "/checkout",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        },
+        "body": "{\"order_id\": 1234, \"payment\": \"card\"}"
+    },
+    {
+        "method": "GET",
+        "uri": "/page/1",
+        "headers": {
+            "User-Agent": "Googlebot"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/page/2",
+        "headers": {
+            "User-Agent": "Bingbot"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/static/js/main.js",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/static/css/styles.css",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "POST",
+        "uri": "/login",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        },
+        "body": "{\"username\": \"admin\", \"password\": \"1234\"}"
+    },
+    {
+        "method": "POST",
+        "uri": "/logout",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "POST",
+        "uri": "/contact-form",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        },
+        "body": "{\"name\": \"John\", \"email\": \"john@example.com\"}"
+    },
+    {
+        "method": "GET",
+        "uri": "/downloads/manual.pdf",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/ws",
+        "headers": {
+            "User-Agent": "Mozilla/5.0",
+            "Connection": "Upgrade",
+            "Upgrade": "websocket"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/admin",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/health",
+        "headers": {
+            "User-Agent": "PingdomBot"
+        }
+    },
+    {
+        "method": "OPTIONS",
+        "uri": "*",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/wp-config.php",
+        "headers": {
+            "User-Agent": "curl/7.68.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/.env",
+        "headers": {
+            "User-Agent": "python-requests/2.25.1"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/../../etc/passwd",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/%2e%2e/%2e%2e/%2e%2e/etc/passwd",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/search?query=' OR 1=1--",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/search?query=\" OR \"\"=\"",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/ping?cmd=whoami",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/api?cmd=id",
+        "headers": {
+            "User-Agent": "curl/7.68.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/admin/login.php",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/admin/index.html",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/wp-admin",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/joomla/administrator",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/shell.php",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/cmd.php?cmd=ls",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/index.php?page=../../../../etc/passwd",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/cgi-bin/login",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/api/v1/configuration/users/user-roles",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "anything_without_user-agent",
+        "headers": {}
+    },
+    {
+        "method": "GET",
+        "uri": "/remote/login",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },    
+    {
+        "method": "GET",
+        "uri": "blablablbasmtp_keys.json",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },    {
+        "method": "GET",
+        "uri": "/.git/smtp_keys.json",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/.git/",
+        "headers": {
+            "User-Agent": "Mozilla/5.0"
+        }
+    },
+    {
+        "method": "GET",
+        "uri": "/api/v1/login",
+        "headers": {
+            "User-Agent": "python-requests/2.25.1",
+            "Accept-Encoding" : "gzip"
+        }
+    }
+]
