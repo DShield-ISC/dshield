@@ -41,6 +41,10 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
         if self.customized_server_string:
             self.send_header('Server', self.customized_server_string)
 
+    def log_message(self, format, *args):
+        #prevents log messages from being generated.
+        pass
+
     def apply_customizations(self, text_element:str) -> str:
         """
         Customize tags in responses with updated values.
@@ -175,6 +179,14 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
         except BrokenPipeError:
             self.logger.exception("Client disconnected before response was fully sent")
 
+        if record_local_responses:
+            try:
+                fh = open(args.local_responses, "a")
+                fh.write(f"{log_data}\n")
+                fh.close()
+            except Exception as e:
+                self.logger.error(f"Error writing to local response file {args.local_responses} - {e}")
+
     def do_GET(self):
         """Handles GET requests."""
         self.logger.debug("do_GET() called")
@@ -246,6 +258,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Web Honeypot")
     parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
+    parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
+    parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
+
     args = parser.parse_args()
 
     # Load configuration from file
@@ -254,12 +269,13 @@ if __name__ == "__main__":
         logger.error(f"Could not read config file {args.config}.")
         sys.exit(1)
 
-    #Set log level to debug if its in the config
-    debug = config.get("iscagent","debug")
+    #Set the logging level based on the command line.
+    numeric_level = getattr(logging, args.loglevel.upper())
+    fh.setLevel(level=numeric_level)
+    sh.setLevel(level=numeric_level)
 
-    if debug == "true":
-        fh.setLevel(logging.DEBUG)
-        sh.setLevel(logging.DEBUG)
+    #Set log level to debug if its in the config
+    record_local_responses = config.get("iscagent","debug") == "true"   #Its lowercase in the log file.
 
     #Start the ISC Agent threats for queueing and submission   
     isc_agent = Agent(config)
