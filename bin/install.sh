@@ -13,12 +13,17 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2024/05/22 01
+# version 2025/04/23 01
 
-readonly myversion=96
+readonly myversion=97
 
-#
+
 # Major Changes (for details see Github):
+#
+# - V97 (Johannes)
+#   - swap in Mark's web honeypot to replace isc-agent
+#   - remove dependency to run as root
+#
 # - V96 (Johannes)
 #   - added 20.04 back again
 #
@@ -224,16 +229,21 @@ INTERACTIVE=1
 FAST=0
 BETA=0
 
+DSHIELDINI=/srv/dshield/etc/dshield.ini
+# userid and uid are used by the dshield.ini configuration and script building it
+SYSUSERID=$(id -u) 
+GROUPID=$(id -g)
+
 # parse command line arguments
 
 for arg in "$@"; do
   case $arg in
   "--update" | "--upgrade")
-    if [ -f /etc/dshield.ini ]; then
+    if [ -f ${DSHIELDINI} ]; then
       echo "Non Interactive Update Mode"
       INTERACTIVE=0
     else
-      echo "Update mode requires a /etc/dshield.ini file"
+      echo "Update mode requires a ${DSHIELDINI} file"
       exit 9
     fi
     ;;
@@ -248,10 +258,12 @@ done
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
+WEBHPOTDIR=${TARGETDIR}/webhpot
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
+
+
 SCRIPTDIR=$( cd -- "$(dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-ISC_AGENT_DIR="${TARGETDIR}/isc-agent"
 INSTDATE="$(date +'%Y-%m-%d_%H%M%S')"
 LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 
@@ -270,6 +282,14 @@ SSHREDIRECT="22"
 TELNETREDIRECT="23 2323"
 WEBREDIRECT="80 8080 7547 5555 9000"
 HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
+
+# create and setup log directory
+if [ ! -d ${LOGDIR} ]; then
+    sudo mkdir -m 0770 -p ${LOGDIR}
+fi
+# for legacy systems that used to run as root
+sudo chown -R ${SYSUSERID}:${GROUPID} ${LOGDIR} 
+
 
 # which port the real sshd should listen to
 SSHDPORT="12222"
@@ -314,18 +334,16 @@ quotespace() {
 
 # write log
 do_log() {
-  if [ ! -d ${LOGDIR} ]; then
-    mkdir -p ${LOGDIR}
-  fi
-  chmod 1777 ${LOGDIR}
-  if [ ! -f ${LOGFILE} ]; then
-    touch ${LOGFILE}
-    chmod 600 ${LOGFILE}
-    outlog "Log ${LOGFILE} started."
-    outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, "
-    outlog "           API keys, ...). Handle with care and sanitize before sharing."
-  fi
-  echo "$(date +'%Y-%m-%d_%H%M%S') ### ${*}" >>${LOGFILE}
+    
+
+    if [ ! -f ${LOGFILE} ]; then
+       touch ${LOGFILE}
+       chmod 600 ${LOGFILE}
+       outlog "Log ${LOGFILE} started."
+       outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, "
+       outlog "           API keys, ...). Handle with care and sanitize before sharing."
+    fi
+    echo "$(date +'%Y-%m-%d_%H%M%S') ### ${*}" >>${LOGFILE}
 }
 
 # execute and log
@@ -341,6 +359,17 @@ run() {
   return ${RET}
 }
 
+# execute and log with sudo
+sudorun() {
+    do_log "Running: sudo ${*}"
+  eval "sudo ${*}" >>${LOGFILE} 2>&1
+  RET=${?}
+  if [ ${RET} -ne 0 ]; then
+    dlog "EXIT CODE NOT ZERO (${RET})!"
+  fi
+  return ${RET}
+}
+
 # run if debug is set
 # make sure, to be run command is passed within '' or ""
 #    if redirects etc. are used
@@ -349,6 +378,20 @@ drun() {
     do_log "DEBUG COMMAND FOLLOWS:"
     do_log "${LINE}"
     run ${*}
+    RET=${?}
+    do_log "${LINE}"
+    return ${RET}
+  fi
+}
+
+# run with sudo if debug is set
+# make sure, to be run command is passed within '' or ""
+#    if redirects etc. are used
+dsudorun() {
+  if [ ${DEBUG} -eq 1 ]; then
+    do_log "DEBUG COMMAND FOLLOWS:"
+    do_log "${LINE}"
+    sudorun ${*}
     RET=${?}
     do_log "${LINE}"
     return ${RET}
@@ -399,6 +442,39 @@ do_copy() {
 
 }
 
+# copy files as root using sudo
+sudo_copy() {
+  dlog "sudo copying ${1} to ${2} and chmod to ${3}"
+  if [ -d ${1} ]; then
+    if [ "${3}" != "" ]; then
+      # source is a directory, but chmod bitmask given nevertheless, issue a warning
+      dlog "WARNING: do_copy: $1 is a directory, but chmod bitmask given, ignored!"
+    fi
+    sudorun "cp -r ${1} ${2}"
+  else
+    sudorun "cp ${1} ${2}"
+  fi
+  if [ ${?} -ne 0 ]; then
+    outlog "Error copying ${1} to ${2}. Aborting."
+    exit 9
+  fi
+  if [ "${3}" != "" -a ! -d ${1} ]; then
+    # only if $1 isn't a directory!
+    if [ -f ${2} ]; then
+      # target is a file, chmod directly
+      sudorun "chmod ${3} ${2}"
+    else
+      # target is a directory, so use basename
+      sudorun "chmod ${3} ${2}/$(basename ${1})"
+    fi
+    if [ ${?} -ne 0 ]; then
+      outlog "Error executing chmod ${3} ${2}/${1}. Aborting."
+      exit 9
+    fi
+  fi
+}
+
+
 ###########################################################
 ## MAIN
 ###########################################################
@@ -411,15 +487,25 @@ clear
 
 echo ${LINE}
 
-userid=$(id -u)
-if [ ! "$userid" = "0" ]; then
-  echo "You have to run this script as root. eg."
-  echo "  sudo bin/install.sh"
+
+
+if [ "${SYSUSERID}" = "0" ]; then
+  echo "You must not run this script as root"
   echo "Exiting."
   echo ${LINE}
   exit 9
 else
-  do_log "Check OK: User-ID is ${userid}."
+  do_log "Check OK: User-ID is ${SYSUSERID}."
+fi
+
+if sudo -n true; then
+    do_log "check OK: sudo"
+else
+    echo "you must have password less access to sudo"
+    echo "Or run a command using 'sudo' to enter the"
+    echo "password before starting this script."
+    echo ${LINE}
+    exit 9
 fi
 
 dlog "This is ${0} V${myversion}"
@@ -564,12 +650,13 @@ fi
 
 dlog "creating a temporary directory"
 
-TMPDIR=$(mktemp -d -q /tmp/dshieldinstXXXXXXX)
+TMPDIR=$(mktemp -udq /tmp/dshieldinstXXXXXXX)
 dlog "TMPDIR: ${TMPDIR}"
 
 dlog "setting trap"
-# trap "rm -r $TMPDIR" 0 1 2 5 15
-run 'trap "echo Log: ${LOGFILE} && rm -r $TMPDIR" 0 1 2 5 15'
+# trap "rm -r ${TMPDIR}" 0 1 2 5 15
+mkdir ${TMPDIR}
+run 'trap "echo Log: ${LOGFILE} && rm -r ${TMPDIR}" 0 1 2 5 15'
 if [ "$FAST" == "0" ]; then
   outlog "Basic security checks"
 
@@ -585,7 +672,7 @@ if [ "$FAST" == "0" ]; then
 
   if [ "$dist" == "apt" ]; then
     dlog "repair any package issues just in case"
-    run 'dpkg --configure -a'
+    sudorun 'dpkg --configure -a'
     dlog "we are on pi and should check if password for user pi has been changed"
     if $progdir/passwordtest.pl | grep -q 1; then
       outlog "You have not yet changed the default password for the 'pi' user"
@@ -594,11 +681,11 @@ if [ "$FAST" == "0" ]; then
     fi
 
     outlog "Updating your Installation (this can take a LOOONG time)"
-    drun 'dpkg --list'
-    run 'apt update'
-    run 'apt -y -q dist-upgrade'
+    dsudorun 'dpkg --list'
+    sudorun 'apt update'
+    sudorun 'apt -y -q dist-upgrade'
 
-    outlog "Installing additional packages"
+    outlog "Installing additional packages (may also take a LOOONG time)"
     # OS packages: no python modules
     # 2017-05-17: added python-virtualenv authbind for cowrie
     # 2020-07-03: turned this into a loop to make it more reliable
@@ -606,34 +693,27 @@ if [ "$FAST" == "0" ]; then
     #             these two installs may fail depending on ubuntu flavor
     # 2020-09-21: remove python2
     # 2024-08-23: pip will no longer install systemwide packages on apt managed systems. Added most packages here in "experimental" section.
-    run 'apt -y -q remove python2'
-    run 'apt -y -q remove python'
-    run 'apt -y -q remove python-pip'
-    run 'apt -y -q install python3'
-    run 'apt -y -q install python3-pip'
-    run 'apt -y -q install python3-requests'
-    run 'apt -y -q remove python-requests'
-    # experimental to try avoid dependency issues
-    run 'apt -y -q install python3-appdirs'
-    run 'apt -y -q install python3-attr'
-    run 'apt -y -q install python3-certifi'
-    run 'apt -y -q install python3-automat'
-    run 'apt -y -q install python3-cffi-backend'
-    run 'apt -y -q install python3-bcrypt'
-    run 'apt -y -q install python3-cffi'
-    run 'apt -y -q install python3-ply'
-    run 'apt -y -q install python3-pycparser'
-    run 'apt -y -q install python3-constantly'
-    run 'apt -y -q install python3-cryptography'
-    run 'apt -y -q install python3-constantly'
-    run 'apt -y -q install python3-defusedxml'
-    run 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
-    run 'apt -y -q install python3-hamcrest python3-openssl python3-pyasn1 python3-pyasn1-modules python3-service-identity python3-twisted python3-zope.interface'
-    run 'apt -y -q install python3-priority'
+    sudorun 'apt -y -q remove python2'
+    sudorun 'apt -y -q remove python'
+    sudorun 'apt -y -q remove python-pip'
+    sudorun 'apt -y -q remove python-requests'
+    sudorun 'apt -y -q install python3-automat'
+    sudorun 'apt -y -q install python3-cffi-backend'
+    sudorun 'apt -y -q install python3-bcrypt'
+    sudorun 'apt -y -q install python3-cffi'
+    sudorun 'apt -y -q install python3-ply'
+    sudorun 'apt -y -q install python3-pycparser'
+    sudorun 'apt -y -q install python3-constantly'
+    sudorun 'apt -y -q install python3-cryptography'
+    sudorun 'apt -y -q install python3-constantly'
+    sudorun 'apt -y -q install python3-defusedxml'
+    sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
+    sudorun 'apt -y -q install python3-hamcrest python3-openssl python3-pyasn1 python3-pyasn1-modules python3-service-identity python3-twisted python3-zope.interface'
+    sudorun 'apt -y -q install python3-priority'
     
-    for b in authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog; do
-      run "apt -y -q install $b"
-      if ! dpkg -l $b >/dev/null 2>/dev/null; then
+    for b in python3 python3-pip python3-requests python3-appdirs python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel; do
+      run "sudo apt -y -q install $b"
+      if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
         outlog "This may be a temporary network issue. You may"
         outlog "try and run this installer again. Or run this"
@@ -646,25 +726,26 @@ if [ "$FAST" == "0" ]; then
 
   if [ "$ID" == "amzn" ]; then
     outlog "Updating your Operating System"
-    run 'yum -q update -y'
+    sudorun 'yum -q update -y'
     outlog "Installing additional packages"
-    run 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
+    sudorun 'yum -q install -y dialog perl-libwww-perl perl-Switch rng-tools boost-random jq MySQL-python mariadb mariadb-devel iptables-services'
   fi
 
   if [ "$ID" == "opensuse" ]; then
     outlog "Updating your openSUSE Operating System will now be done."
-    run 'zypper --non-interactive dup --no-recommends'
+    sudorun 'zypper --non-interactive dup --no-recommends'
     outlog "Installing additional packages"
-    run 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python311-devel libopenssl-devel rsyslog dialog'
-    run 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
-    run 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
-    run 'zypper --non-interactive install --no-recommends python3-zope.interface python311-pip rng-tools curl openssh unzip'
-    run 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
-    run 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
-    run 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
+    sudorun 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python311-devel libopenssl-devel rsyslog dialog'
+    sudorun 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
+    sudorun 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
+    sudorun 'zypper --non-interactive install --no-recommends python3-zope.interface python311-pip rng-tools curl openssh unzip'
+    sudorun 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
+    sudorun 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
+    sudorun 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
+    sudorun 'zypper --non-interactive install --no-recommends stunnel'
     # opensuse does not have packet wamerican so copy it
-    mkdir -p /usr/share/dict
-    cp $progdir/../dict/american-english /usr/share/dict/
+    sudo mkdir -p /usr/share/dict
+    sudo cp $progdir/../dict/american-english /usr/share/dict/
   fi
 else
   outlog "Skipping OS Update / Package install and security check in FAST mode"
@@ -752,10 +833,8 @@ if [ "$INTERACTIVE" == 1 ]; then
   else
     MANUPDATES=0
   fi
-
   dlog "MANUPDATES: ${MANUPDATES}"
   clear
-
 fi
 
 ###########################################################
@@ -764,13 +843,14 @@ fi
 
 if [ -x /etc/init.d/cowrie ]; then
   outlog "Existing cowrie startup file found, stopping cowrie."
-  run '/etc/init.d/cowrie stop'
+  sudorun '/etc/init.d/cowrie stop'
   outlog "... giving cowrie time to stop ..."
   run 'sleep 10'
   outlog "... OK."
 fi
 # in case systemd is used
-systemctl stop cowrie
+outlog "Stopping cowrie via systemd"
+sudo systemctl stop cowrie
 
 if [ "$FAST" == "0" ]; then
 
@@ -784,12 +864,12 @@ if [ "$FAST" == "0" ]; then
 
   if [ ${?} -gt 0 ]; then
     outlog "no pip3 found, installing pip3"
-    run "$CURL https://bootstrap.pypa.io/get-pip.py > $TMPDIR/get-pip.py"
+    run "$CURL https://bootstrap.pypa.io/get-pip.py > ${TMPDIR}/get-pip.py"
     if [ ${?} -ne 0 ]; then
       outlog "Error downloading get-pip, aborting."
       exit 9
     fi
-    run 'python3 $TMPDIR/get-pip.py'
+    run 'python3 ${TMPDIR}/get-pip.py'
     if [ ${?} -ne 0 ]; then
       outlog "Error running get-pip3, aborting."
       exit 9
@@ -837,8 +917,8 @@ run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
 
 if [ "$ID" != "opensuse" ]; then
   dlog "Disabling IPv6 in /etc/modprobe.d/ipv6.conf"
-  run "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
-  cat >/etc/modprobe.d/ipv6.conf <<EOF
+  sudorun "mv /etc/modprobe.d/ipv6.conf /etc/modprobe.d/ipv6.conf.bak"
+  sudo cat >/etc/modprobe.d/ipv6.conf <<EOF
 # Don't load ipv6 by default
 alias net-pf-10 off
 # uncommented
@@ -848,16 +928,16 @@ options ipv6 disable_ipv6=1
 # this is needed for not loading ipv6 driver
 blacklist ipv6
 EOF
-  run "chmod 644 /etc/modprobe.d/ipv6.conf"
+  sudorun "chmod 644 /etc/modprobe.d/ipv6.conf"
   drun "cat /etc/modprobe.d/ipv6.conf.bak"
   drun "cat /etc/modprobe.d/ipv6.conf"
 else # in openSUSE
   run "grep -q 'ipv6.conf' /etc/sysctl.d/70-yast.conf"
   if [ ${?} -ne 0 ]; then
     dlog "Disabling IPv6 in /etc/sysctl.d/70-yast.conf"
-    drun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.d/70-yast.conf'
-    drun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.d/70-yast.conf'
-    drun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.d/70-yast.conf'
+    dsudorun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.d/70-yast.conf'
+    dsudorun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.d/70-yast.conf'
+    dsudorun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.d/70-yast.conf'
   else
     dlog "IPv6 already disabled in /etc/sysctl.d/70-yast.conf"
   fi
@@ -868,11 +948,22 @@ fi
 ###########################################################
 
 if [ -f /etc/dshield.ini ]; then
+    if [ ! -f ${DSHIELDINI} ]; then
+	sudorun 'mv /etc/dshield.ini ${DSHIELDINI}'
+    else
+	sudorun 'rm /etc/dshield.ini'
+    fi
+    sudorun 'ln -s ${DSHIELDINI} /etc/dshield.ini'
+    
+fi
+
+
+if [ -f ${DSHIELDINI} ]; then
   dlog "dshield.ini found, content follows"
-  drun 'cat /etc/dshield.ini'
+  drun 'cat ${DSHIELDINI}'
   dlog "securing dshield.ini"
-  run 'chmod 600 /etc/dshield.ini'
-  run 'chown root:root /etc/dshield.ini'
+  run 'chmod 600 ${DSHIELDINI}'
+  sudorun "chown ${SYSUSERID}:${GROUPID} ${DSHIELDINI}"
   outlog "reading old configuration"
   if grep -q 'uid=<authkey>' /etc/dshield.ini; then
     dlog "erasing <.*> pattern from dshield.ini"
@@ -881,13 +972,11 @@ if [ -f /etc/dshield.ini ]; then
     drun 'cat /etc/dshield.ini'
   fi
   # believe it or not, bash has a built in .ini parser. Just need to remove spaces around "="
-  source <(grep = /etc/dshield.ini | sed 's/ *= */=/g')
+  source <(grep = ${DSHIELDINI} | sed 's/ *= */=/g')
   dlog "dshield.ini found, content follows"
-  drun 'cat /etc/dshield.ini'
+  drun 'cat ${DSHIELDINI}'
   dlog "securing dshield.ini"
-  run 'chmod 600 /etc/dshield.ini'
-  run 'chown root:root /etc/dshield.ini'
-  
+  run 'chmod 600 ${DSHIELDINI}'
 fi
 
 #
@@ -906,7 +995,7 @@ fi
 
 
 # hmmm - this SHOULD NOT happen
-if ! [ -d $TMPDIR ]; then
+if ! [ -d ${TMPDIR} ]; then
   outlog "${TMPDIR} not found, aborting."
   exit 9
 fi
@@ -936,9 +1025,9 @@ fi
 
 # TODO: let the user create a dhield account instead of using an existing one
 
-# dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> $TMPDIR/dialog
+# dialog --title 'DShield Installer' --menu "DShield Account" 10 40 2 1 "Use Existing Account" 2 "Create New Account" 2> ${TMPDIR}/dialog
 # return_value=$?
-# return=`cat $TMPDIR/dialog`
+# return=`cat ${TMPDIR}/dialog`
 
 return_value=$DIALOG_OK
 return=1
@@ -972,11 +1061,11 @@ if [ "$INTERACTIVE" == 1 ]; then
           # TODO: urlencode($user)
           user=$(echo $email | sed 's/+/%2b/' | sed 's/@/%40/')
           dlog "Checking API key ..."
-          run "$CURL https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion/$piid > $TMPDIR/checkapi"
+          run "$CURL https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$myversion/$piid > ${TMPDIR}/checkapi"
 
           dlog "Curl return code is ${?}"
 
-          if ! [ -d "$TMPDIR" ]; then
+          if ! [ -d "${TMPDIR}" ]; then
             # this SHOULD NOT happpen
             outlog "Can not find TMPDIR ${TMPDIR}"
             exit 9
@@ -986,9 +1075,9 @@ if [ "$INTERACTIVE" == 1 ]; then
 
           dlog "Examining result of API key check ..."
 
-          if grep -q '<result>ok</result>' $TMPDIR/checkapi; then
+          if grep -q '<result>ok</result>' ${TMPDIR}/checkapi; then
             apikeyok=1
-            uid=$(grep '<id>.*<\/id>' $TMPDIR/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/')
+            uid=$(grep '<id>.*<\/id>' ${TMPDIR}/checkapi | sed -E 's/.*<id>([0-9]+)<\/id>.*/\1/')
             dlog "API key OK, uid is ${uid}"
           else
             dlog "API key not OK, informing user"
@@ -1010,7 +1099,6 @@ if [ "$INTERACTIVE" == 1 ]; then
     fi # use existing account or create new one
   fi # dialogue not aborted
 
-  # echo $uid
 
   dialog --title 'API Key Verified' --msgbox 'Your API Key is valid. The firewall will be configured next. ' 7 40
 fi # interactive mode
@@ -1151,8 +1239,8 @@ dlog "localnet: ${localnet}"
 # additionally we will use any connection to current sshd
 # (ignoring config and using real connections)
 # as trusted / local IP (just to make sure we include routed networks)
-drun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
-CURSSHDPORT=$(grep '^Port' /etc/ssh/sshd_config | awk '{print $2}')
+dsudorun "grep '^Port' /etc/ssh/sshd_config | awk '{print \$2}'"
+CURSSHDPORT=$(sudo grep '^Port' /etc/ssh/sshd_config | awk '{print $2}')
 # current ssh port already known
 adminports=$CURSSHDPORT
 
@@ -1212,15 +1300,15 @@ if [ "$INTERACTIVE" == 1 ]; then
       "Local Network:" 1 2 "$localnet" 1 18 37 20 \
       "Additional IPs:" 2 2 "${CONIPS}" 2 18 37 60 \
       "Admin Ports:" 3 2 "${ADMINPORTS}" 3 18 37 20 \
-      2>$TMPDIR/dialog.txt
+      2>${TMPDIR}/dialog.txt
     response=${?}
 
     case ${response} in
     ${DIALOG_OK})
       dlog "User input for local network & IPs:"
-      localnet=$(head -1 $TMPDIR/dialog.txt)
-      CONIPS=$(head -2 $TMPDIR/dialog.txt | tail -1)
-      ADMINPORTS=$(tail -1 $TMPDIR/dialog.txt)
+      localnet=$(head -1 ${TMPDIR}/dialog.txt)
+      CONIPS=$(head -2 ${TMPDIR}/dialog.txt | tail -1)
+      ADMINPORTS=$(tail -1 ${TMPDIR}/dialog.txt)
       dlog "user input localnet: ${localnet}"
       dlog "user input further IPs: ${CONIPS}"
       dlog "user input further admin ports: ${ADMINPORTS}"
@@ -1341,7 +1429,7 @@ if [ "$INTERACTIVE" == 1 ]; then
   dialog --title 'IPs / Ports to disable Honeypot for' --form "IPs and nets to disable honeypot for to prevent reporting internal legitimate access attempts (IPs / nets in notation iptables likes, separated by spaces / ports (not real but after PREROUTING, so as configured in honeypot) separated by spaces)." \
     12 70 0 \
     "IPs / Networks:" 1 1 "${nohoneyips}" 1 17 47 100 \
-    "Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>$TMPDIR/dialog.txt
+    "Honeypot Ports:" 2 1 "${nohoneyports}" 2 17 47 100 2>${TMPDIR}/dialog.txt
   response=${?}
   case ${response} in
   ${DIALOG_OK}) ;;
@@ -1358,8 +1446,8 @@ if [ "$INTERACTIVE" == 1 ]; then
 
   dlog "user provided NOHONEY:"
 
-  NOHONEYIPS=$(head -1 $TMPDIR/dialog.txt)
-  NOHONEYPORTS=$(tail -1 $TMPDIR/dialog.txt)
+  NOHONEYIPS=$(head -1 ${TMPDIR}/dialog.txt)
+  NOHONEYPORTS=$(tail -1 ${TMPDIR}/dialog.txt)
 
   dlog "NOHONEYIPS: ${NOHONEYIPS}"
   dlog "NOHONEYPORTS: ${NOHONEYPORTS}"
@@ -1409,20 +1497,20 @@ dlog "creating /etc/network/iptables"
 # - default policy: DROP (8.)
 
 if [ ! -d /etc/network ]; then
-  run 'mkdir /etc/network'
+  sudorun 'mkdir /etc/network'
 fi
 # cleanup iptables/nftables backups older than 60 days
-run "find /etc/network -name 'iptables.????-??-??_*' -ctime +60 -delete"
-run "find /etc/network -name 'iptables.nft.????-??-??_*' -ctime +60 -delete"
+sudorun "find /etc/network -name 'iptables.????-??-??_*' -ctime +60 -delete"
+sudorun "find /etc/network -name 'iptables.nft.????-??-??_*' -ctime +60 -delete"
 
 # backup old iptables rules
 if [ -f /etc/network/iptables ]; then
-  run "mv /etc/network/iptables /etc/network/iptables.${INSTDATE}"
+  sudorun "mv /etc/network/iptables /etc/network/iptables.${INSTDATE}"
 fi
 
 # backup old nftables rules
 if [ -f /etc/network/ruleset.nft ]; then
-  run "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
+  sudorun "mv /etc/network/ruleset.nft /etc/network/ruleset.nft.${INSTDATE}"
 fi
 
 
@@ -1441,7 +1529,7 @@ if [ "$use_iptables" = "True" ] ; then
     dlog "using iptables not nftables"
     # do not overwrite existing local file
     if [ ! -f /etc/network/iptables.local ]; then
-    cat >/etc/network/iptables.local <<EOF
+        cat >${TMPDIR}/iptables.local <<EOF
 #
 # use this for local iptables rules not to be overwriten
 # by the honeypot configuration. Use "-I" to insert rules
@@ -1458,8 +1546,9 @@ if [ "$use_iptables" = "True" ] ; then
 # iptables -n iptables.local
 #
 EOF
+        sudo cp ${TMPDIR}/iptables.local /etc/network/iptables.local
     fi
-  cat >/etc/network/iptables <<EOF
+  cat >${TMPDIR}/iptables <<EOF
 
 #
 # 
@@ -1481,40 +1570,40 @@ EOF
 EOF
 
   # allow pings from localnet
-  echo "# allow ping from local network" >>/etc/network/iptables
-  echo "-A INPUT -i $interface -s ${localnet} -p icmp -m icmp --icmp-type 8 -j ACCEPT" >>/etc/network/iptables
+  echo "# allow ping from local network" >>${TMPDIR}/iptables
+  echo "-A INPUT -i $interface -s ${localnet} -p icmp -m icmp --icmp-type 8 -j ACCEPT" >>${TMPDIR}/iptables
 
   # insert IPs and ports for which honeypot has to be disabled
   # as soon as possible
   if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ]; then
-    echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
+    echo "# START: IPs / Ports honeypot should be disabled for" >>${TMPDIR}/iptables
     for NOHONEYIP in ${NOHONEYIPS}; do
       for NOHONEYPORT in ${NOHONEYPORTS}; do
-        echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >>/etc/network/iptables
+        echo "-A INPUT -i $interface -s ${NOHONEYIP} -p tcp --dport ${NOHONEYPORT} -j REJECT" >>${TMPDIR}/iptables
       done
     done
-    echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/iptables
+    echo "# END: IPs / Ports honeypot should be disabled for" >>${TMPDIR}/iptables
   fi
 
   # allow access to admin ports for local nets / IPs
-  echo "# START: allow access to admin ports for local IPs" >>/etc/network/iptables
+  echo "# START: allow access to admin ports for local IPs" >>${TMPDIR}/iptables
   for PORT in ${ADMINPORTS}; do
     # first: local network
-    echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
+    echo "-A INPUT -i $interface -s ${localnet} -p tcp --dport ${PORT} -j ACCEPT" >>${TMPDIR}/iptables
     # second: other IPs
     for IP in ${CONIPS}; do
-      echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >>/etc/network/iptables
+      echo "-A INPUT -i $interface -s ${IP} -p tcp --dport ${PORT} -j ACCEPT" >>${TMPDIR}/iptables
     done
   done
-  echo "# END: allow access to admin ports for local IPs" >>/etc/network/iptables
+  echo "# END: allow access to admin ports for local IPs" >>${TMPDIR}/iptables
 
   # allow access to honeypot ports
   if [ "${HONEYPORTS}" != "" ]; then
-    echo "# START: Ports honeypot should be enabled for" >>/etc/network/iptables
+    echo "# START: Ports honeypot should be enabled for" >>${TMPDIR}/iptables
     for HONEYPORT in ${HONEYPORTS}; do
-      echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >>/etc/network/iptables
+      sudo echo "-A INPUT -i $interface -p tcp --dport ${HONEYPORT} -j ACCEPT" >>${TMPDIR}/iptables
     done
-    echo "# END: Ports honeypot should be enabled for" >>/etc/network/iptables
+    echo "# END: Ports honeypot should be enabled for" >>${TMPDIR}/iptables
   fi
 
   # create stuff for PREROUTING chain:
@@ -1524,7 +1613,7 @@ EOF
   # - logging of all access attempts (1.)
   # - redirect for honeypot ports (6.)
 
-  cat >>/etc/network/iptables <<EOF
+  cat >>${TMPDIR}/iptables <<EOF
 COMMIT
 *nat
 :PREROUTING ACCEPT [0:0]
@@ -1539,14 +1628,14 @@ EOF
 
   # insert to-be-ignored IPs just before the LOGging stuff so that traffic will be handled by default policy for chain
   if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ]; then
-    echo "# START: IPs firewall logging should be disabled for" >>/etc/network/iptables
+    echo "# START: IPs firewall logging should be disabled for" >>${TMPDIR}/iptables
     for NOFWLOG in ${NOFWLOGGING}; do
-      echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >>/etc/network/iptables
+      sudo echo "-A PREROUTING -i $interface -s ${NOFWLOG} -j RETURN" >>${TMPDIR}/iptables
     done
-    echo "# END: IPs firewall logging should be disabled for" >>/etc/network/iptables
+    echo "# END: IPs firewall logging should be disabled for" >>${TMPDIR}/iptables
   fi
 
-  cat >>/etc/network/iptables <<EOF
+  cat >>${TMPDIR}/iptables <<EOF
 # log all traffic with original ports, but exclude traffic from unused/prive IPs.
 -N DSHIELDLOG
 -A DSHIELDLOG -s 10.0.0.0/8 -j RETURN
@@ -1566,44 +1655,45 @@ EOF
 # redirect honeypot ports
 EOF
 
-  echo "# - ssh ports" >>/etc/network/iptables
+  echo "# - ssh ports" >>${TMPDIR}/iptables
   for PORT in ${SSHREDIRECT}; do
-    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >>/etc/network/iptables
+    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${SSHHONEYPORT}" >>${TMPDIR}/iptables
   done
 
-  echo "# - telnet ports" >>/etc/network/iptables
+  echo "# - telnet ports" >>${TMPDIR}/iptables
   if [ "$telnet" != "no" ]; then   
       for PORT in ${TELNETREDIRECT}; do
-	  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>/etc/network/iptables
+	  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>${TMPDIR}/iptables
       done
   fi
 
-  echo "# - web ports" >>/etc/network/iptables
+  echo "# - web ports" >>${TMPDIR}/iptables
   for PORT in ${WEBREDIRECT}; do
-    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >>/etc/network/iptables
+    echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${WEBHONEYPORT}" >>${TMPDIR}/iptables
   done
 
-  echo "COMMIT" >>/etc/network/iptables
-
-  run 'chmod 700 /etc/network/iptables'
+  echo "COMMIT" >>${TMPDIR}/iptables
+  sudorun 'cp ${TMPDIR}/iptables /etc/network/iptables'
+  sudorun 'chown root:root /etc/network/iptables'
+  sudorun 'chmod 700 /etc/network/iptables'
 
   dlog "/etc/network/iptables follows"
-  drun 'cat /etc/network/iptables'
+  drun 'sudo cat /etc/network/iptables'
 
   if [ -d /etc/ufw ]; then
       dlog "dealing with ufw"
-      run "systemctl disable ufw"
-      run "ufw disable"
+      sudorun "systemctl disable ufw"
+      sudorun "ufw disable"
       # purge may be a bit harsh, but better safe ..
-      run "apt -y purge ufw"
-      do_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.service 640
-      run "systemctl daemon-reload"
-      run "systemctl enable dshieldfw.service"
+      sudorun "apt -y purge ufw"
+      sudo_copy $progdir/../etc/dshieldfw.service /etc/systemd/system/dshieldfw.service 640
+      sudorun "systemctl daemon-reload"
+      sudorun "systemctl enable dshieldfw.service"
   fi
   
 else # use_iptables = False -> use nftables
   dlog "using nftables, not iptables"
-  cat > /etc/network/ruleset.nft <<EOF
+  sudo cat > /etc/network/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
 add table ip filter
 add chain ip filter INPUT { type filter hook input priority 0; policy drop; }
@@ -1614,43 +1704,43 @@ add rule ip filter INPUT iifname "${interface}" ct state related,established  co
 EOF
 
   # allow pings from localnet
-  echo "# allow ping from local network" >>/etc/network/ruleset.nft
-  echo "add rule ip filter INPUT iifname \"$interface\" ip saddr ${localnet} icmp type echo-request counter accept" >>/etc/network/ruleset.nft
+  sudo echo "# allow ping from local network" >>/etc/network/ruleset.nft
+  sudo echo "add rule ip filter INPUT iifname \"$interface\" ip saddr ${localnet} icmp type echo-request counter accept" >>/etc/network/ruleset.nft
 
   # insert IPs and ports for which honeypot has to be disabled
   # as soon as possible
   if [ "${NOHONEYIPS}" != "" -a "${NOHONEYIPS}" != " " ]; then
-    echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
+    sudo echo "# START: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
     for NOHONEYIP in ${NOHONEYIPS}; do
       for NOHONEYPORT in ${NOHONEYPORTS}; do
-        echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${NOHONEYIP} tcp dport ${NOHONEYPORT} counter reject" >>/etc/network/ruleset.nft
+        sudo echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${NOHONEYIP} tcp dport ${NOHONEYPORT} counter reject" >>/etc/network/ruleset.nft
       done
     done
-    echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
+    sudo echo "# END: IPs / Ports honeypot should be disabled for" >>/etc/network/ruleset.nft
   fi
 
   # allow access to admin ports for local nets / IPs
-  echo "# START: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
+  sudo echo "# START: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
   for PORT in ${ADMINPORTS}; do
     # first: local network
     echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${localnet} tcp dport ${PORT} counter accept" >>/etc/network/ruleset.nft
     # second: other IPs
     for IP in ${CONIPS}; do
-      echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${IP} tcp dport ${PORT} counter accept" >>/etc/network/ruleset.nft
+      sudo echo "add rule ip filter INPUT iifname \"${interface}\" ip saddr ${IP} tcp dport ${PORT} counter accept" >>/etc/network/ruleset.nft
     done
   done
-  echo "# END: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
+  sudo echo "# END: allow access to admin ports for local IPs" >>/etc/network/ruleset.nft
 
   # allow access to honeypot ports
   if [ "${HONEYPORTS}" != "" ]; then
-    echo "# START: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
+    sudo echo "# START: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
     for HONEYPORT in ${HONEYPORTS}; do
-      echo "add rule ip filter INPUT iifname \"$interface\" tcp dport ${HONEYPORT} counter accept" >>/etc/network/ruleset.nft
+      sudo echo "add rule ip filter INPUT iifname \"$interface\" tcp dport ${HONEYPORT} counter accept" >>/etc/network/ruleset.nft
     done
-    echo "# END: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
+    sudo echo "# END: Ports honeypot should be enabled for" >>/etc/network/ruleset.nft
   fi
 
-  cat >> /etc/network/ruleset.nft <<EOF
+  sudo cat >> /etc/network/ruleset.nft <<EOF
 add table ip nat
 add chain ip nat PREROUTING { type nat hook prerouting priority -100; policy accept; }
 add chain ip nat INPUT { type nat hook input priority 100; policy accept; }
@@ -1663,14 +1753,14 @@ EOF
   # insert to-be-ignored IPs just before the logging stuff so that traffic will be handled by default policy for chain
 
   if [ "${NOFWLOGGING}" != "" -a "${NOFWLOGGING}" != " " ]; then
-    echo "# START: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
+    sudo echo "# START: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
     for NOFWLOG in ${NOFWLOGGING}; do
-      echo "add rule ip nat PREROUTING iifname \"${interface}\" ip saddr ${NOFWLOG} counter return" >>/etc/network/ruleset.nft
+      sudo echo "add rule ip nat PREROUTING iifname \"${interface}\" ip saddr ${NOFWLOG} counter return" >>/etc/network/ruleset.nft
     done
-    echo "# END: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
+    sudo echo "# END: IPs firewall logging should be disabled for" >>/etc/network/ruleset.nft
   fi
 
-  cat >> /etc/network/ruleset.nft <<EOF
+  sudo cat >> /etc/network/ruleset.nft <<EOF
 add chain ip nat DSHIELDLOG
 add rule ip nat DSHIELDLOG ip saddr 10.0.0.0/8 counter return
 add rule ip nat DSHIELDLOG ip saddr 100.64.0.0/10 counter return
@@ -1688,61 +1778,61 @@ add rule ip nat DSHIELDLOG counter return
 add rule ip nat PREROUTING iifname "$interface" ct state invalid,new  counter jump DSHIELDLOG
 EOF
 
-  echo "# - ssh ports" >>/etc/network/ruleset.nft
+  sudo echo "# - ssh ports" >>/etc/network/ruleset.nft
   for PORT in ${SSHREDIRECT}; do
-    echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${SSHHONEYPORT}" >>/etc/network/ruleset.nft
+    sudo echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${SSHHONEYPORT}" >>/etc/network/ruleset.nft
   done
 
-  echo "# - telnet ports" >>/etc/network/ruleset.nft
+  sudo echo "# - telnet ports" >>/etc/network/ruleset.nft
   if [ "$telnet" != "no" ]; then   
       for PORT in ${TELNETREDIRECT}; do
-	  echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${TELNETHONEYPORT}" >>/etc/network/ruleset.nft
+	  sudo echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${TELNETHONEYPORT}" >>/etc/network/ruleset.nft
       done
   fi
 
-  echo "# - web ports" >>/etc/network/ruleset.nft
+  sudo echo "# - web ports" >>/etc/network/ruleset.nft
   for PORT in ${WEBREDIRECT}; do
-    echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${WEBHONEYPORT}" >>/etc/network/ruleset.nft
+    sudo echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${WEBHONEYPORT}" >>/etc/network/ruleset.nft
   done
 
-  run 'chmod 700 /etc/network/ruleset.nft'
+  sudorun 'chmod 700 /etc/network/ruleset.nft'
 
   dlog "/etc/network/ruleset.nft follows"
-  drun 'cat /etc/network/ruleset.nft'
+  dsudorun 'cat /etc/network/ruleset.nft'
 fi
 
 if [ "$use_iptables" = "True" ]; then
   dlog "Copying /etc/network/if-pre-up.d"
 
-  do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
+  sudo_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/network/if-pre-up.d 775
   # for ubuntu, we need to use netpland
   if [ -d /etc/networkd-dispatcher/routable.d ]; then
-    do_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/networkd-dispatcher/routable.d/10-dshield-iptables 775
+    sudo_copy $progdir/../etc/network/if-pre-up.d/dshield /etc/networkd-dispatcher/routable.d/10-dshield-iptables 775
   fi
   # for Ubuntu, we turn off UFW so it doesn't mess with our firewall rules
   if systemctl | grep ufw; then
-    run 'systemctl disable ufw'
+    sudorun 'systemctl disable ufw'
   fi
   # for Amazon's CentOS version, we use the iptables service
   if [ "$ID" == "amzn" ]; then
-    run 'rm -f /etc/sysconfig/iptables'
-    run 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
-    run 'systemctl enable iptables.service'
+    sudorun 'rm -f /etc/sysconfig/iptables'
+    sudorun 'ln -s /etc/network/iptables /etc/sysconfig/iptables'
+    sudorun 'systemctl enable iptables.service'
   fi
 else #  use nftables
   if [ -e /etc/network/iptables ] ; then
     # when (automatic) upgrading this system, a previous version may use iptables, which should be disabled and removed
     [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && systemctl disable dshieldiptables.services
-    rm /etc/network/iptables*
-    rm /usr/lib/systemd/system/dshieldiptables*
+    sudo rm /etc/network/iptables*
+    sudo rm /usr/lib/systemd/system/dshieldiptables*
   fi
   dlog "Copying /etc/network/ruleset-init.nft, /etc/network/ruleset-stop.nft, /usr/lib/systemd/system/dshieldnft*.service"
-  do_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
-  do_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
-  do_copy $progdir/../lib/systemd/system/dshieldnft_init.service /usr/lib/systemd/system/dshieldnft_init.service 644
-  do_copy $progdir/../lib/systemd/system/dshieldnft.service /usr/lib/systemd/system/dshieldnft.service 644
-  run 'systemctl enable dshieldnft.service'
-  run "systemctl daemon-reload"
+  sudo_copy $progdir/../etc/network/ruleset-init.nft /etc/network/ruleset-init.nft 600
+  sudo_copy $progdir/../etc/network/ruleset-stop.nft /etc/network/ruleset-stop.nft 600
+  sudo_copy $progdir/../lib/systemd/system/dshieldnft_init.service /usr/lib/systemd/system/dshieldnft_init.service 644
+  sudo_copy $progdir/../lib/systemd/system/dshieldnft.service /usr/lib/systemd/system/dshieldnft.service 644
+  sudorun 'systemctl enable dshieldnft.service'
+  sudorun "systemctl daemon-reload"
 fi
 
 ###########################################################
@@ -1778,9 +1868,9 @@ fi # interactive
 dlog "setting interface in syslog config"
 # no %%interface%% in dshield.conf template anymore, so only copying file
 # run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
-do_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
+sudo_copy $progdir/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
 
-drun 'cat /etc/rsyslog.d/dshield.conf'
+dsudorun 'cat /etc/rsyslog.d/dshield.conf'
 
 ###########################################################
 ## Further copying / configuration
@@ -1791,11 +1881,31 @@ drun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-run "mkdir -p ${DSHIELDDIR}"
+sudorun "mkdir -m 0700 -p ${DSHIELDDIR}"
+# using -R for legacy systems that may still have root owned files in this directory
+
+sudorun "chown -R ${SYSUSERID}:${GROUPID} ${DSHIELDDIR}"
+run "mkdir -m 0700 ${DSHIELDDIR}/etc"
+if [ -f ${DSHIELDDIR}/fwlogparser.py ]; then
+    run "rm ${DSHIELDDIR}/fwlogparser.py"
+fi
 do_copy $progdir/../srv/dshield/fwlogparser.py ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/status.sh ]; then
+    run "rm ${DSHIELDDIR}/status.sh"
+fi
 do_copy $progdir/status.sh ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/cleanup.sh ]; then
+    run "rm ${DSHIELDDIR}/cleanup.sh"
+fi
 do_copy $progdir/cleanup.sh ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/DShield.py ]; then
+    run "rm ${DSHIELDDIR}/DShield.py"
+fi
 do_copy $progdir/../srv/dshield/DShield.py ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/updatehoneypotip.sh ]; then
+    run "rm ${DSHIELDDIR}/updatehoneypotip.sh"
+fi
+do_copy $progdir/updatehoneypotip.sh ${DSHIELDDIR} 700
 [ "$ID" = "opensuse" ] &&
   run "patch ${DSHIELDDIR}/DShield.py $progdir/../srv/dshield/DShield.patch"
 
@@ -1806,15 +1916,6 @@ if [ "$MANUPDATES" == "" ]; then
   MANUPDATES=0
 fi
 
-
-
-# Manual updates now consistent in dshield.ini; parameter manualupdates
-# 0 is auto-update, 1 is manual update
-#if [ "$MANUPDATES" -eq "0" ]; then
-#  dlog "automatic updates OK, configuring"
-#  run 'touch ${DSHIELDDIR}/auto-update-ok'
-#fi
-
 #
 # "random" offset for cron job so not everybody is reporting at once
 #
@@ -1823,13 +1924,16 @@ dlog "creating /etc/cron.d/dshield"
 offset1=$(shuf -i0-29 -n1)
 offset2=$((offset1 + 30))
 # important: first line overwrites old file to avoid duplication
-echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >/etc/cron.d/dshield
+echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >${TMPDIR}/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >>/etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >>${TMPDIR}/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root /sbin/reboot" >>/etc/cron.d/dshield
+echo "${offset1} ${offset2} * * * root /sbin/reboot" >>${TMPDIR}/cron.dshield
+offset1=$(shuf -i0-59 -n1)
+offset2=$(shuf -i0-23 -n1)
+echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >${TMPDIR}/cron.dshield
 # run status check 5 minutes before reboot
 if [ $offset1 -gt 5 ]; then
   offset1=$((offset1 - 5))
@@ -1841,66 +1945,73 @@ else
     offset2=23
   fi
 fi
-echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >>/etc/cron.d/dshield
-echo "0 6 * * * root find /srv/db -name 'webhoneypot*json' -ctime +7 -delete" >> /etc/cron.d/dshield
-echo "0 10 * * * root find /srv/cowrie/var/log/cowrie -name 'cowrie.*' -ctime +7 -delete" >> /etc/cron.d/dshield
-drun 'cat /etc/cron.d/dshield'
+echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >>${TMPDIR}/cron.dshield
+echo "0 6 * * * root find /srv/db -name 'webhoneypot*json' -ctime +7 -delete" >> ${TMPDIR}/cron.dshield
+echo "0 10 * * * root find /srv/cowrie/var/log/cowrie -name 'cowrie.*' -ctime +7 -delete" >> ${TMPDIR}/cron.dshield
+sudorun "cp ${TMPDIR}/cron.dshield /etc/cron.d/dshield"
+dsudorun 'cat /etc/cron.d/dshield'
 
 #
 # Update dshield Configuration
 #
-dlog "creating new /etc/dshield.ini"
-if [ -f /etc/dshield.ini ]; then
+dlog "creating new /src/dshield/etc/dshield.ini"
+if [ -f ${DSHIELDINI} ]; then
   dlog "old dshield.ini follows"
-  drun 'cat /etc/dshield.ini'
-  run 'mv /etc/dshield.ini /etc/dshield.ini.${INSTDATE}'
+  drun 'cat ${DSHIELDINI}'
+  run 'mv ${DSHIELDINI} ${DSHIELDINI}.${INSTDATE}'
+fi
+
+if [ -f /etc/dshield.ini ]; then
+    sudorun 'rm /etc/dshield.ini'
+    sudorun 'ln -s ${DSHIELDINI} /etc/dshield.ini'
 fi
 
 if [ ! -d /srv/db ]; then
-  run 'mkdir -m 1777 /srv/db'
+    sudorun 'mkdir -m 1777 /srv/db'
+    sudorun "chown ${SYSUSERID}:${GROUPID} /srv/db"
 fi
 
 # new shiny config file
-run 'touch /etc/dshield.ini'
-run 'chmod 600 /etc/dshield.ini'
-run 'echo "[DShield]" >> /etc/dshield.ini'
-run 'echo "interface=$interface" >> /etc/dshield.ini'
-run 'echo "version=$myversion" >> /etc/dshield.ini'
-run 'echo "email=$email" >> /etc/dshield.ini'
-run 'echo "userid=$uid" >> /etc/dshield.ini'
-run 'echo "apikey=$apikey" >> /etc/dshield.ini'
-run 'echo "piid=$piid" >> /etc/dshield.ini'
-run 'echo "# the following lines will be used by a new feature of the submit code: "  >> /etc/dshield.ini'
-run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> /etc/dshield.ini'
-run 'echo "honeypotip=$honeypotip" >> /etc/dshield.ini'
-run 'echo "replacehoneypotip=" >> /etc/dshield.ini'
-run 'echo "anonymizeip=" >> /etc/dshield.ini'
-run 'echo "anonymizemask=" >> /etc/dshield.ini'
-run 'echo "fwlogfile=/var/log/dshield.log" >> /etc/dshield.ini'
+run 'touch ${DSHIELDINI}'
+run 'chmod 600 ${DSHIELDINI}'
+run 'echo "[DShield]" >> ${DSHIELDINI}'
+run 'echo "interface=$interface" >> ${DSHIELDINI}'
+run 'echo "version=$myversion" >> ${DSHIELDINI}'
+run 'echo "email=$email" >> ${DSHIELDINI}'
+run 'echo "userid=$uid" >> ${DSHIELDINI}'
+run 'echo "apikey=$apikey" >> ${DSHIELDINI}'
+run 'echo "piid=$piid" >> ${DSHIELDINI}'
+run 'echo "# the following lines will be used by a new feature of the submit code: "  >> ${DSHIELDINI}'
+run 'echo "# replace IP with other value and / or anonymize parts of the IP"  >> ${DSHIELDINI}'
+run 'echo "honeypotip=$honeypotip" >> ${DSHIELDINI}'
+run 'echo "replacehoneypotip=" >> ${DSHIELDINI}'
+run 'echo "anonymizeip=" >> ${DSHIELDINI}'
+run 'echo "anonymizemask=" >> ${DSHIELDINI}'
+run 'echo "fwlogfile=/var/log/dshield.log" >> ${DSHIELDINI}'
 nofwlogging=$(quotespace $nofwlogging)
-run 'echo "nofwlogging=$nofwlogging" >> /etc/dshield.ini'
+run 'echo "nofwlogging=$nofwlogging" >> ${DSHIELDINI}'
 CONIPS="$(quotespace $CONIPS)"
-run 'echo "localips=$CONIPS" >> /etc/dshield.ini'
+run 'echo "localips=$CONIPS" >> ${DSHIELDINI}'
 ADMINPORTS=$(quotespace $ADMINPORTS)
-run 'echo "adminports=$ADMINPORTS" >> /etc/dshield.ini'
+run 'echo "adminports=$ADMINPORTS" >> ${DSHIELDINI}'
 nohoneyips=$(quotespace $nohoneyips)
-run 'echo "nohoneyips=$nohoneyips" >> /etc/dshield.ini'
+run 'echo "nohoneyips=$nohoneyips" >> ${DSHIELDINI}'
 nohoneyports=$(quotespace $nohoneyports)
-run 'echo "nohoneyports=$nohoneyports" >> /etc/dshield.ini'
-run 'echo "manualupdates=$MANUPDATES" >> /etc/dshield.ini'
-run 'echo "telnet=$telnet" >> /etc/dshield.ini'
-run 'echo "[plugin:tcp:http]" >> /etc/dshield.ini'
-run 'echo "http_ports=[8000]" >> /etc/dshield.ini'
-run 'echo "https_ports=[8443]" >> /etc/dshield.ini'
-run 'echo "submit_logs_rate=300" >> /etc/dshield.ini'
-run 'echo "[iscagent]" >> /etc/dshield.ini'
+run 'echo "nohoneyports=$nohoneyports" >> ${DSHIELDINI}'
+run 'echo "manualupdates=$MANUPDATES" >> ${DSHIELDINI}'
+run 'echo "telnet=$telnet" >> ${DSHIELDINI}'
+run 'echo "[plugin:tcp:http]" >> ${DSHIELDINI}'
+run 'echo "http_ports=[8000]" >> ${DSHIELDINI}'
+run 'echo "https_ports=[8443]" >> ${DSHIELDINI}'
+run 'echo "submit_logs_rate=300" >> ${DSHIELDINI}'
+run 'echo "[iscagent]" >> ${DSHIELDINI}'
 database=$(quotespace $database)
-run 'echo "database=$database" >> /etc/dshield.ini'
+run 'echo "database=$database" >> ${DSHIELDINI}'
 archivedatabase=$(quotespace $archivedatabase)
-run 'echo "archivedatabase=$archivedatabase" >> /etc/dshield.ini'
-run 'echo "debug=false" >> /etc/dshield.ini'
-dlog "new /etc/dshield.ini follows"
-drun 'cat /etc/dshield.ini'
+run 'echo "archivedatabase=$archivedatabase" >> ${DSHIELDINI}'
+run 'echo "debug=false" >> ${DSHIELDINI}'
+dlog "new ${DSHIELDINI} follows"
+drun 'cat ${DSHIELDINI}'
 
 
 
@@ -1925,9 +2036,9 @@ dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
   dlog "... no, creating"
   if [ "$ID" != "opensuse" ]; then
-    run 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+    sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
   else
-    run 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
+    sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
   fi
   outlog "Added user 'cowrie'"
 else
@@ -1938,19 +2049,19 @@ fi
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
 if [ "$BETA" == 1 ]; then
-  run "$CURL https://www.dshield.org/cowrie-beta.zip > $TMPDIR/cowrie.zip"
+  run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
 else
-  run "$CURL https://www.dshield.org/cowrie.zip > $TMPDIR/cowrie.zip"
+  run "$CURL https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
 fi
 
 if [ ${?} -ne 0 ]; then
   outlog "Something went wrong downloading cowrie, ZIP corrupt."
   exit 9
 fi
-if [ -f $TMPDIR/cowrie.zip ]; then
-  run "unzip -qq -d $TMPDIR $TMPDIR/cowrie.zip "
+if [ -f ${TMPDIR}/cowrie.zip ]; then
+  run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
 else
-  outlog "Can not find cowrie.zip in $TMPDIR"
+  outlog "Can not find cowrie.zip in ${TMPDIR}"
   exit 9
 fi
 
@@ -1958,31 +2069,32 @@ fi
 # deleting old backups
 #
 
-run "rm -rf /srv/cowrie.2*"
-run "rm -rf /srv/www.2*"
+sudorun "rm -rf /srv/cowrie.2*"
+sudorun "rm -rf /srv/www.2*"
 
 #
 # pruning logs prior to backup
 #
 
-run "rm -f /srv/cowrie/var/log/cowrie/cowrie.log.2*"
-run "rm -f /srv/cowrie/var/log/cowrie/cowrie.json.2*"
+sudorun "rm -f /srv/cowrie/var/log/cowrie/cowrie.log.2*"
+sudorun "rm -f /srv/cowrie/var/log/cowrie/cowrie.json.2*"
 
 
 if [ -d ${COWRIEDIR} ]; then
   dlog "old cowrie installation found, moving"
-  run "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
+  sudorun "mv ${COWRIEDIR} ${COWRIEDIR}.${INSTDATE}"
+  sudorun "chown -R ${SYSUSERID}:${GROUPID} ${COWRIEDIR}.${INSTDATE}"
 fi
 
 
 dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d $TMPDIR/cowrie ]; then
-  run "mv $TMPDIR/cowrie ${COWRIEDIR}"
+if [ -d ${TMPDIR}/cowrie ]; then
+  sudorun "mv ${TMPDIR}/cowrie ${COWRIEDIR}"
 else
-    if [ -d $TMPDIR/cowrie-master ]; then
-	run "mv $TMPDIR/cowrie-master ${COWRIEDIR}"
+    if [ -d ${TMPDIR}/cowrie-master ]; then
+	sudorun "mv ${TMPDIR}/cowrie-master ${COWRIEDIR}"
     else
-	outlog "$TMPDIR/cowrie / cowrie-master not found"
+	outlog "${TMPDIR}/cowrie / cowrie-master not found"
 	exit 9
     fi
 fi
@@ -1993,24 +2105,26 @@ fi
 outlog "Installing Python packages with PIP. This will take a LOOONG time."
 OLDDIR=$(pwd)
 
-
+if [ ! -d ${COWRIEDIR} ]; then
+    sudorun "mkdir ${COWRIEDIR}"
+fi    
 cd ${COWRIEDIR}
 dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
 # openSUSE does not support installation with pip ouside environments
 if [ "$ID" != "opensuse" ] ; then
-    run "pip3 install --upgrade pip"
-    run "pip3 install -r ${SCRIPTDIR}/requirements.txt"
+    sudorun "pip3 install --upgrade pip"
+    sudorun "pip3 install -r ${SCRIPTDIR}/requirements.txt"
 fi
 dlog "setting up virtual environment"
-run 'virtualenv --python=python3 cowrie-env'
+sudorun 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
-run 'source cowrie-env/bin/activate'
+sudorun 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
-    run 'pip3 install --upgrade pip'
-    run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade requests'
-    run 'pip3 install -r requirements.txt'
+    sudorun 'pip3 install --upgrade pip'
+    sudorun 'pip3 install --upgrade bcrypt'
+    sudorun 'pip3 install --upgrade requests'
+    sudorun 'pip3 install -r requirements.txt'
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
        exit 9
@@ -2037,7 +2151,7 @@ outlog "Doing further cowrie configuration."
 
 # step 6 (Generate a DSA key)
 dlog "generating cowrie SSH hostkey"
-run "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/var/lib/cowrie/ssh_host_dsa_key "
+sudorun "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/var/lib/cowrie/ssh_host_dsa_key "
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
@@ -2056,76 +2170,68 @@ export kernel_build_string=$(uname -v | sed 's/SMP.*/SMP/')
 export ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ttylog='false'
 export telnet
-drun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
+dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
 
 dlog "creating output for text commands"
 
-run "mkdir -p ${TXTCMDS}/bin"
-run "mkdir -p ${TXTCMDS}/usr/bin"
-run "df > ${TXTCMDS}/bin/df"
-run "dmesg > ${TXTCMDS}/bin/dmesg"
-run "mount > ${TXTCMDS}/bin/mount"
-run "ulimit > ${TXTCMDS}/bin/ulimit"
-run "lscpu > ${TXTCMDS}/usr/bin/lscpu"
-run "echo '-bash: emacs: command not found' > ${TXTCMDS}/usr/bin/emacs"
-run "echo '-bash: locate: command not found' > ${TXTCMDS}/usr/bin/locate"
+sudorun "mkdir -p ${TXTCMDS}/bin"
+sudorun "mkdir -p ${TXTCMDS}/usr/bin"
+sudorun "df > ${TXTCMDS}/bin/df"
+sudorun "dmesg > ${TXTCMDS}/bin/dmesg"
+sudorun "mount > ${TXTCMDS}/bin/mount"
+sudorun "ulimit > ${TXTCMDS}/bin/ulimit"
+sudorun "lscpu > ${TXTCMDS}/usr/bin/lscpu"
+sudorun "echo '-bash: emacs: command not found' > ${TXTCMDS}/usr/bin/emacs"
+sudorun "echo '-bash: locate: command not found' > ${TXTCMDS}/usr/bin/locate"
 
-run 'chown -R cowrie:cowrie ${COWRIEDIR}'
+sudorun 'chown -R cowrie:cowrie ${COWRIEDIR}'
 
 # echo "###########  $progdir  ###########"
 
 dlog "copying cowrie system files"
 
-do_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
-do_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
+sudo_copy $progdir/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
+sudo_copy $progdir/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 
 # make sure to remove old cowrie start if they exist
 if [ -f /etc/init.d/cowrie ]; then
   rm -f /etc/init.d/cowrie
 fi
-run 'mkdir -p ${COWRIEDIR}/log'
-run 'chmod 755 ${COWRIEDIR}/log'
-run 'chown cowrie:cowrie ${COWRIEDIR}/log'
-run 'mkdir -p ${COWRIEDIR}/log/tty'
-run 'chmod 755 ${COWRIEDIR}/log/tty'
-run 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
-find /etc/rc?.d -name '*cowrie*' -delete
-run 'systemctl daemon-reload'
-run 'systemctl enable cowrie.service'
+sudorun 'mkdir -p ${COWRIEDIR}/log'
+sudorun 'chmod 755 ${COWRIEDIR}/log'
+sudorun 'chown cowrie:cowrie ${COWRIEDIR}/log'
+sudorun 'mkdir -p ${COWRIEDIR}/log/tty'
+sudorun 'chmod 755 ${COWRIEDIR}/log/tty'
+sudorun 'chown cowrie:cowrie ${COWRIEDIR}/log/tty'
+sudo find /etc/rc?.d -name '*cowrie*' -delete
+sudorun 'systemctl daemon-reload'
+sudorun 'systemctl enable cowrie.service'
 
 dlog 'deactivate cowrie venv'
-run 'deactivate'
+sudorun 'deactivate'
 
 
 ###########################################################
-## Installation of isc-agent
+## Instaling web honeypot
 ###########################################################
 
-outlog "Installing ISC-Agent"
-dlog "installing ISC-Agent"
+outlog "Installing Web Honeypot"
+dlog "installing Web Honeypot"
 
-# support for ubuntu server 22.04.2 LTS
-[ "$ID" != "opensuse" ] && dlog "(re)installing python attrs package"
-[ "$ID" != "opensuse" ] && run "pip3 install --ignore-installed attrs"
-run "mkdir -p ${ISC_AGENT_DIR}"
-do_copy $progdir/../srv/isc-agent ${ISC_AGENT_DIR}/../
-do_copy $progdir/../lib/systemd/system/isc-agent.service ${systemdpref}/lib/systemd/system/ 644
-do_copy $progdir/../srv/isc-agent/requirements.txt ${ISC_AGENT_DIR}
-run "chmod +x /srv/isc-agent/bin/isc-agent"
-run "mkdir -m 0700 /srv/isc-agent/run"
+sudorun "mkdir -p ${WEBHPOTDIR}"
+sudorun "chown ${SYSUSERID}:${GROUPID} ${WEBHPOTDIR}"
+sudo do_copy $progdir/../srv/web  ${WEBHPOTDIR}/../
+sudo chmod -R cowrie:cowrie ${WEBHPOTDIR}
+sudo_copy $progdir/../lib/systemd/system/webhpot.service ${systemdpref}/lib/systemd/system/ 644
+run "mkdir -m 0700 ${WEBHPOTDIR}/run"
+sudorun "chown cowrie:cowrie ${WEBHPOTDIR}/run"
 
 OLDPWD=$PWD
-cd ${ISC_AGENT_DIR}
-[ "$ID" != "opensuse" ] && run "pip3 install --upgrade pip"
-ISCAGENTENV="/srv/isc-agent/virtenv"
-run "virtualenv --python=python3 $ISCAGENTENV"
-run "pip3 install --ignore-installed -r requirements.txt --prefix $ISCAGENTENV"
-run "systemctl daemon-reload"
-run "systemctl enable isc-agent.service"
-dlog 'deactivate isc-agent venv'
-run 'deactivate'
+cd ${WEBHPOTDIR}
+sudorun "systemctl daemon-reload"
+sudorun "systemctl enable webhpot.service"
 
 [ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd $OLDPWD
@@ -2136,45 +2242,7 @@ cd $OLDPWD
 
 dlog "copying further system files"
 
-# do_copy $progdir/../etc/cron.hourly/dshield /etc/cron.hourly 755
 
-###########################################################
-## Setting up Services
-###########################################################
-
-# setting up services
-# dlog "setting up services: cowrie"
-# run 'update-rc.d cowrie defaults'
-
-###########################################################
-## Setting up postfix
-###########################################################
-
-#
-# installing postfix as an MTA
-# TODO: AWS/Yum based install
-#
-
-# skipping postfix install in fast mode
-if [ "$FAST" == "0" ]; then
-if [ "$dist" == "apt" ]; then
-  outlog "Installing and configuring postfix."
-  dlog "uninstalling postfix"
-  run 'apt -y -q purge postfix'
-  dlog "preparing installation of postfix"
-  echo "postfix postfix/mailname string raspberrypi" | debconf-set-selections
-  echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
-  echo "postfix postfix/mynetwork string '127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'" | debconf-set-selections
-  echo "postfix postfix/destinations string raspberrypi, localhost.localdomain, localhost" | debconf-set-selections
-  outlog "package configuration for postfix"
-  run 'debconf-get-selections | grep postfix'
-  dlog "installing postfix"
-  run 'apt -y -q install postfix'
-  if grep -q 'inet_protocols = all' /etc/postfix/main.cf; then
-    sed -i 's/inet_protocols = all/inet_protocols = ipv4/' /etc/postfix/main.cf
-  fi
-fi # end "$dist" == "apt"
-fi
 ###########################################################
 ## Apt Cleanup
 ###########################################################
@@ -2203,7 +2271,7 @@ fi
 
 dlog "installing /etc/motd"
 if [ "$ID" != "opensuse" ]; then
-  cat >$TMPDIR/motd <<EOF
+  cat >${TMPDIR}/motd <<EOF
 
 The programs included with the Debian GNU/Linux system are free software;
 the exact distribution terms for each program are described in the
@@ -2219,7 +2287,7 @@ permitted by applicable law.
 EOF
 else # openSUSE
   hostname="$(cat /etc/hostname)"
-  cat >$TMPDIR/motd <<EOF
+  cat >${TMPDIR}/motd <<EOF
 
 The programs included with the openSUSE GNU/Linux system are free software;
 the exact distribution terms for each program are described in the
@@ -2235,7 +2303,7 @@ permitted by applicable law.
 EOF
 fi
 
-run "mv $TMPDIR/motd /etc/motd"
+run "mv ${TMPDIR}/motd /etc/motd"
 run "chmod 644 /etc/motd"
 run "chown root:root /etc/motd"
 
@@ -2292,15 +2360,12 @@ clear
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
   ./makecert.sh
-
   dlog "moving certs to /srv/isc-agent"
   run "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
   run "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
-
-  dlog "updating /etc/dshield.ini"
-  run 'echo "tlskey=/srv/isc-agent/honeypot.key" >> /etc/dshield.ini'
-  run 'echo "tlscert=/srv/isc-agent/honeypot.crt" >> /etc/dshield.ini'
-
+  dlog "updating ${DSHIELDINI}"
+  run 'echo "tlskey=/srv/isc-agent/honeypot.key" >> ${DSHIELDINI}'
+  run 'echo "tlscert=/srv/isc-agent/honeypot.crt" >> ${DSHIELDINI}'
 fi
 
 #
@@ -2344,7 +2409,7 @@ outlog
 outlog "Please reboot your Pi now."
 outlog
 outlog "For feedback, please e-mail jullrich@sans.edu or file a bug report on github"
-outlog "Please include a sanitized version of /etc/dshield.ini in bug reports"
+outlog "Please include a sanitized version of ${DSHIELDINI} in bug reports"
 outlog "as well as a very carefully sanitized version of the installation log "
 outlog "  (${LOGFILE})."
 outlog
