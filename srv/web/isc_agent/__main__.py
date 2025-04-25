@@ -21,6 +21,7 @@ logger.setLevel(logging.DEBUG)
 from configparser import ConfigParser
 from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler
+from http.client import IncompleteRead
 from stunnel_manager import StunnelManager
 
 from core import score_request
@@ -346,8 +347,29 @@ if __name__ == "__main__":
         signal.signal(signal.SIGHUP, reload_handler)
     signal.signal(signal.SIGINT, shutdown_handler)
 
+    class CustomServer(server_class):
+        def handle_error(self, request, client_address):
+            exc_type, exc_value, _ = sys.exc_info()
+            # Expected errors: log as INFO to track without clutter
+            if exc_type == ConnectionResetError:
+                logger.info(f"Connection reset by {client_address[0]}:{client_address[1]}")
+            elif exc_type == BrokenPipeError:
+                logger.info(f"Broken pipe to {client_address[0]}:{client_address[1]}")
+            elif exc_type in (TimeoutError, socket.timeout):
+                logger.info(f"Timeout from {client_address[0]}:{client_address[1]}")
+            elif exc_type == OSError and exc_value.errno in (113, 111):
+                logger.info(f"Network error (errno {exc_value.errno}) from {client_address[0]}:{client_address[1]}")
+            elif exc_type == IncompleteRead:
+                logger.info(f"Incomplete read from {client_address[0]}:{client_address[1]}")
+            elif exc_type == OSError and exc_value.errno == 24:
+                # Critical resource issue: log as ERROR
+                logger.error(f"Too many open files from {client_address[0]}:{client_address[1]}", exc_info=True)
+            else:
+                # Unexpected errors: log as ERROR with traceback
+                logger.error(f"Unexpected error from {client_address[0]}:{client_address[1]}", exc_info=True)
+
     # Run serve_forever 
-    httpd = server_class(("", port), HoneypotRequestHandler)
+    httpd = CustomServer(("", port), HoneypotRequestHandler)
     if production:
         httpd.daemon_threads = True
 
