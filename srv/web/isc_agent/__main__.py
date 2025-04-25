@@ -139,6 +139,8 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
                 return f"{self.method} {self.path} headers={self.headers}"
 
         request = RequestShim(path, method, remote_addr, headers)
+        content_length = int(request.headers.get('Content-Length',0))
+        post_data = self.rfile.read(content_length).decode()
 
         best_score = -1
         best_signature = None
@@ -158,31 +160,37 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
 
         logger.info(f"Sending Response {response_id} matching signature {best_signature} for Request: {method} {path}")
 
+
+        #Respond to web requests
         try:
             self.responder(response_id)
-            content_length = int(request.headers.get('Content-Length',0))
-            post_data = self.rfile.read(content_length).decode()
-            log_data = {
-                'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
-                'headers': request.headers,
-                'sip': remote_addr,
-                'dip': isc_agent.my_ip,
-                'method': method,
-                'url': path,
-                'data': post_data,
-                'useragent': headers.get("User-Agent",""),
-                'version': self.request_version,
-                'response_id': response_id,
-                'signature_id': best_signature
-            }
+        except Exception as e:
+            self.logger.exception(f"Error Responding to client: {str(e)}")
+
+        #Record response for ISC
+        log_data = {
+            'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            'headers': request.headers,
+            'sip': remote_addr,
+            'dip': isc_agent.my_ip,
+            'method': method,
+            'url': path,
+            'data': post_data,
+            'useragent': headers.get("User-Agent",""),
+            'version': self.request_version,
+            'response_id': response_id,
+            'signature_id': best_signature
+        }
+
+        try:
             isc_agent.add_to_queue(log_data)
-        except BrokenPipeError:
-            self.logger.exception("Client disconnected before response was fully sent")
+        except Exception as e:
+            logging.exception(f"Error sending to ISC: {str(e)}")
 
         if record_local_responses:
             try:
                 fh = open(args.local_responses, "a")
-                fh.write(f"{log_data}\n")
+                fh.write(f"{json.dumps(log_data)}\n")
                 fh.close()
             except Exception as e:
                 self.logger.error(f"Error writing to local response file {args.local_responses} - {e}")
@@ -309,7 +317,6 @@ if __name__ == "__main__":
 
     port = 8000
 
-        
     logger.debug(f"start_production() called with port={port}")
     done = False
     while True:
