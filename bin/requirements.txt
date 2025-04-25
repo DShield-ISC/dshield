@@ -24,7 +24,6 @@ incremental
 jinja2
 markupsafe
 priority
-pyasn1-modules
 pyasn1
 pycparser
 pydantic[email]

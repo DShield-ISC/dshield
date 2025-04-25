@@ -23,6 +23,7 @@ readonly myversion=97
 # - V97 (Johannes)
 #   - swap in Mark's web honeypot to replace isc-agent
 #   - remove dependency to run as root
+#   - remove postfix
 #
 # - V96 (Johannes)
 #   - added 20.04 back again
@@ -704,6 +705,7 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q remove python'
     sudorun 'apt -y -q remove python-pip'
     sudorun 'apt -y -q remove python-requests'
+    sudorun 'apt -y -q remove pyasn1-modules'
     sudorun 'apt -y -q install python3-automat'
     sudorun 'apt -y -q install python3-cffi-backend'
     sudorun 'apt -y -q install python3-bcrypt'
@@ -715,10 +717,8 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q install python3-constantly'
     sudorun 'apt -y -q install python3-defusedxml'
     sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
-    sudorun 'apt -y -q install python3-hamcrest python3-openssl python3-pyasn1 python3-pyasn1-modules python3-service-identity python3-twisted python3-zope.interface'
-    sudorun 'apt -y -q install python3-priority'
     
-    for b in python3 python3-pip python3-requests python3-appdirs python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel; do
+    for b in python3 python3-pip python3-requests python3-appdirs python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
       run "sudo apt -y -q install $b"
       if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -744,8 +744,8 @@ if [ "$FAST" == "0" ]; then
     outlog "Installing additional packages"
     sudorun 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python311-devel libopenssl-devel rsyslog dialog'
     sudorun 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
-    sudorun 'zypper --non-interactive install --no-recommends python3-Twisted python3-pycryptodome python3-pyasn1 python3-virtualenv'
-    sudorun 'zypper --non-interactive install --no-recommends python3-zope.interface python311-pip rng-tools curl openssh unzip'
+    sudorun 'zypper --non-interactive install --no-recommends python3-pycryptodome python3-virtualenv'
+    sudorun 'zypper --non-interactive install --no-recommends python311-pip rng-tools curl openssh unzip'
     sudorun 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
     sudorun 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
     sudorun 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
@@ -988,7 +988,7 @@ if [ -f ${DSHIELDINI} ]; then
   # shellcheck disable=SC1090
   # shellcheck disable=SC2036
   # shellcheck disable=SC2034
-  source <(grep=${DSHIELDINI} | sed 's/ *= */=/g')
+  source <(grep = ${DSHIELDINI} | sed 's/ *= */=/g')
   dlog "dshield.ini found, content follows."
   drun "cat ${DSHIELDINI}"
   dlog "securing dshield.ini"
@@ -1060,8 +1060,8 @@ if [ "${INTERACTIVE}" == 1 ]; then
 
         case $response in
         "${DIALOG_OK}")
-          email=$(echo "${VALUES}" | cut -f1 -d' ')
-          apikey=$(echo "${VALUES}" | cut -f2 -d' ')
+          email=$(echo ${VALUES} | cut -f1 -d' ')
+          apikey=$(echo ${VALUES} | cut -f2 -d' ')
           dlog "Got email ${email} and apikey ${apikey}"
           dlog "Calculating nonce."
           nonce=$(openssl rand -hex 10)
@@ -1827,7 +1827,7 @@ if [ "$use_iptables" = "True" ]; then
 else #  use nftables
   if [ -e /etc/network/iptables ] ; then
     # when (automatic) upgrading this system, a previous version may use iptables, which should be disabled and removed
-    [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && systemctl disable dshieldiptables.services
+    [ "$(systemctl is-enabled dshieldiptables 2>/dev/null)" == "enabled" ] && sudo systemctl disable dshieldiptables.services
     sudo rm /etc/network/iptables*
     sudo rm /usr/lib/systemd/system/dshieldiptables*
   fi
@@ -1952,7 +1952,6 @@ else
 fi
 # shellcheck disable=SC2129
 echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >> "${TMPDIR}"/cron.dshield
-echo "0 6 * * * root find /srv/db -name 'webhoneypot*json' -ctime +7 -delete" >> "${TMPDIR}"/cron.dshield
 echo "0 10 * * * root find /srv/cowrie/var/log/cowrie -name 'cowrie.*' -ctime +7 -delete" >> "${TMPDIR}"/cron.dshield
 sudorun "cp ${TMPDIR}/cron.dshield /etc/cron.d/dshield"
 dsudorun 'cat /etc/cron.d/dshield'
@@ -2227,20 +2226,33 @@ sudorun 'deactivate'
 outlog "Installing Web Honeypot"
 dlog "Installing Web Honeypot"
 
+if ! grep -qE '^webhpot' /etc/passwd; then
+    dlog "creating webhpot user"
+    if [ "$ID" != "opensuse" ]; then
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/webhpot --no-create-home webhpot'	
+    else
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/webhpot webhpot'	
+    fi
+    outlog "Added user 'webhpot'"
+else
+    outlog "User 'webhpot' already exists"
+fi
+
+
 sudorun "mkdir -p ${WEBHPOTDIR}"
-sudorun "chown ${SYSUSERID}:${GROUPID} ${WEBHPOTDIR}"
+sudorun "chown webhpot:webhpot ${WEBHPOTDIR}"
 sudo_copy "${progdir}"/../srv/web  ${WEBHPOTDIR}/../
-sudo chmod -R cowrie:cowrie ${WEBHPOTDIR}
-sudo_copy "$progdir"/../lib/systemd/system/webhpot.service /etc/systemd/system/lib/systemd/system/ 644
+sudo chmod -R webhpot:webhpot ${WEBHPOTDIR}
+sudo_copy "$progdir"/../lib/systemd/system/webhpot.service /etc/systemd/system/webhpot.service 644
 run "mkdir -m 0700 ${WEBHPOTDIR}/run"
-sudorun "chown cowrie:cowrie ${WEBHPOTDIR}/run"
+sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/run"
 
 OLDPWD=$PWD
 cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
 sudorun "systemctl enable webhpot.service"
 
-[ "$ID" != "opensuse" ] && run "systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
+[ "$ID" != "opensuse" ] && run "sudo systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd "${OLDPWD}" || exit
 
 ###########################################################
@@ -2331,10 +2343,10 @@ if [ "$(find ../etc/CA/certs -name '*.crt' 2>/dev/null | wc -l)" -gt 0 ]; then
     "${DIALOG_OK}")
       dlog "user said OK to generate new CERTs, so removing old CERTs"
       # cleaning up old certs
-      run 'rm ../etc/CA/certs/*'
-      run 'rm ../etc/CA/keys/*'
-      run 'rm ../etc/CA/requests/*'
-      run 'rm ../etc/CA/index.*'
+      run 'sudo rm ../etc/CA/certs/*'
+      run 'sudo rm ../etc/CA/keys/*'
+      run 'sudo rm ../etc/CA/requests/*'
+      run 'sudo rm ../etc/CA/index.*'
       GENCERT=1
       ;;
     "${DIALOG_CANCEL}")
@@ -2357,11 +2369,15 @@ if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
   ./makecert.sh
   dlog "moving certs to /srv/isc-agent"
-  run "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/isc-agent/honeypot.key"
-  run "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/isc-agent/honeypot.crt"
+  run "cat $SCRIPTDIR/../etc/CA/keys/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
+  sudorun "mv $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem /srv/webhpot/combined_stunnel.pem"
+  sudorun "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/webhpot/honeypot.key"
+  sudorun "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/webhpot/honeypot.crt"
+  sudorun "chown webhpot:webhpot /srv/webhpot/honeypot.*"
+  sudorun "chown webhpot:webhpot /srv/webhpot/combined_stunnel.pem"  
   dlog "updating ${DSHIELDINI}"
-  run "echo \"tlskey=/srv/isc-agent/honeypot.key\" >> ${DSHIELDINI}"
-  run "echo \"tlscert=/srv/isc-agent/honeypot.crt\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlskey=/srv/webhpot/honeypot.key\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlscert=/srv/webhpot/honeypot.crt\" >> ${DSHIELDINI}"
 fi
 
 #
@@ -2371,10 +2387,10 @@ fi
 run 'mkdir -p /var/tmp/dshield'
 
 # rotate dshield firewall logs
-do_copy "$progdir"/../etc/logrotate.d/dshield /etc/logrotate.d 644
+sudo_copy "$progdir"/../etc/logrotate.d/dshield /etc/logrotate.d 644
 [ "$ID" = "opensuse" ] && sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
 if [ -f "/etc/cron.daily/logrotate" ]; then
-  run "mv /etc/cron.daily/logrotate /etc/cron.hourly"
+  sudorun "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
 
 ###########################################################
