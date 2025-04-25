@@ -31,7 +31,10 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.customized_server_string = None
         self.logger = logging.getLogger(self.__class__.__name__)
-        super().__init__(*args,**kwargs)
+        try:
+            super().__init__(*args,**kwargs)
+        except ConnectionResetError as e:
+            self.logger.debug(f"Connection Reset Error: {e}")
     
     def send_response(self, code, message=None):
         """ This overrides the normal send_response which always includes a Server and Date Header."""
