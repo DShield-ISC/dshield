@@ -917,7 +917,7 @@ fi
 #
 
 dlog "Changing random number generator settings."
-run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
+sudorun 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
 
 ###########################################################
 ## Disable IPv6
