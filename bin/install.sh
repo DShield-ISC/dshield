@@ -326,8 +326,8 @@ outlog() {
 quotespace() {
   local line="${*}"
   if echo "$line" | grep -Eq ' '; then
-    if ! echo "$line" | grep -Eq "'"; then
-      line="'${line}'"
+    if ! echo "$line" | grep -Fq '"'; then
+      line="\"${line}\""
     fi
   fi
   echo "$line"
@@ -1886,11 +1886,16 @@ dsudorun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-sudorun "mkdir -m 0700 -p ${DSHIELDDIR}"
-# using -R for legacy systems that may still have root owned files in this directory
+sudorun "mkdir -m 0750 -p ${DSHIELDDIR}"
+if [ ! -d "${DSHIELDDIR}"/etc ]; then
+    run "mkdir -m 0750 ${DSHIELDDIR}/etc"
+else
+    run "chmod 0750 ${DSHIELDDIR}/etc"
+fi
 
-sudorun "chown -R ${SYSUSERID}:${GROUPID} ${DSHIELDDIR}"
-run "mkdir -m 0700 ${DSHIELDDIR}/etc"
+# using -R for legacy systems that may still have root owned files in this directory
+sudorun "chown -R ${SYSUSERID}:webhpot ${DSHIELDDIR}"
+
 if [ -f ${DSHIELDDIR}/fwlogparser.py ]; then
     run "rm ${DSHIELDDIR}/fwlogparser.py"
 fi
@@ -1971,10 +1976,6 @@ if [ -f /etc/dshield.ini ]; then
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 fi
 
-if [ ! -d /srv/db ]; then
-    sudorun 'mkdir -m 1777 /srv/db'
-    sudorun "chown ${SYSUSERID}:${GROUPID} /srv/db"
-fi
 
 # new shiny config file
 run "touch ${DSHIELDINI}"
@@ -2017,7 +2018,10 @@ run "echo 'archivedatabase=$archivedatabase' >> ${DSHIELDINI}"
 run "echo 'debug=false' >> ${DSHIELDINI}"
 dlog "new ${DSHIELDINI} follows"
 drun "cat ${DSHIELDINI}"
-
+# making sure permissions are right for the ini file
+sudorun "chown -R ${SYSUSERID}:webhpot ${DSHIELDDIR}"
+sudorun "chmod 0640 ${DSHIELDINI}"
+sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 
 ###########################################################
@@ -2107,22 +2111,16 @@ if [ ! -d ${COWRIEDIR} ]; then
     sudorun "mkdir ${COWRIEDIR}"
 fi    
 cd ${COWRIEDIR} || exit
-dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
-# openSUSE does not support installation with pip outside environments
-if [ "$ID" != "opensuse" ] ; then
-    sudorun "pip3 install --upgrade pip"
-    sudorun "pip3 install -r ${SCRIPTDIR}/requirements.txt"
-fi
 dlog "setting up virtual environment"
-sudorun 'virtualenv --python=python3 cowrie-env'
+run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 sudorun 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
-    sudorun 'pip3 install --upgrade pip'
-    sudorun 'pip3 install --upgrade bcrypt'
-    sudorun 'pip3 install --upgrade requests'
-    sudorun 'pip3 install -r requirements.txt'
+    run 'pip3 install --upgrade pip'
+    run 'pip3 install --upgrade bcrypt'
+    run 'pip3 install --upgrade requests'
+    run 'pip3 install -r requirements.txt'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
@@ -2229,9 +2227,9 @@ dlog "Installing Web Honeypot"
 if ! grep -qE '^webhpot' /etc/passwd; then
     dlog "creating webhpot user"
     if [ "$ID" != "opensuse" ]; then
-	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/webhpot --no-create-home webhpot'	
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
     else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/webhpot webhpot'	
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
     fi
     outlog "Added user 'webhpot'"
 else
@@ -2241,14 +2239,14 @@ fi
 
 sudorun "mkdir -p ${WEBHPOTDIR}"
 sudo_copy "${progdir}"/../srv/web  "${WEBHPOTDIR}"/../
-run "mkdir -m 0700 ${WEBHPOTDIR}/run"
+sudorun "mkdir -m 0700 ${WEBHPOTDIR}/run"
 sudorun "chown -R webhpot:webhpot ${WEBHPOTDIR}"
 sudo -u webhpot pip install --upgrade --target "${WEBHPOTDIR}"/isc_agent requests
 OLDPWD=$PWD
 cd "${WEBHPOTDIR}" || exit
 sudo -u webhpot python3 -m zipapp ./isc_agent
 sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
-sudo_copy "${progdir}"/../srv/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
+sudo_copy "${progdir}"/../srv/web/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
 sudorun "systemctl enable webhpot.service"
@@ -2267,7 +2265,7 @@ dlog "copying further system files"
 ## Apt Cleanup
 ###########################################################
 if [ "$dist" == "apt" ]; then
-  run 'apt autoremove -y'
+  sudorun 'apt autoremove -y'
 fi
 
 ###########################################################
@@ -2312,9 +2310,9 @@ permitted by applicable law.
 EOF
 fi
 
-run "mv ${TMPDIR}/motd /etc/motd"
-run "chmod 644 /etc/motd"
-run "chown root:root /etc/motd"
+sudorun "mv ${TMPDIR}/motd /etc/motd"
+sudorun "chmod 644 /etc/motd"
+sudorun "chown root:root /etc/motd"
 
 drun "cat /etc/motd"
 
@@ -2333,9 +2331,9 @@ GENCERT=1
 if [ ! -f ../etc/CA/ca.serial ]; then
   echo 01 >../etc/CA/ca.serial
 fi
-drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
+drun "ls ../etc/CA/certs/*.pem 2>/dev/null"
 dlog "Exit code not zero is possible, is expected in first run"
-if [ "$(find ../etc/CA/certs -name '*.crt' 2>/dev/null | wc -l)" -gt 0 ]; then
+if [ "$(find ../etc/CA/certs -name '*.pem' 2>/dev/null | wc -l)" -gt 0 ]; then
   if [ "$INTERACTIVE" == 1 ]; then
     dlog "CERTs may already be there, asking user"
     dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
@@ -2368,17 +2366,17 @@ clear
 
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
-  ./makecert.sh
-  dlog "moving certs to /srv/isc-agent"
+  "${SCRIPTDIR}"/makecert.sh
+  dlog "moving certs to /srv/web honeypot"
   run "cat $SCRIPTDIR/../etc/CA/keys/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem /srv/webhpot/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/webhpot/honeypot.key"
-  sudorun "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/webhpot/honeypot.crt"
-  sudorun "chown webhpot:webhpot /srv/webhpot/honeypot.*"
-  sudorun "chown webhpot:webhpot /srv/webhpot/combined_stunnel.pem"  
+  sudorun "mv $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem "${WEBHPOTDIR}"/combined_stunnel.pem"
+  sudorun "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key "${WEBHPOTDIR}"/honeypot.key"
+  sudorun "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt "${WEBHPOTDIR}"/honeypot.crt"
+  sudorun "chown webhpot:webhpot "${WEBHPOTDIR}"/honeypot.*"
+  sudorun "chown webhpot:webhpot "${WEBHPOTDIR}"/combined_stunnel.pem"  
   dlog "updating ${DSHIELDINI}"
-  run "sudo echo \"tlskey=/srv/webhpot/honeypot.key\" >> ${DSHIELDINI}"
-  run "sudo echo \"tlscert=/srv/webhpot/honeypot.crt\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlskey="${WEBHPOTDIR}"/honeypot.key\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlscert="${WEBHPOTDIR}"/honeypot.crt\" >> ${DSHIELDINI}"
 fi
 
 #
@@ -2393,6 +2391,22 @@ sudo_copy "$progdir"/../etc/logrotate.d/dshield /etc/logrotate.d 644
 if [ -f "/etc/cron.daily/logrotate" ]; then
   sudorun "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
+
+
+###########################################################
+## LEGACY CLEANUP
+###########################################################
+
+if [ -d "/srv/webhpot" ]; then
+    sudorun "rm -rf /srv/webhpot"
+fi
+if [ -d "/srv/isc-agent" ]; then
+    sudorun "rm -rf /srv/isc-agent"
+fi
+if [ -d "/srv/db" ]; then
+    sudorun "rm -rf /srv/db"
+fi
+
 
 ###########################################################
 ## POSTINSTALL OPTION

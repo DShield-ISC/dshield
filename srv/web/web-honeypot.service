@@ -6,7 +6,8 @@ After=network.target
 ExecStart=/usr/bin/python3 /srv/web/isc_agent.pyz
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
-User=youruser
+User=webhpot
+Group=webhpot
 WorkingDirectory=/srv/web
 
 [Install]

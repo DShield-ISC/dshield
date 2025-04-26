@@ -4,8 +4,8 @@ f=`echo $f | sed 's/^\.//'`
 f=`pwd`$f
 d=`echo $f | sed -E 's/[^\/]+$//'`
 
-if [ -f /etc/dshield.sslca ] ; then
-	. /etc/dshield.sslca
+if [ -f $d/../etc/dshield.sslca ] ; then
+	. $d/../etc/dshield.sslca
 else
 	Country="US"
 	State="Florida"
@@ -33,11 +33,11 @@ dialog --title 'Creating SSL Certificate' --separate-widget $'\n' --form\
     read -r hostname
 
 if [ ! -f /etc/dshield.sslca ] ; then
-	echo "Country=\"$country\"" > /etc/dshield.sslca
-	echo "State=\"$state\"" >> /etc/dshield.sslca
-	echo "City=\"$city\"" >> /etc/dshield.sslca
-	echo "Company=\"$company\"" >> /etc/dshield.sslca
-	echo "Depart=\"$department\"" >> /etc/dshield.sslca
+	echo "Country=\"$country\"" > $d/../etc/dshield.sslca
+	echo "State=\"$state\"" >> $d/../etc/dshield.sslca
+	echo "City=\"$city\"" >> $d/../etc/dshield.sslca
+	echo "Company=\"$company\"" >> $d/../etc/dshield.sslca
+	echo "Depart=\"$department\"" >> $d/../etc/dshield.sslca
 fi
 echo $country
 if [ ! -f $d/../etc/CA/keys/honeypot.key ]; then
