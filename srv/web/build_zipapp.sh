@@ -8,5 +8,5 @@ pip install --target ./isc_agent requests
 python3 -m zipapp ./isc_agent
 
 # Remove all the subdirectories (installed modules) after zipapp is built.
-# find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
+find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
 

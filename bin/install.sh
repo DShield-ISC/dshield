@@ -2247,6 +2247,7 @@ sudo -u webhpot pip install --upgrade --target "${WEBHPOTDIR}"/isc_agent request
 OLDPWD=$PWD
 cd "${WEBHPOTDIR}" || exit
 sudo -u webhpot python3 -m zipapp ./isc_agent
+sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
 sudo_copy "${progdir}"/../srv/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
