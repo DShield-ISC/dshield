@@ -259,7 +259,7 @@ done
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
-WEBHPOTDIR=${TARGETDIR}/webhpot
+WEBHPOTDIR=${TARGETDIR}/web
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
 
@@ -2240,14 +2240,14 @@ fi
 
 
 sudorun "mkdir -p ${WEBHPOTDIR}"
-sudorun "chown webhpot:webhpot ${WEBHPOTDIR}"
-sudo_copy "${progdir}"/../srv/web  ${WEBHPOTDIR}/../
-sudo chmod -R webhpot:webhpot ${WEBHPOTDIR}
-sudo_copy "$progdir"/../lib/systemd/system/webhpot.service /etc/systemd/system/webhpot.service 644
+sudo_copy "${progdir}"/../srv/web  "${WEBHPOTDIR}"/../
 run "mkdir -m 0700 ${WEBHPOTDIR}/run"
-sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/run"
-
+sudorun "chown -R webhpot:webhpot ${WEBHPOTDIR}"
+sudo -u webhpot pip install --upgrade --target "${WEBHPOTDIR}"/isc_agent requests
 OLDPWD=$PWD
+cd "${WEBHPOTDIR}" || exit
+sudo -u webhpot python3 -m zipapp ./isc_agent
+sudo_copy "${progdir}"/../srv/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
 sudorun "systemctl enable webhpot.service"
