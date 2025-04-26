@@ -1872,8 +1872,15 @@ fi # interactive
 
 dlog "setting interface in syslog config"
 # no %%interface%% in dshield.conf template anymore, so only copying file
-# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
-sudo_copy "$progdir"/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
+# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/10-dshield.conf'
+sudo_copy "$progdir"/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d/10-dshield.conf 600
+# cleanup legacy
+if [ -f /etc/rsyslog.d/dshield.conf ]; then
+    sudorun "rm /etc/rsyslog.d/dshield.conf"
+fi
+
+
+
 
 dsudorun 'cat /etc/rsyslog.d/dshield.conf'
 
