@@ -52,11 +52,11 @@ fi
 if [ ! -f $d/../etc/CA/keys/honeypot.csr ]; then
     echo "make key and csr"
     echo "$country $state $city $company $department $hostname"
-    openssl req -quiet -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot.key -out $d/../etc/CA/requests/honeypot.csr -nodes -subj "/C=$country/ST=${state}/L=${city}/O=${company}/OU=${depart}/CN=${hostname}"  2>/dev/null
+    openssl req -sha256 -new -newkey rsa:2048 -keyout $d/../etc/CA/keys/honeypot.key -out $d/../etc/CA/requests/honeypot.csr -nodes -subj "/C=$country/ST=${state}/L=${city}/O=${company}/OU=${depart}/CN=${hostname}"  2>/dev/null
 fi
 if [ ! -f $d/../etc/CA/keys/honeypot.key ]; then
     echo "make keypin"
-    openssl req -quiet -in $d/../etc/CA/requests/honeypot.csr -pubkey -noout | openssl rsa -quiet -pubin -outform der | openssl dgst -quiet -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot.keypin
+    openssl req -in $d/../etc/CA/requests/honeypot.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 > $d/../etc/CA/requests/honeypot.keypin
 fi
 
 cadir=$d/../etc/CA
@@ -66,18 +66,18 @@ cadir=$d/../etc/CA
 # if you want more security, then please use a "real" certificate authority or
 # a proper internal CA.
 if [ ! -f "${cadir}"/keys/dshieldca.key ] ; then
-    openssl genrsa -quiet -aes256 -out "${cadir}"/keys/dshieldca.key -passout pass:raspi 4096
-    openssl rsa -quiet -in "${cadir}"/keys/dshieldca.key -out "${cadir}"/keys/dshieldcanp.key -passin pass:raspi
+    openssl genrsa -aes256 -out ${cadir}/keys/dshieldca.key -passout pass:raspi 4096
+    openssl rsa -in ${cadir}/keys/dshieldca.key -out ${cadir}/keys/dshieldcanp.key -passin pass:raspi
     mv "${cadir}"/keys/dshieldcanp.key "${cadir}"/keys/dshieldca.key
 fi
 if [ ! -f "${cadir}"/certs/dshieldca.crt ]; then
     echo "make ca cert"
-    openssl req -quiet -new -x509 -days 3652 -key "${cadir}"/keys/dshieldca.key -out "${cadir}"/certs/dshieldca.crt -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$department/CN=ROOT-CA"
+    openssl req -new -x509 -days 3652 -key "${cadir}"/keys/dshieldca.key -out "${cadir}"/certs/dshieldca.crt -subj "/C=$country/ST=$state/L=$city/O=$company/OU=$depart/CN=ROOT-CA"
 fi
     # we will only sign the primary CSR, not the spare one for now.
 touch "${cadir}"/index.txt
 echo "unique_subject = no" > "${cadir}"/index.txt.attr
-sed -r --in-place=.bak "s|^dir\s=.*$|dir = $cadir|" "${d}"/../etc/openssl.cnf
+sed -r "s|^dir\s=.*$|dir = $cadir|" "${d}"/../etc/openssl.template > "${d}/../etc/openssl.cnf
 echo "sign cert"
 openssl ca -batch -config "${d}"/../etc/openssl.cnf -policy signing_policy -extensions signing_req -out "${cadir}"/certs/honeypot.crt -infiles "${cadir}"/requests/honeypot.csr    
 exec 3>&-
