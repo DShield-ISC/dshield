@@ -2371,16 +2371,38 @@ if [ "$(find ../etc/CA/certs -name '*.pem' 2>/dev/null | wc -l)" -gt 0 ]; then
 fi
 clear
 
+if [ ! $SCRIPTDIR/../etc/CA/keys/honeypot.key ]; then
+    GENCERT=1
+fi
+if [ ! $SCRIPTDIR/../etc/CA/certs/honeypot.crt ]; then
+    GENCERT=1
+fi
+if [ ! -f $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ]; then
+    GENCERT=1
+else
+    if ! grep -q '-----BEGIN PRIVATE KEY-----' /srv/web/combined_stunnel.pem; then
+	GENCERT=1
+    fi
+    if ! grep -q '-----BEGIN CERTIFICATE-----' /srv/web/combined_stunnel.pem; then
+       GENCERT=1
+    fi
+	
+
+fi
+
+
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
-  "${SCRIPTDIR}"/makecert.sh
+  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE 2>/srv/log/makecert.err >/srv/log/makecert.log
   dlog "moving certs to /srv/web honeypot"
-  run "cat $SCRIPTDIR/../etc/CA/keys/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem "${WEBHPOTDIR}"/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key "${WEBHPOTDIR}"/honeypot.key"
-  sudorun "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt "${WEBHPOTDIR}"/honeypot.crt"
-  sudorun "chown webhpot:webhpot "${WEBHPOTDIR}"/honeypot.*"
-  sudorun "chown webhpot:webhpot "${WEBHPOTDIR}"/combined_stunnel.pem"  
+  run "cat $SCRIPTDIR/../etc/CA/certs/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
+  sudorun "cp $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem "${WEBHPOTDIR}"/combined_stunnel.pem"
+  sudorun "cp $SCRIPTDIR/../etc/CA/keys/honeypot.key "${WEBHPOTDIR}"/honeypot.key"
+  sudorun "cp $SCRIPTDIR/../etc/CA/certs/honeypot.crt "${WEBHPOTDIR}"/honeypot.crt"
+  sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/honeypot.*"
+  sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/combined_stunnel.pem"
+  sudorun "chmod 600 ${WEBHPOTDIR}/honeypot.key"
+  sudorun "chmod 600 ${WEBHPOTDIR}/combined_stunnel.pem"
   dlog "updating ${DSHIELDINI}"
   run "sudo echo \"tlskey="${WEBHPOTDIR}"/honeypot.key\" >> ${DSHIELDINI}"
   run "sudo echo \"tlscert="${WEBHPOTDIR}"/honeypot.crt\" >> ${DSHIELDINI}"
