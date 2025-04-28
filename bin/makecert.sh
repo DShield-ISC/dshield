@@ -49,6 +49,9 @@ if [ "$interactive" -eq "1" ]; then
 	echo "depart=\"$department\"" >> $d/../etc/dshield.sslca
 	}
 fi
+if [ ! -d $d/../etc/CA/keys ]; then
+    mkdir -m 0700 $d/../etc/CA/keys
+fi
 if [ ! -f $d/../etc/CA/keys/honeypot.csr ]; then
     echo "make key and csr"
     echo "$country $state $city $company $department $hostname"
@@ -77,7 +80,7 @@ fi
     # we will only sign the primary CSR, not the spare one for now.
 touch "${cadir}"/index.txt
 echo "unique_subject = no" > "${cadir}"/index.txt.attr
-sed -r "s|^dir\s=.*$|dir = $cadir|" "${d}"/../etc/openssl.template > "${d}/../etc/openssl.cnf
+sed -r "s|^dir\s=.*$|dir = $cadir|" "${d}"/../etc/openssl.template > "${d}/../etc/openssl.cnf"
 echo "sign cert"
 openssl ca -batch -config "${d}"/../etc/openssl.cnf -policy signing_policy -extensions signing_req -out "${cadir}"/certs/honeypot.crt -infiles "${cadir}"/requests/honeypot.csr    
 exec 3>&-

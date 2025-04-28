@@ -14,7 +14,7 @@
 ###########################################################
 
 # version 2025/04/23 01
-
+set -x
 readonly myversion=97
 
 
@@ -956,6 +956,25 @@ fi
 ###########################################################
 ## Handling existing config
 ###########################################################
+
+if ! grep -qE '^webhpot' /etc/passwd; then
+    dlog "creating webhpot user"
+    if [ "$ID" != "opensuse" ]; then
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+    else
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+    fi
+    outlog "Added user 'webhpot'"
+else
+    outlog "User 'webhpot' already exists"
+fi
+
+if [ ! -d /srv/dshield/etc ]; then
+    sudorun "mkdir -m 0770 -p /srv/dshield/etc"
+    
+    sudorun "chown -R ${SYSUSERID}:webhpot /srv/dshield"
+fi
+
 
 if [ -f /etc/dshield.ini ]; then
     if [ ! -f ${DSHIELDINI} ]; then
@@ -1900,6 +1919,19 @@ else
     run "chmod 0750 ${DSHIELDDIR}/etc"
 fi
 
+if ! grep -qE '^webhpot' /etc/passwd; then
+    dlog "creating webhpot user"
+    if [ "$ID" != "opensuse" ]; then
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+    else
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+    fi
+    outlog "Added user 'webhpot'"
+else
+    outlog "User 'webhpot' already exists"
+fi
+
+
 # using -R for legacy systems that may still have root owned files in this directory
 sudorun "chown -R ${SYSUSERID}:webhpot ${DSHIELDDIR}"
 
@@ -2231,22 +2263,12 @@ sudorun 'deactivate'
 outlog "Installing Web Honeypot"
 dlog "Installing Web Honeypot"
 
-if ! grep -qE '^webhpot' /etc/passwd; then
-    dlog "creating webhpot user"
-    if [ "$ID" != "opensuse" ]; then
-	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
-    else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
-    fi
-    outlog "Added user 'webhpot'"
-else
-    outlog "User 'webhpot' already exists"
-fi
-
 
 sudorun "mkdir -p ${WEBHPOTDIR}"
 sudo_copy "${progdir}"/../srv/web  "${WEBHPOTDIR}"/../
-sudorun "mkdir -m 0700 ${WEBHPOTDIR}/run"
+if [ -d "${WEBHPOTDIR}"/run ]; then
+    sudorun "mkdir -m 0700 ${WEBHPOTDIR}/run"
+fi
 sudorun "chown -R webhpot:webhpot ${WEBHPOTDIR}"
 sudo -u webhpot pip install --upgrade --target "${WEBHPOTDIR}"/isc_agent requests
 OLDPWD=$PWD
@@ -2256,7 +2278,7 @@ sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
 sudo_copy "${progdir}"/../srv/web/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
-sudorun "systemctl enable webhpot.service"
+sudorun "systemctl enable web-honeypot.service"
 
 [ "$ID" != "opensuse" ] && run "sudo systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd "${OLDPWD}" || exit
