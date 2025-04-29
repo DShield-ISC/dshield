@@ -2108,7 +2108,7 @@ dlog "downloading and unzipping cowrie"
 if [ "$BETA" == 1 ]; then
   run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
 else
-  run "$CURL https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
 fi
 
 # shellcheck disable=SC2181
