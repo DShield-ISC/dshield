@@ -234,6 +234,7 @@ DSHIELDINI=/srv/dshield/etc/dshield.ini
 # userid and uid are used by the dshield.ini configuration and script building it
 SYSUSERID=$(id -u) 
 GROUPID=$(id -g)
+SYSUSERNAME=$(id -ng)
 
 # parse command line arguments
 
@@ -2081,6 +2082,8 @@ dlog "installing cowrie"
 
 # step 1 (Install OS dependencies): done
 
+
+
 # step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
@@ -2094,6 +2097,10 @@ if ! grep '^cowrie:' -q /etc/passwd; then
 else
   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
+
+# add current user to cowrie group to help with permissions for install later
+sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
+run "newgrp cowrie"
 
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
@@ -2158,18 +2165,21 @@ OLDDIR=$(pwd)
 
 if [ ! -d ${COWRIEDIR} ]; then
     sudorun "mkdir ${COWRIEDIR}"
-fi    
+
+fi
+sudorun "chown ${SYSUSERID}:cowrie ${COWRIEDIR}"
+sudorun "chmod 0770 $COWRIEDIR"
 cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
-run 'virtualenv --python=python3 cowrie-env'
+run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
-sudorun 'source cowrie-env/bin/activate'
+run 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
-    run 'pip3 install --upgrade pip'
-    run 'pip3 install --upgrade bcrypt'
-    run 'pip3 install --upgrade requests'
-    run 'pip3 install -r requirements.txt'
+    run 'sudo -u cowrie pip3 install --upgrade pip'
+    run 'sudo -u cowrie pip3 install --upgrade bcrypt'
+    run 'sudo -u cowrie pip3 install --upgrade requests'
+    run 'sudo -u cowrie pip3 install -r requirements.txt'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
