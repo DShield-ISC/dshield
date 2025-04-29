@@ -14,7 +14,7 @@
 ###########################################################
 
 # version 2025/04/23 01
-set -x
+
 readonly myversion=97
 
 
@@ -913,11 +913,21 @@ fi
 ###########################################################
 
 #
-# yes. this will make the random number generator less secure. but remember this is for a honeypot
+# yes. this will make the random number generator less secure.
+# But remember this is for a honeypot, and we want speed on minimal hardware
 #
 
 dlog "Changing random number generator settings."
-sudorun 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
+
+run "echo '# Modified by DShield Honeypot Installer' > ${TMPDIR}/rng-tools"
+run "echo 'HRNGDEVICE=/dev/urandom' >> ${TMPDIR}/rng-tools"
+if [ -f /etc/default/rng-tools-debian ]; then
+    sudorun "mv ${TMPDIR}/rng-tools /etc/default/rng-tools-debian"
+    sudorun 'chown root:root /etc/default/rng-tools-debian'
+else
+    sudorun "mv ${TMPDIR}/rng-tools /etc/default/rng-tools"
+    sudorun 'chown root:root /etc/default/rng-tools'
+fi
 
 ###########################################################
 ## Disable IPv6
@@ -2266,7 +2276,7 @@ dlog "Installing Web Honeypot"
 
 sudorun "mkdir -p ${WEBHPOTDIR}"
 sudo_copy "${progdir}"/../srv/web  "${WEBHPOTDIR}"/../
-if [ -d "${WEBHPOTDIR}"/run ]; then
+if [ ! -d "${WEBHPOTDIR}"/run ]; then
     sudorun "mkdir -m 0700 ${WEBHPOTDIR}/run"
 fi
 sudorun "chown -R webhpot:webhpot ${WEBHPOTDIR}"
