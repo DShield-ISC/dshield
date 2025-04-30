@@ -1993,7 +1993,7 @@ offset2=$(shuf -i0-23 -n1)
 echo "${offset1} ${offset2} * * * root /sbin/reboot" >>"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >"${TMPDIR}"/cron.dshield
+echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >>"${TMPDIR}"/cron.dshield
 # run status check 5 minutes before reboot
 if [ "$offset1" -gt 5 ]; then
   offset1=$((offset1 - 5))
