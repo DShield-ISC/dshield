@@ -2100,7 +2100,6 @@ fi
 
 # add current user to cowrie group to help with permissions for install later
 sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
-run "newgrp cowrie"
 
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
@@ -2435,7 +2434,7 @@ fi
 
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
-  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE 2>/srv/log/makecert.err >/srv/log/makecert.log
+  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE 
   dlog "moving certs to /srv/web honeypot"
   run "cat $SCRIPTDIR/../etc/CA/certs/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
   sudorun "cp $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ${WEBHPOTDIR}/combined_stunnel.pem"
