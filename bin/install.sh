@@ -2194,7 +2194,7 @@ fi
 # dlog "installing dependencies requirements-output.txt"
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
-    run "pip3 install --upgrade requests"
+    run "sudo -u cowrie pip3 install --upgrade requests"
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
 	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
