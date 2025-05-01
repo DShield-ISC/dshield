@@ -1958,6 +1958,10 @@ if [ -f ${DSHIELDDIR}/cleanup.sh ]; then
     run "rm ${DSHIELDDIR}/cleanup.sh"
 fi
 do_copy "$progdir"/cleanup.sh ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/update.sh ]; then
+    run "rm ${DSHIELDDIR}/update.sh"
+fi
+do_copy "$progdir"/update.sh ${DSHIELDDIR} 700
 if [ -f ${DSHIELDDIR}/DShield.py ]; then
     run "rm ${DSHIELDDIR}/DShield.py"
 fi
@@ -1987,7 +1991,7 @@ offset2=$((offset1 + 30))
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >>"${TMPDIR}"/cron.dshield
+echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/update.sh --cron >/dev/null " >>"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
 echo "${offset1} ${offset2} * * * root /sbin/reboot" >>"${TMPDIR}"/cron.dshield
