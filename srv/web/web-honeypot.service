@@ -1,12 +1,15 @@
 [Unit]
 Description=Web Honeypot Service
+Documentation=https://isc.sans.edu/honeypot.html
 After=network.target
 
 [Service]
 ExecStart=/usr/bin/python3 /srv/web/isc_agent.pyz
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
-User=youruser
+TimeoutSec=300
+User=webhpot
+Group=webhpot
 WorkingDirectory=/srv/web
 
 [Install]
