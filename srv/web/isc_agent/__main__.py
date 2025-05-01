@@ -21,6 +21,7 @@ logger.setLevel(logging.DEBUG)
 from configparser import ConfigParser
 from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler
+from http.client import IncompleteRead
 from stunnel_manager import StunnelManager
 
 from core import score_request
@@ -43,6 +44,10 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
         self.send_response_only(code, message)
         if self.customized_server_string:
             self.send_header('Server', self.customized_server_string)
+
+    def log_message(self, format, *args):
+        #prevents log messages from being generated.
+        pass
 
     def apply_customizations(self, text_element:str) -> str:
         """
@@ -138,6 +143,8 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
                 return f"{self.method} {self.path} headers={self.headers}"
 
         request = RequestShim(path, method, remote_addr, headers)
+        content_length = int(request.headers.get('Content-Length',0))
+        post_data = self.rfile.read(content_length).decode()
 
         best_score = -1
         best_signature = None
@@ -157,26 +164,40 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
 
         logger.info(f"Sending Response {response_id} matching signature {best_signature} for Request: {method} {path}")
 
+
+        #Respond to web requests
         try:
             self.responder(response_id)
-            content_length = int(request.headers.get('Content-Length',0))
-            post_data = self.rfile.read(content_length).decode()
-            log_data = {
-                'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
-                'headers': request.headers,
-                'sip': remote_addr,
-                'dip': isc_agent.my_ip,
-                'method': method,
-                'url': path,
-                'data': post_data,
-                'useragent': headers.get("User-Agent",""),
-                'version': self.request_version,
-                'response_id': response_id,
-                'signature_id': best_signature
-            }
+        except Exception as e:
+            self.logger.exception(f"Error Responding to client: {str(e)}")
+
+        #Record response for ISC
+        log_data = {
+            'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            'headers': request.headers,
+            'sip': remote_addr,
+            'dip': isc_agent.my_ip,
+            'method': method,
+            'url': path,
+            'data': post_data,
+            'useragent': headers.get("User-Agent",""),
+            'version': self.request_version,
+            'response_id': response_id,
+            'signature_id': best_signature
+        }
+
+        try:
             isc_agent.add_to_queue(log_data)
-        except BrokenPipeError:
-            self.logger.exception("Client disconnected before response was fully sent")
+        except Exception as e:
+            logging.exception(f"Error sending to ISC: {str(e)}")
+
+        if record_local_responses:
+            try:
+                fh = open(args.local_responses, "a")
+                fh.write(f"{json.dumps(log_data)}\n")
+                fh.close()
+            except Exception as e:
+                self.logger.error(f"Error writing to local response file {args.local_responses} - {e}")
 
     def do_GET(self):
         """Handles GET requests."""
@@ -249,6 +270,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Web Honeypot")
     parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
+    parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
+    parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
+
     args = parser.parse_args()
 
     # Load configuration from file
@@ -257,12 +281,13 @@ if __name__ == "__main__":
         logger.error(f"Could not read config file {args.config}.")
         sys.exit(1)
 
-    #Set log level to debug if its in the config
-    debug = config.get("iscagent","debug")
+    #Set the logging level based on the command line.
+    numeric_level = getattr(logging, args.loglevel.upper())
+    fh.setLevel(level=numeric_level)
+    sh.setLevel(level=numeric_level)
 
-    if debug == "true":
-        fh.setLevel(logging.DEBUG)
-        sh.setLevel(logging.DEBUG)
+    #Set log level to debug if its in the config
+    record_local_responses = config.get("iscagent","debug") == "true"   #Its lowercase in the log file.
 
     #Start the ISC Agent threats for queueing and submission   
     isc_agent = Agent(config)
@@ -296,7 +321,6 @@ if __name__ == "__main__":
 
     port = 8000
 
-        
     logger.debug(f"start_production() called with port={port}")
     done = False
     while True:
@@ -326,8 +350,29 @@ if __name__ == "__main__":
         signal.signal(signal.SIGHUP, reload_handler)
     signal.signal(signal.SIGINT, shutdown_handler)
 
+    class CustomServer(server_class):
+        def handle_error(self, request, client_address):
+            exc_type, exc_value, _ = sys.exc_info()
+            # Expected errors: log as INFO to track without clutter
+            if exc_type == ConnectionResetError:
+                logger.info(f"Connection reset by {client_address[0]}:{client_address[1]}")
+            elif exc_type == BrokenPipeError:
+                logger.info(f"Broken pipe to {client_address[0]}:{client_address[1]}")
+            elif exc_type in (TimeoutError, socket.timeout):
+                logger.info(f"Timeout from {client_address[0]}:{client_address[1]}")
+            elif exc_type == OSError and exc_value.errno in (113, 111):
+                logger.info(f"Network error (errno {exc_value.errno}) from {client_address[0]}:{client_address[1]}")
+            elif exc_type == IncompleteRead:
+                logger.info(f"Incomplete read from {client_address[0]}:{client_address[1]}")
+            elif exc_type == OSError and exc_value.errno == 24:
+                # Critical resource issue: log as ERROR
+                logger.error(f"Too many open files from {client_address[0]}:{client_address[1]}", exc_info=True)
+            else:
+                # Unexpected errors: log as ERROR with traceback
+                logger.error(f"Unexpected error from {client_address[0]}:{client_address[1]}", exc_info=True)
+
     # Run serve_forever 
-    httpd = server_class(("", port), HoneypotRequestHandler)
+    httpd = CustomServer(("", port), HoneypotRequestHandler)
     if production:
         httpd.daemon_threads = True
 
