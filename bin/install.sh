@@ -237,6 +237,14 @@ GROUPID=$(id -g)
 SYSUSERNAME=$(id -ng)
 
 # parse command line arguments
+ETCDIR=$(dirname $DSHIELDINI)
+if [ ! -f "${DSHIELDINI}" ]; then
+    if [ -f /etc/dshield.ini ]; then
+	sudo mkdir -p "${ETCDIR}"
+	sudo mv /etc/dshield.ini "${DSHIELDINI}"
+	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
+    fi
+fi
 
 for arg in "$@"; do
   case $arg in
