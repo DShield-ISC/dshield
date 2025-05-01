@@ -291,8 +291,8 @@ if [ ! -d ${LOGDIR} ]; then
 fi
 # for legacy systems that used to run as root
 sudo chown -R "${SYSUSERID}":"${GROUPID}" "${LOGDIR}"
-
-
+# and the local etc dir may need cleaning up from legacy files as root
+sudo chown -R "${SYSUSERID}":"${GROUPID}" "$progdir"
 # which port the real sshd should listen to
 SSHDPORT="12222"
 
@@ -985,6 +985,8 @@ if [ ! -d /srv/dshield/etc ]; then
     
     sudorun "chown -R ${SYSUSERID}:webhpot /srv/dshield"
 fi
+
+
 
 
 if [ -f /etc/dshield.ini ]; then
