@@ -1887,7 +1887,8 @@ fi
 if [ "$INTERACTIVE" == 1 ]; then
   dlog "changing port for sshd"
 
-  run "sed -i.bak \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" /etc/ssh/sshd_config"
+  run "sed \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" < /etc/ssh/sshd_config > ${TMPDIR}/sshd_config"
+  sudorun "mv ${TMPDIR}/sshd_config /etc/ssh/sshd_config"
 
   dlog "checking if modification was successful"
   if [ "$(grep -c "^Port ${SSHDPORT}$" /etc/ssh/sshd_config)" -ne 1 ]; then
