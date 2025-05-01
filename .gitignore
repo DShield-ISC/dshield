@@ -28,3 +28,6 @@ etc/CA/ca.serial.old
 etc/CA/index.txt.attr.old
 etc/CA/index.txt.old
 etc/openssl.cnf.bak
+etc/dshield.sslca
+etc/CA/keys/
+etc/openssl.cnf

@@ -234,8 +234,17 @@ DSHIELDINI=/srv/dshield/etc/dshield.ini
 # userid and uid are used by the dshield.ini configuration and script building it
 SYSUSERID=$(id -u) 
 GROUPID=$(id -g)
+SYSUSERNAME=$(id -ng)
 
 # parse command line arguments
+ETCDIR=$(dirname $DSHIELDINI)
+if [ ! -f "${DSHIELDINI}" ]; then
+    if [ -f /etc/dshield.ini ]; then
+	sudo mkdir -p "${ETCDIR}"
+	sudo mv /etc/dshield.ini "${DSHIELDINI}"
+	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
+    fi
+fi
 
 for arg in "$@"; do
   case $arg in
@@ -259,7 +268,7 @@ done
 TARGETDIR="/srv"
 DSHIELDDIR="${TARGETDIR}/dshield"
 COWRIEDIR="${TARGETDIR}/cowrie" # remember to also change the init.d script!
-WEBHPOTDIR=${TARGETDIR}/webhpot
+WEBHPOTDIR=${TARGETDIR}/web
 TXTCMDS=${COWRIEDIR}/share/cowrie/txtcmds
 LOGDIR="${TARGETDIR}/log"
 
@@ -290,8 +299,8 @@ if [ ! -d ${LOGDIR} ]; then
 fi
 # for legacy systems that used to run as root
 sudo chown -R "${SYSUSERID}":"${GROUPID}" "${LOGDIR}"
-
-
+# and the local etc dir may need cleaning up from legacy files as root
+sudo chown -R "${SYSUSERID}":"${GROUPID}" "$progdir"
 # which port the real sshd should listen to
 SSHDPORT="12222"
 
@@ -326,8 +335,8 @@ outlog() {
 quotespace() {
   local line="${*}"
   if echo "$line" | grep -Eq ' '; then
-    if ! echo "$line" | grep -Eq "'"; then
-      line="'${line}'"
+    if ! echo "$line" | grep -Fq '"'; then
+      line="\"${line}\""
     fi
   fi
   echo "$line"
@@ -913,11 +922,21 @@ fi
 ###########################################################
 
 #
-# yes. this will make the random number generator less secure. but remember this is for a honeypot
+# yes. this will make the random number generator less secure.
+# But remember this is for a honeypot, and we want speed on minimal hardware
 #
 
 dlog "Changing random number generator settings."
-run 'echo "HRNGDEVICE=/dev/urandom" > /etc/default/rnd-tools'
+
+run "echo '# Modified by DShield Honeypot Installer' > ${TMPDIR}/rng-tools"
+run "echo 'HRNGDEVICE=/dev/urandom' >> ${TMPDIR}/rng-tools"
+if [ -f /etc/default/rng-tools-debian ]; then
+    sudorun "mv ${TMPDIR}/rng-tools /etc/default/rng-tools-debian"
+    sudorun 'chown root:root /etc/default/rng-tools-debian'
+else
+    sudorun "mv ${TMPDIR}/rng-tools /etc/default/rng-tools"
+    sudorun 'chown root:root /etc/default/rng-tools'
+fi
 
 ###########################################################
 ## Disable IPv6
@@ -957,6 +976,27 @@ fi
 ## Handling existing config
 ###########################################################
 
+if ! grep -qE '^webhpot' /etc/passwd; then
+    dlog "creating webhpot user"
+    if [ "$ID" != "opensuse" ]; then
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+    else
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+    fi
+    outlog "Added user 'webhpot'"
+else
+    outlog "User 'webhpot' already exists"
+fi
+
+if [ ! -d /srv/dshield/etc ]; then
+    sudorun "mkdir -m 0770 -p /srv/dshield/etc"
+    
+    sudorun "chown -R ${SYSUSERID}:webhpot /srv/dshield"
+fi
+
+
+
+
 if [ -f /etc/dshield.ini ]; then
     if [ ! -f ${DSHIELDINI} ]; then
 	sudorun "mv /etc/dshield.ini ${DSHIELDINI}"
@@ -964,7 +1004,6 @@ if [ -f /etc/dshield.ini ]; then
 	sudorun 'rm /etc/dshield.ini'
     fi
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
-    
 fi
 
 
@@ -1847,7 +1886,8 @@ fi
 if [ "$INTERACTIVE" == 1 ]; then
   dlog "changing port for sshd"
 
-  run "sed -i.bak \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" /etc/ssh/sshd_config"
+  run "sed \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" < /etc/ssh/sshd_config > ${TMPDIR}/sshd_config"
+  sudorun "mv ${TMPDIR}/sshd_config /etc/ssh/sshd_config"
 
   dlog "checking if modification was successful"
   if [ "$(grep -c "^Port ${SSHDPORT}$" /etc/ssh/sshd_config)" -ne 1 ]; then
@@ -1872,8 +1912,15 @@ fi # interactive
 
 dlog "setting interface in syslog config"
 # no %%interface%% in dshield.conf template anymore, so only copying file
-# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/dshield.conf'
-sudo_copy "$progdir"/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d 600
+# run 'sed "s/%%interface%%/$interface/" < $progdir/../etc/rsyslog.d/dshield.conf > /etc/rsyslog.d/10-dshield.conf'
+sudo_copy "$progdir"/../etc/rsyslog.d/dshield.conf /etc/rsyslog.d/10-dshield.conf 600
+# cleanup legacy
+if [ -f /etc/rsyslog.d/dshield.conf ]; then
+    sudorun "rm /etc/rsyslog.d/dshield.conf"
+fi
+
+
+
 
 dsudorun 'cat /etc/rsyslog.d/dshield.conf'
 
@@ -1886,11 +1933,29 @@ dsudorun 'cat /etc/rsyslog.d/dshield.conf'
 # (don't like to have root run scripty which are not owned by root)
 #
 
-sudorun "mkdir -m 0700 -p ${DSHIELDDIR}"
-# using -R for legacy systems that may still have root owned files in this directory
+sudorun "mkdir -m 0750 -p ${DSHIELDDIR}"
+if [ ! -d "${DSHIELDDIR}"/etc ]; then
+    run "mkdir -m 0750 ${DSHIELDDIR}/etc"
+else
+    run "chmod 0750 ${DSHIELDDIR}/etc"
+fi
 
-sudorun "chown -R ${SYSUSERID}:${GROUPID} ${DSHIELDDIR}"
-run "mkdir -m 0700 ${DSHIELDDIR}/etc"
+if ! grep -qE '^webhpot' /etc/passwd; then
+    dlog "creating webhpot user"
+    if [ "$ID" != "opensuse" ]; then
+	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+    else
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+    fi
+    outlog "Added user 'webhpot'"
+else
+    outlog "User 'webhpot' already exists"
+fi
+
+
+# using -R for legacy systems that may still have root owned files in this directory
+sudorun "chown -R ${SYSUSERID}:webhpot ${DSHIELDDIR}"
+
 if [ -f ${DSHIELDDIR}/fwlogparser.py ]; then
     run "rm ${DSHIELDDIR}/fwlogparser.py"
 fi
@@ -1903,6 +1968,10 @@ if [ -f ${DSHIELDDIR}/cleanup.sh ]; then
     run "rm ${DSHIELDDIR}/cleanup.sh"
 fi
 do_copy "$progdir"/cleanup.sh ${DSHIELDDIR} 700
+if [ -f ${DSHIELDDIR}/update.sh ]; then
+    run "rm ${DSHIELDDIR}/update.sh"
+fi
+do_copy "$progdir"/update.sh ${DSHIELDDIR} 700
 if [ -f ${DSHIELDDIR}/DShield.py ]; then
     run "rm ${DSHIELDDIR}/DShield.py"
 fi
@@ -1932,13 +2001,13 @@ offset2=$((offset1 + 30))
 echo "${offset1},${offset2} * * * * root ${DSHIELDDIR}/fwlogparser.py" >"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root cd ${progdir}; ./update.sh --cron >/dev/null " >>"${TMPDIR}"/cron.dshield
+echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/update.sh --cron >/dev/null " >>"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
 echo "${offset1} ${offset2} * * * root /sbin/reboot" >>"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
-echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >"${TMPDIR}"/cron.dshield
+echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >>"${TMPDIR}"/cron.dshield
 # run status check 5 minutes before reboot
 if [ "$offset1" -gt 5 ]; then
   offset1=$((offset1 - 5))
@@ -1971,10 +2040,6 @@ if [ -f /etc/dshield.ini ]; then
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 fi
 
-if [ ! -d /srv/db ]; then
-    sudorun 'mkdir -m 1777 /srv/db'
-    sudorun "chown ${SYSUSERID}:${GROUPID} /srv/db"
-fi
 
 # new shiny config file
 run "touch ${DSHIELDINI}"
@@ -2017,7 +2082,10 @@ run "echo 'archivedatabase=$archivedatabase' >> ${DSHIELDINI}"
 run "echo 'debug=false' >> ${DSHIELDINI}"
 dlog "new ${DSHIELDINI} follows"
 drun "cat ${DSHIELDINI}"
-
+# making sure permissions are right for the ini file
+sudorun "chown -R ${SYSUSERID}:webhpot ${DSHIELDDIR}"
+sudorun "chmod 0640 ${DSHIELDINI}"
+sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 
 ###########################################################
@@ -2027,6 +2095,8 @@ drun "cat ${DSHIELDINI}"
 dlog "installing cowrie"
 
 # step 1 (Install OS dependencies): done
+
+
 
 # step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
@@ -2042,13 +2112,16 @@ else
   outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
 fi
 
+# add current user to cowrie group to help with permissions for install later
+sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
+
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
 if [ "$BETA" == 1 ]; then
   run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
 else
-  run "$CURL https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
 fi
 
 # shellcheck disable=SC2181
@@ -2105,24 +2178,21 @@ OLDDIR=$(pwd)
 
 if [ ! -d ${COWRIEDIR} ]; then
     sudorun "mkdir ${COWRIEDIR}"
-fi    
-cd ${COWRIEDIR} || exit
-dlog "installing global dependencies from ${SCRIPTDIR}/requirements.txt"
-# openSUSE does not support installation with pip outside environments
-if [ "$ID" != "opensuse" ] ; then
-    sudorun "pip3 install --upgrade pip"
-    sudorun "pip3 install -r ${SCRIPTDIR}/requirements.txt"
+
 fi
+sudorun "chown ${SYSUSERID}:cowrie ${COWRIEDIR}"
+sudorun "chmod 0770 $COWRIEDIR"
+cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
-sudorun 'virtualenv --python=python3 cowrie-env'
+run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
-sudorun 'source cowrie-env/bin/activate'
+run 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
-    sudorun 'pip3 install --upgrade pip'
-    sudorun 'pip3 install --upgrade bcrypt'
-    sudorun 'pip3 install --upgrade requests'
-    sudorun 'pip3 install -r requirements.txt'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade pip"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
@@ -2138,7 +2208,7 @@ fi
 # dlog "installing dependencies requirements-output.txt"
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
-    run "pip3 install --upgrade requests"
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
 	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
@@ -2226,31 +2296,22 @@ sudorun 'deactivate'
 outlog "Installing Web Honeypot"
 dlog "Installing Web Honeypot"
 
-if ! grep -qE '^webhpot' /etc/passwd; then
-    dlog "creating webhpot user"
-    if [ "$ID" != "opensuse" ]; then
-	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/webhpot --no-create-home webhpot'	
-    else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/webhpot webhpot'	
-    fi
-    outlog "Added user 'webhpot'"
-else
-    outlog "User 'webhpot' already exists"
-fi
-
 
 sudorun "mkdir -p ${WEBHPOTDIR}"
-sudorun "chown webhpot:webhpot ${WEBHPOTDIR}"
-sudo_copy "${progdir}"/../srv/web  ${WEBHPOTDIR}/../
-sudo chmod -R webhpot:webhpot ${WEBHPOTDIR}
-sudo_copy "$progdir"/../lib/systemd/system/webhpot.service /etc/systemd/system/webhpot.service 644
-run "mkdir -m 0700 ${WEBHPOTDIR}/run"
-sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/run"
-
+sudo_copy "${progdir}"/../srv/web  "${WEBHPOTDIR}"/../
+if [ ! -d "${WEBHPOTDIR}"/run ]; then
+    sudorun "mkdir -m 0700 ${WEBHPOTDIR}/run"
+fi
+sudorun "chown -R webhpot:webhpot ${WEBHPOTDIR}"
+sudo -u webhpot pip install --upgrade --target "${WEBHPOTDIR}"/isc_agent requests
 OLDPWD=$PWD
 cd "${WEBHPOTDIR}" || exit
+sudo -u webhpot python3 -m zipapp ./isc_agent
+sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
+sudo_copy "${progdir}"/../srv/web/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
+cd "${WEBHPOTDIR}" || exit
 sudorun "systemctl daemon-reload"
-sudorun "systemctl enable webhpot.service"
+sudorun "systemctl enable web-honeypot.service"
 
 [ "$ID" != "opensuse" ] && run "sudo systemctl enable systemd-networkd.service systemd-networkd-wait-online.service"
 cd "${OLDPWD}" || exit
@@ -2266,7 +2327,7 @@ dlog "copying further system files"
 ## Apt Cleanup
 ###########################################################
 if [ "$dist" == "apt" ]; then
-  run 'apt autoremove -y'
+  sudorun 'apt autoremove -y'
 fi
 
 ###########################################################
@@ -2311,9 +2372,9 @@ permitted by applicable law.
 EOF
 fi
 
-run "mv ${TMPDIR}/motd /etc/motd"
-run "chmod 644 /etc/motd"
-run "chown root:root /etc/motd"
+sudorun "mv ${TMPDIR}/motd /etc/motd"
+sudorun "chmod 644 /etc/motd"
+sudorun "chown root:root /etc/motd"
 
 drun "cat /etc/motd"
 
@@ -2332,9 +2393,9 @@ GENCERT=1
 if [ ! -f ../etc/CA/ca.serial ]; then
   echo 01 >../etc/CA/ca.serial
 fi
-drun "ls ../etc/CA/certs/*.crt 2>/dev/null"
+drun "ls ../etc/CA/certs/*.pem 2>/dev/null"
 dlog "Exit code not zero is possible, is expected in first run"
-if [ "$(find ../etc/CA/certs -name '*.crt' 2>/dev/null | wc -l)" -gt 0 ]; then
+if [ "$(find ../etc/CA/certs -name '*.pem' 2>/dev/null | wc -l)" -gt 0 ]; then
   if [ "$INTERACTIVE" == 1 ]; then
     dlog "CERTs may already be there, asking user"
     dialog --title 'Generating CERTs' --yesno "You may already have CERTs generated. Do you want me to re-generate CERTs and erase all existing ones?" 10 50
@@ -2365,19 +2426,41 @@ if [ "$(find ../etc/CA/certs -name '*.crt' 2>/dev/null | wc -l)" -gt 0 ]; then
 fi
 clear
 
+if [ ! $SCRIPTDIR/../etc/CA/keys/honeypot.key ]; then
+    GENCERT=1
+fi
+if [ ! $SCRIPTDIR/../etc/CA/certs/honeypot.crt ]; then
+    GENCERT=1
+fi
+if [ ! -f $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ]; then
+    GENCERT=1
+else
+    if ! sudo grep -q 'BEGIN PRIVATE KEY' /srv/web/combined_stunnel.pem; then
+	GENCERT=1
+    fi
+    if ! sudo grep -q 'BEGIN CERTIFICATE' /srv/web/combined_stunnel.pem; then
+       GENCERT=1
+    fi
+	
+
+fi
+
+
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
-  ./makecert.sh
-  dlog "moving certs to /srv/isc-agent"
-  run "cat $SCRIPTDIR/../etc/CA/keys/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem /srv/webhpot/combined_stunnel.pem"
-  sudorun "mv $SCRIPTDIR/../etc/CA/keys/honeypot.key /srv/webhpot/honeypot.key"
-  sudorun "mv $SCRIPTDIR/../etc/CA/certs/honeypot.crt /srv/webhpot/honeypot.crt"
-  sudorun "chown webhpot:webhpot /srv/webhpot/honeypot.*"
-  sudorun "chown webhpot:webhpot /srv/webhpot/combined_stunnel.pem"  
+  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE 
+  dlog "moving certs to /srv/web honeypot"
+  run "cat $SCRIPTDIR/../etc/CA/certs/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
+  sudorun "cp $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ${WEBHPOTDIR}/combined_stunnel.pem"
+  sudorun "cp $SCRIPTDIR/../etc/CA/keys/honeypot.key ${WEBHPOTDIR}/honeypot.key"
+  sudorun "cp $SCRIPTDIR/../etc/CA/certs/honeypot.crt ${WEBHPOTDIR}/honeypot.crt"
+  sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/honeypot.*"
+  sudorun "chown webhpot:webhpot ${WEBHPOTDIR}/combined_stunnel.pem"
+  sudorun "chmod 600 ${WEBHPOTDIR}/honeypot.key"
+  sudorun "chmod 600 ${WEBHPOTDIR}/combined_stunnel.pem"
   dlog "updating ${DSHIELDINI}"
-  run "sudo echo \"tlskey=/srv/webhpot/honeypot.key\" >> ${DSHIELDINI}"
-  run "sudo echo \"tlscert=/srv/webhpot/honeypot.crt\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlskey=${WEBHPOTDIR}/honeypot.key\" >> ${DSHIELDINI}"
+  run "sudo echo \"tlscert=${WEBHPOTDIR}/honeypot.crt\" >> ${DSHIELDINI}"
 fi
 
 #
@@ -2392,6 +2475,22 @@ sudo_copy "$progdir"/../etc/logrotate.d/dshield /etc/logrotate.d 644
 if [ -f "/etc/cron.daily/logrotate" ]; then
   sudorun "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
+
+
+###########################################################
+## LEGACY CLEANUP
+###########################################################
+
+if [ -d "/srv/webhpot" ]; then
+    sudorun "rm -rf /srv/webhpot"
+fi
+if [ -d "/srv/isc-agent" ]; then
+    sudorun "rm -rf /srv/isc-agent"
+fi
+if [ -d "/srv/db" ]; then
+    sudorun "rm -rf /srv/db"
+fi
+
 
 ###########################################################
 ## POSTINSTALL OPTION

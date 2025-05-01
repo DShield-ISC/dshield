@@ -219,7 +219,7 @@ checkfile "/etc/dshield.ini"
 TESTS['ini']=$?
 checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
-checkfile "/etc/rsyslog.d/dshield.conf"
+checkfile "/etc/rsyslog.d/10-dshield.conf"
 TESTS['dshieldconf']=$?
 IPTABLES=/usr/sbin/iptables
 NFT=/usr/sbin/nft
@@ -245,18 +245,18 @@ fi
 if [ ${TESTS['fw']} -eq 0 ] ; then
     echo "${RED}MISSING${NC}: firewall rules"
 fi
-x=$((systemctl is-active isc-agent > /dev/null && echo 1) || echo 0)
+x=$((systemctl is-active web-honeypot.service > /dev/null && echo 1) || echo 0)
 if [ $x -eq 1 ]; then
-  echo "${GREEN}OK${NC}: isc-agent running"
-  TESTS['iscagentrunning']=1		   
+  echo "${GREEN}OK${NC}: web honeypot running"
+  TESTS['webhpotrunning']=1		   
 else
-    echo "${RED}ERROR${NC}: isc-agent not running"
-  TESTS['iscagentrunning']=0		       
+    echo "${RED}ERROR${NC}: web honeypot not running"
+  TESTS['webhpotrunning']=0		       
 fi    
 
-# no need to test if the server is exposed, if isc-agent is not running
-if [ ${TESTS['iscagentrunning']} -eq 1 ]; then
-  portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json')
+# no need to test if the server is exposed, if web honeypot is not running
+if [ ${TESTS['webhpotrunning']} -eq 1 ]; then
+  portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json' --max-time 5)
   port=$(echo $portcheck | jq .port80 | tr -d '"')
   webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
   if [[ "$port" == "open" ]]; then
