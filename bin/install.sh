@@ -1004,7 +1004,6 @@ if [ -f /etc/dshield.ini ]; then
 	sudorun 'rm /etc/dshield.ini'
     fi
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
-    
 fi
 
 
