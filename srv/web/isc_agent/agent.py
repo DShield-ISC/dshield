@@ -250,7 +250,6 @@ class Agent:
             self.logger.debug(f"ip42long({ip}) returned {result}")
             return result
         except socket.error:
-            self.logger.error(f" - Invalid IP address: '{ip}'")
             self.logger.debug(f"ip42long({ip}) returned -1 due to invalid IP")
             return -1
 
