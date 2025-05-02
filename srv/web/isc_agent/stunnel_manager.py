@@ -6,6 +6,7 @@ import logging
 import shutil
 import platform
 import socket
+import select
 
 from pathlib import Path
 from typing import List, Optional
@@ -27,7 +28,7 @@ class StunnelManager:
         self.config = config
         self.pid: Optional[int] = None
         self.process: Optional[subprocess.Popen] = None
-        self.conf_file = Path("stunnel.conf")
+        self.conf_file = Path("/srv/web/run/stunnel.conf")
         self.dport = None
         self.watchdog_interval = watchdog_interval
         self._watchdog_running = False
@@ -40,16 +41,13 @@ class StunnelManager:
         self.https_ports = [8443] 
         
         # Get TLS certificate pathsd
-        self.tls_cert = "stunnel.pem"
+        self.tls_cert = "/srv/web/combined_stunnel.pem"
         #openssl req -x509 -newkey rsa:2048 -keyout stunnel.key -out stunnel.pem -days 365 -nodes
         #cat stunnel.pem stunnel.key > combined_stunnel.pem
-        if not Path(self.tls_cert).is_file:
-            self._logger.error(f"Unable to open stunnel certificate {self.tls_cert}")     
-
-        # self.tls_cert = Path(config.get('iscagent', 'tlscert', 
-        #                               fallback='/etc/stunnel/stunnel.pem'))
-        # self.tls_key = Path(config.get('iscagent', 'tlskey', 
-        #                              fallback='/etc/stunnel/stunnel.key'))
+        if not Path(self.tls_cert).is_file():
+            self._logger.error(f"ERROR: Unable to open stunnel certificate {self.tls_cert}")    
+            self._logger.error("To create :\n    openssl req -x509 -newkey rsa:2048 -keyout stunnel.key -out stunnel.pem -days 365 -nodes")
+            self._logger.error(f"    cat stunnel.pem stunnel.key > {self.tls_cert}")
 
         self.find_stunnel_binary()
         self._logger.debug(f"Stunnel Binary location is '{self.stunnel_path}'")
@@ -118,20 +116,22 @@ class StunnelManager:
             f.write(";to create test stunnel keys...\n")
             f.write(";openssl req -x509 -newkey rsa:2048 -keyout stunnel.key "
                    "-out stunnel.pem -days 365 -nodes\n")
-            f.write(";cat stunnel.pem stunnel.key > combined_stunnel.pem\n\n")
+            f.write(f";cat stunnel.pem stunnel.key > {self.tls_cert}\n\n")
                
             # HTTPS (encrypted) listeners
             for port in self.https_ports:
                 #f.write("setuid = nobody\n")
                 #f.write("setgid = nogroup\n")
-                f.write("pid = /srv/webhpot/run/stunnel.pid\n")
+                f.write(f"pid = /srv/web/run/stunnel.pid\n")
                 f.write("foreground = yes\n")
+                f.write("output = /dev/null\n")
+                f.write("debug = 0\n")
                 f.write(f"output = {Path().cwd().joinpath('stunnel.log')}\n")
                 f.write("; HTTPS Proxy (With SSL/TLS Encryption)\n")
                 f.write(f"[https_{port}]\n")
-                f.write(f"accept = {port}\n")
+                f.write(f"accept = 0.0.0.0:{port}\n")
                 f.write(f"connect = 127.0.0.1:{target_port}\n")
-                f.write("cert = combined_stunnel.pem\n")
+                f.write(f"cert = {self.tls_cert}\n")
                 # f.write(f"cert = {self.tls_cert}\n")
                 # f.write(f"key = {self.tls_key}\n\n")
         self._logger.debug(f"Config file {self.conf_file} generated")
@@ -146,12 +146,14 @@ class StunnelManager:
         time.sleep(delay)
         try:
             self.process = subprocess.Popen([self.stunnel_path, str(self.conf_file)],
-                                          stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE)
+                                          stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.DEVNULL,
+                                        )
             self.pid = self.process.pid
             self._logger.debug(f"Started stunnel process with PID {self.pid}")
-        except subprocess.SubprocessError as e:
-            self._logger.debug(f"Failed to start stunnel: {str(e)}")
+        except Exception as e:
+            self._logger.error(f"Failed to start stunnel\nThe program will continue without stunnel.\nHere is the STUNNEL error: {str(e)}")
+        
 
     def _check_service(self) -> bool:
         """Check if HTTPS service is listening on configured ports.

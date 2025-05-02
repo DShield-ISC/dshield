@@ -228,8 +228,9 @@ def shutdown_handler(signum, frame):
     logger.debug(f"Active threads before ISC-AGENT shutdown: {[t.name for t in threading.enumerate()]}")
     isc_agent.shutdown()
     logger.debug(f"Active threads before STUNNEL shutdown: {[t.name for t in threading.enumerate()]}")
-    stun_mgr.shutdown()
-    logger.debug(f"Active threads before exit: {[t.name for t in threading.enumerate()]}")
+    if stun_mgr:
+        stun_mgr.shutdown()
+        logger.debug(f"Active threads before exit: {[t.name for t in threading.enumerate()]}")
     logger.info(f"Exiting honeypot web service")
     sys.exit(0)
 
@@ -331,7 +332,7 @@ if __name__ == "__main__":
         else:
             break
 
-    production = False  #False=Single threaded for debugging vs True = production (multithreaded)
+    production = False #False=Single threaded for debugging vs True = production (multithreaded)
 
     if production:
         server_class = socketserver.ThreadingTCPServer  #Multithreaded
@@ -376,11 +377,17 @@ if __name__ == "__main__":
         httpd.daemon_threads = True
 
     #Start the Stunnel port forwarding
-    stun_mgr = StunnelManager(config)
-    stun_mgr_start_thread = stun_mgr.start(delay=2, port=8000)
-    if stun_mgr_start_thread:
-        stun_mgr_start_thread.join()
+    try:
+        stun_mgr = StunnelManager(config)
+        stun_mgr_start_thread = stun_mgr.start(delay=2, port=8000)
+        if stun_mgr_start_thread:
+            stun_mgr_start_thread.join()
+    except Exception as e:
+        stun_mgr = None
+        logger.error("Unable to start stunnel.")
+
 
     #Start the httpd server
+    logger.info("Serving honeypot.")
     httpd.serve_forever()
 
