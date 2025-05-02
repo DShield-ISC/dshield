@@ -332,7 +332,7 @@ if __name__ == "__main__":
         else:
             break
 
-    production = False #False=Single threaded for debugging vs True = production (multithreaded)
+    production = True #False=Single threaded for debugging vs True = production (multithreaded)
 
     if production:
         server_class = socketserver.ThreadingTCPServer  #Multithreaded
