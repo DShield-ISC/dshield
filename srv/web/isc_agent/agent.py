@@ -185,19 +185,23 @@ class Agent:
         self.logger.debug(f" - cidr2long({translate}) returned net={self.honeypotnet}, mask={self.honeypotmask}")
 
         replacehoneypotip = self.config.get('DShield', 'replacehoneypotip')
-        if replacehoneypotip == 'auto':
+        if replacehoneypotip == 'auto' or replacehoneypotip == '':
             replacehoneypotip = self.my_ip
         self.replacehoneypotip = self.ip42long(replacehoneypotip)
         self.logger.debug(f" - ip42long({replacehoneypotip}) returned {self.replacehoneypotip}")
 
         anonymize = self.config.get('DShield', 'anonymizeip')
-        anonymize_result = self.cidr2long(anonymize)
-        self.anonymizenet = anonymize_result[0]
-        self.anonymizenetmask = anonymize_result[1]
-        self.logger.debug(f" - cidr2long({anonymize}) returned net={self.anonymizenet}, mask={self.anonymizenetmask}")
+        if anonymize == '':
+            self.anonymizenet = -1
+            self.anonymizenetmask = -1
+        else:
+            anonymize_result = self.cidr2long(anonymize)
+            self.anonymizenet = anonymize_result[0]
+            self.anonymizenetmask = anonymize_result[1]
+            self.logger.debug(f" - cidr2long({anonymize}) returned net={self.anonymizenet}, mask={self.anonymizenetmask}")
 
-        self.anonymizemask = self.ip42long(self.config.get('DShield', 'anonymizemask'))
-        self.logger.debug(f" - ip42long({self.config.get('DShield', 'anonymizemask')}) returned {self.anonymizemask}")
+            self.anonymizemask = self.ip42long(self.config.get('DShield', 'anonymizemask'))
+            self.logger.debug(f" - ip42long({self.config.get('DShield', 'anonymizemask')}) returned {self.anonymizemask}")
 
         self.logger.debug(f"read_config completed: user_id={self.id}, honeypot_net={self.honeypotnet}, anonymize_net={self.anonymizenet}")
 

@@ -122,7 +122,7 @@ class StunnelManager:
             for port in self.https_ports:
                 #f.write("setuid = nobody\n")
                 #f.write("setgid = nogroup\n")
-                f.write(f"pid = /srv/web/run/stunnel.pid\n")
+                f.write("pid = /srv/web/run/stunnel.pid\n")
                 f.write("foreground = yes\n")
                 f.write("output = /dev/null\n")
                 f.write("debug = 0\n")
