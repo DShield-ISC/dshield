@@ -13,7 +13,6 @@ import requests
 import pathlib
 import threading
 
-from collections import deque
 from threading import Lock, Timer, Event
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Dict, Any
@@ -34,7 +33,7 @@ class Agent:
         self.logger.setLevel(logging.DEBUG)
         self.config = config_file
 
-        self.queue = deque()      #To be submitted to dshield
+        self.queue = list()      #To be submitted to dshield
         self.queue_lock = Lock()   #Locked while queue is updated
         self.submit_lock = Lock()   #Locked while entries are being submitted to queue
         self.rules_lock = Lock()   #Locked when rules are updating
@@ -48,13 +47,13 @@ class Agent:
 
         #Keep some statistics
         self.submission_errors = 0
-        self.submission_timestamps = deque()
+        self.submission_timestamps = list()
         
         #Used to submit entries in queue to dshield
         self.executor = ThreadPoolExecutor(max_workers=2) #2 shoud be good
         
-        #self.url = 'https://www.dshield.org/submitapi/'  #production
-        self.url = 'https://isc.sans.edu/devsubmitapi'  #Development
+        #self.url = 'https://www.dshield.org/submitapi/'  #production   These are set in the read_config
+        #self.url = 'https://isc.sans.edu/devsubmitapi'  #Development
 
         #Flags control what is anonymized
         self.honeypotmask = -1
@@ -118,17 +117,29 @@ class Agent:
 
         self.id = self.config.getint('DShield', 'userid')
         if self.id == 0:
-            self.logger.error(" - No userid configured")
+            self.logger.error(" - No userid configured.  Expected 'userid' to be defined in the 'Dshield' section of dshield.ini. (default location is /etc/dshield.ini)")
             sys.exit(1)
 
         key = self.config.get('DShield', 'apikey')
         if not key or not all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=+' for c in key):
-            self.logger.error(" - No valid API key configured")
+            self.logger.error(" - No valid API key configured. Expected 'apikey' to be defined in the 'Dshield' section of dshield.ini. (default location is /etc/dshield.ini)")
             sys.exit(1)
         self.key = key
 
+        url = self.config.get("plugin:tcp:http","dshield_url",fallback="https://www.dshield.org/submitapi/")
+        try:
+            response = requests.head(url, timeout=10)  # Added timeout
+            response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        except Exception as e:
+            self.logger.exception(f"Invalid URL specified in configuration file. {url} {str(e)}")
+            sys.exit(1)
+        self.logger.debug(f" - Using this url for submissions: {url}.")
+        self.url = url
+
+
         log_rate = self.config.get('plugin:tcp:http', 'submit_logs_rate', fallback="300")
         if not log_rate or not log_rate.isnumeric() or int(log_rate) < 60:
+            self.logger.warning(f" - submit_log_rates can not be less than 60.  Using 300")
             self.submission_interval = 300
         else:
             self.submission_interval = int(log_rate)
@@ -136,17 +147,36 @@ class Agent:
 
         hydrate_interval = self.config.get('plugin:tcp:http', 'refresh_rules_interval', fallback="3600")
         if not hydrate_interval or not hydrate_interval.isnumeric() or int(hydrate_interval) > 86500:
+            self.logger.warning(f" - refresh_rules_interval can not be > 86500.  Using 3600.")
             self.hydrate_interval = 3600
         else:
             self.hydrate_interval = int(hydrate_interval)
         self.logger.debug(f" - Rule refresh rate set to {self.hydrate_interval} seconds.")
 
-        msg_trigger = self.config.get('DShield', 'queue_size_submit_trigger', fallback='100')
-        if not msg_trigger or not msg_trigger.isnumeric() or int(msg_trigger) > 1000:
+        msg_trigger = self.config.get('plugin:tcp:http', 'queue_size_submit_trigger', fallback='100')
+        if not msg_trigger or not msg_trigger.isnumeric() or (int(msg_trigger) > 1000) or (int(msg_trigger) < 10):
+            self.logger.warning(f" - queue_size_submit_trigger must be between 10 and 1000. Defaulting to 100.")
             self.queue_trigger_size = 100
         else:
             self.queue_trigger_size = int(msg_trigger)
         self.logger.debug(f" - Submission are automatically triggered if there are more than {self.queue_trigger_size} in queue.")
+
+        web_log_purge_rate = self.config.get('plugin:tcp:http', 'web_log_purge_rate', fallback='2')
+        if not web_log_purge_rate or not web_log_purge_rate.isnumeric() or int(web_log_purge_rate) < 2 or int(web_log_purge_rate) > 10 :
+            self.logger.warning(f" - web_log_purge_rate value must be between 2 and 10. Defaulting to 2")
+            self.web_log_purge_rate = 2
+        else:
+            self.web_log_purge_rate = int(web_log_purge_rate)
+        self.logger.debug(f" - When purging logs every {self.web_log_purge_rate} will be dropped.")
+
+        web_log_limit = self.config.get('plugin:tcp:http', 'web_log_limit', fallback='1000')
+        minimum_log_limit = self.queue_trigger_size *2
+        if not web_log_limit or not web_log_limit.isnumeric() or (int(web_log_limit) < minimum_log_limit):
+            self.logger.warning(f" - web_log_limit must be at least double queue_size_submit_trigger. Setting it to {minimum_log_limit}")
+            self.web_log_limit = minimum_log_limit
+        else:
+            self.web_log_limit = int(web_log_limit)
+        self.logger.debug(f" - When the agent queue size exceeds {self.web_log_limit} messages will be purged.")
 
         translate = self.config.get('DShield', 'honeypotip')
         translate_result = self.cidr2long(translate)
@@ -452,13 +482,22 @@ class Agent:
 
         with self.queue_lock:
             self.queue.append(processed_msg)
-            queue_size = len(self.queue)
 
+        queue_size = len(self.queue)
+
+        #Prevent ISC queue from being backlocked by purging every X records when web_log_limit reached
+        if queue_size >= self.web_log_limit:
+            self.logger.warning(f" - ISC Submit queue size exceeded max web_log_limit from ini {self.web_log_limit}. Purging every {self.web_log_purge_rate} records.")
+            with self.queue_lock:
+                self.queue = self.queue[::self.web_log_purge_rate]
+            queue_size = len(self.queue)
+        
+        #If this submit make the length exceed the trigger size then start submitting. (otherwise done by scheduled job)
         if queue_size >= self.queue_trigger_size:
-            self.logger.info(f" - Queue is getting large. ({queue_size} items) Submitting data to isc.")
-            self._submit()
+            self.logger.info(f" - ISC Submit queue is getting large. ({queue_size} items) Submitting data to isc.")
+            self._submit()   
         else:
-            self.logger.info(f" - Not triggering submit because (Queue size: {queue_size} < Trigger size {self.queue_trigger_size})")
+            self.logger.debug(f" - Not triggering submit because (Queue size: {queue_size} < Trigger size {self.queue_trigger_size})")
 
         self.logger.debug(f"add_to_queue completed, queue size = {len(self.queue)}")
 
@@ -631,7 +670,7 @@ class Agent:
                 with self.queue_lock:
                     if not self.queue:
                         break
-                    msg = self.queue.popleft()
+                    msg = self.queue.pop()
                     self.logger.debug(f" - Dequeued message: {msg}")
 
                 future = self.executor.submit(self._send_to_backend, msg)
@@ -735,7 +774,7 @@ class Agent:
             self.logger.error(f" - Submission failed for msg {msg}: {e}")
             with self.queue_lock:
                 self.queue.appendleft(msg)
-                self.logger.debug(f" - Message requeued: {msg}, errors_24h={self.submission_errors}")
+            self.logger.debug(f" - Message requeued: {msg}, errors_24h={self.submission_errors}")
 
         self.logger.debug("callback_result_handler completed")
 
