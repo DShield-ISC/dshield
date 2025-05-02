@@ -190,11 +190,11 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
 
         if record_local_responses:
             try:
-                fh = open(args.local_responses, "a")
+                fh = open(local_response_path, "a")
                 fh.write(f"{json.dumps(log_data)}\n")
                 fh.close()
             except Exception as e:
-                self.logger.error(f"Error writing to local response file {args.local_responses} - {e}")
+                self.logger.error(f"Error writing to local response file {local_response_path} - {e}")
 
     def do_GET(self):
         """Handles GET requests."""
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
     parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
-    parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
+    #parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
 
     args = parser.parse_args()
 
@@ -284,7 +284,10 @@ if __name__ == "__main__":
     sh.setLevel(level=numeric_level)
 
     #Set log level to debug if its in the config
-    record_local_responses = config.get("iscagent","debug") == "true"   #Its lowercase in the log file.
+    record_local_responses = config.get('plugin:tcp:http','enable_local_logs') == 'true'   #Its lowercase.
+
+    #Set local logfile path 
+    local_response_path = config.get('plugin:tcp:http','local_logs_file', fallback='/srv/log/isc-agent.out')
 
     #Start the ISC Agent threats for queueing and submission   
     isc_agent = Agent(config)
@@ -328,7 +331,7 @@ if __name__ == "__main__":
         else:
             break
 
-    production = True  #False=Single threaded for debugging vs True = production (multithreaded)
+    production = False  #False=Single threaded for debugging vs True = production (multithreaded)
 
     if production:
         server_class = socketserver.ThreadingTCPServer  #Multithreaded
