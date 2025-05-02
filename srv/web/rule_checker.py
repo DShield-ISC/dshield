@@ -112,7 +112,7 @@ for sig in signatures:
         if rule.get("attribute") == "path" and (len(rule.get("value")) > 3) and (rule.get("score") < 10):
             logger.warning(f"Rules base on a full URI (path) should be given 10 points or more.\nSignature {sig}\n")
         if rule.get("condition") not in ['equals','contains','absent','regex']:
-            logger.warning(f"Rules has an invalid condition. Must be equals,contains,absent or regex.\nSignature {sig}\n")
+            logger.error(f"Rules has an invalid condition. Must be equals,contains,absent or regex.\nSignature {sig}\n")
         if rule.get("condition") == "contains" and len(value) < 4:
             logger.warning(f"Rule {rule.get('id')} uses 'contains' on a small string <4! \n Signature {sig}\n")
         if (rule.get("attribute") == "method") and rule.get("value").lower() in ["get","post"] and rule.get("score") > 1:
