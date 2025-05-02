@@ -675,7 +675,7 @@ class Agent:
         auth_header = self.make_auth_header()
         headers = {
             'content-type': 'application/json',
-            'User-Agent': 'DShield PyLib 0.1',
+            'User-Agent': f'DShield WebHoneypot-{self.config.get("DShield","version",fallback="XX")}-{self.config.get("DShield","userid",fallback="blank")}',
             'X-ISC-Authorization': auth_header,
             'X-ISC-LogType': 'webhoneypot'
         }
