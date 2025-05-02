@@ -310,9 +310,6 @@ if __name__ == "__main__":
     else:
         response_customizations = {}
 
-
-    production = True  #False=Single threaded for debugging vs True = production (multithreaded)
-
     #Note: http_ports, https_ports in dshield.ini are used by setup process to create port forwards.
     #This process just needs to listen on port 8000 (HTTP) and 8443 (HTTPS)
 
@@ -330,7 +327,9 @@ if __name__ == "__main__":
             time.sleep(10)
         else:
             break
-    
+
+    production = True  #False=Single threaded for debugging vs True = production (multithreaded)
+
     if production:
         server_class = socketserver.ThreadingTCPServer  #Multithreaded
     else: 
