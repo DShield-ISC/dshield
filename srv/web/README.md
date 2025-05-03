@@ -77,6 +77,21 @@ To run as source you will also need to install:
   python ./isc_agent.pyz -c dshield.ini
     ```
 
+The specified init file must contain a valid APIKEY and UserID. 
+
+The specified init file can have the following optional values specified:
+
+```
+[plugin:tcp:http]
+dshield_url=https://www.dshield.com/submitapi   #Override the default submit url.
+enable_local_logs=true                          #When true local logs will be recorded 
+local_logs_file=/home/student/locallog.json     #Specify the path for the local logs
+submit_logs_rate=300                            #Frequency that local logs are submitted to ISC (seconds)
+queue_size_submit_trigger=100                   #When local log size reaches this submit to ISC is auto triggered
+web_log_limit=1000                              #If local queue reaches this size items are dropped                
+web_log_purge_rate=2                            #Number of items to drop from queue when web_log_limit is exceeded 2 means every other, 3 every third, etc
+```
+
   You can also provide a local file that provides customizations that are specific to your instance using the `--response customizations.json` command line argument.  For full details on this see [Customizations](./CUSTOMIZATIONS.md)
 
 ### Testing
