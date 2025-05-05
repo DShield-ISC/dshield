@@ -33,10 +33,10 @@ class DshieldSubmit:
     url = 'https://www.dshield.org/submitapi/'
 
     types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest', 'webhoneypot']
-    logtypesregex={'generic': '^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
-                   'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
-                   'iptables': '(^\d+) \S+ kernel:\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
-                   'aws': '(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
+    logtypesregex={'generic': r'^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
+                   'pi': r'(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                   'iptables': r'(^\d+) \S+ kernel:\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                   'aws': r'(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
     authheader = ''
 
     def __init__(self, filename):
@@ -51,10 +51,10 @@ class DshieldSubmit:
 
     @staticmethod
     def testurl(string):
-        urlre = re.compile('(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:[a-z]{2,13})/)'
-                           '(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+'
-                           '(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'".,<>?])'
-                           '|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:[a-z]{2,13})\b/?(?!@)))')
+        urlre = re.compile(r'(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:[a-z]{2,13})/)'
+                           r'(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+'
+                           r'(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'".,<>?])'
+                           r'|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:[a-z]{2,13})\b/?(?!@)))')
         if urlre.match(string):
             return 1
         return 0
