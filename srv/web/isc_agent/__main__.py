@@ -288,7 +288,7 @@ if __name__ == "__main__":
     sh.setLevel(level=numeric_level)
 
     #Set log level to debug if its in the config
-    record_local_responses = config.get('plugin:tcp:http','enable_local_logs') == 'true'   #Its lowercase.
+    record_local_responses = config.get('plugin:tcp:http','enable_local_logs',fallback='false') == 'true'   #Its lowercase.
 
     #Set local logfile path 
     local_response_path = config.get('plugin:tcp:http','local_logs_file', fallback='/srv/log/isc-agent.out')
