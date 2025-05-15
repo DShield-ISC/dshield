@@ -117,12 +117,12 @@ class Agent:
 
         self.id = self.config.getint('DShield', 'userid')
         if self.id == 0:
-            self.logger.error(" - No userid configured.  Expected 'userid' to be defined in the 'Dshield' section of dshield.ini. (default location is /etc/dshield.ini)")
+            self.logger.error(" - No userid configured.  Expected 'userid' to be defined in the 'Dshield' section of dshield.ini.")
             sys.exit(1)
 
         key = self.config.get('DShield', 'apikey')
         if not key or not all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=+' for c in key):
-            self.logger.error(" - No valid API key configured. Expected 'apikey' to be defined in the 'Dshield' section of dshield.ini. (default location is /etc/dshield.ini)")
+            self.logger.error(" - No valid API key configured. Expected 'apikey' to be defined in the 'Dshield' section of dshield.ini.")
             sys.exit(1)
         self.key = key
 

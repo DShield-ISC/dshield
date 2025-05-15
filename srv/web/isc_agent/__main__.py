@@ -12,6 +12,7 @@ import threading
 import signal
 import time
 import platform
+import pathlib
 
 import logging
 import logging.handlers
@@ -267,9 +268,13 @@ if __name__ == "__main__":
     sh.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(sh)
 
+    default_ini = "/etc/dshield.ini"
+    if pathlib.Path("/srv/dshield/etc/dshield.ini").is_file():
+        default_ini = "/srv/dshield/etc/dshield.ini"
+
     # Parse command-line arguments for config file
     parser = argparse.ArgumentParser(description="Web Honeypot")
-    parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
+    parser.add_argument("-c", "--config", default=default_ini, help=f"Path to configuration file, Default is {default_ini}")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
     parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
     #parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
@@ -287,7 +292,10 @@ if __name__ == "__main__":
     fh.setLevel(level=numeric_level)
     sh.setLevel(level=numeric_level)
 
-    #Set log level to debug if its in the config
+    #Log the path to dshield.ini
+    logger.info(f"Using configuration file {args.config}.")
+
+    #Set whether or not we are going to use local logging
     record_local_responses = config.get('plugin:tcp:http','enable_local_logs',fallback='false') == 'true'   #Its lowercase.
 
     #Set local logfile path 
@@ -319,7 +327,6 @@ if __name__ == "__main__":
 
     #Note: http_ports, https_ports in dshield.ini are used by setup process to create port forwards.
     #This process just needs to listen on port 8000 (HTTP) and 8443 (HTTPS)
-
     port = 8000
 
     logger.debug(f"start_production() called with port={port}")
