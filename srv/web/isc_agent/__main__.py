@@ -269,7 +269,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments for config file
     parser = argparse.ArgumentParser(description="Web Honeypot")
-    parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
+    parser.add_argument("-c", "--config", default="/srv/dshield/etc/dshield.ini", help="Configuration file")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
     parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
     #parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
