@@ -33,13 +33,22 @@ To run as source you will also need to install:
   
 ## Installation
 
-### From zipapp
-1. **Download and run the zipapp**
+### From zipapp (One of the following 2 options)
+1. **Download or build and run the zipapp**
     - Download from releases [Here](https://github.com/DShield-ISC/dshield/releases)
 
-    `python3 ./isc_agent.pyz`
+2. **Build the zipapp**
+   - If the a release is unavailable or you want the latest changes you can build the zipapp from the repository. As a zipapp the web honeypot can easily be moved to any system with python along with your `dshield.ini` and run without an installation process. To build a zipapp do the following:
 
-### From Source
+    ```
+    git clone http://github.com/Dshield-isc/dshield
+    cd dshield/srv/web
+    ./build_zipapp.sh
+    ```
+
+    This will create a portable zipapp file name `./isc_agent.pyz`.
+
+### From Source (Follow these steps)
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/Dshield-ISC/dshield.git
@@ -55,44 +64,55 @@ To run as source you will also need to install:
 
 ## Usage
 
-### Running the Honeypot
+### Running the Honeypot as a zipapp:
 
-- **As a zipapp**:
-  After downloading the zipapp .pyz launch it and pass any desired command line argument:
+  As a zipapp absent the normal installation process you will have to specify the path to the dshield.ini.
+
   ```bash
   python ./isc_agent.pyz -h
+  python ./isc_agent.pyz -c ./dshield.ini
   ```
-  The server will start on port `8000` and (if stunnel is installed) will start a stunnel instance to terminate TLS traffic on `8443` and forward it to port 8000.
+  
 
-- **As source code**:
+### Running the Honeypot as source code:
   To run from source point the python interpreter at the isc_agent directory (not at a python program):
   ```bash
-  cd ./srv/web
-  python3 ./isc_agent
-    ```
+  cd /srv/web
+  python3 ./isc_agent -h
+  ```
 
-- **Custom Configuration**:
-  Specify a different config file using the `-c` flag. If no option is specified it will look for the file /etc/dshield.ini:
+### Configuration
+  The honeypot reads settings from a config file. By default the tool will prefer `/srv/dshield/etc/dshield.ini` if it exists. If it does not exist it uses `/etc/dshield.ini`.  A location can be forced with the `-c` command line argument.
+
   ```bash
-  python ./isc_agent.pyz -c dshield.ini
-    ```
+  python3 ./isc_agent.pyz -c dshield.ini
+  ```
 
-The specified init file must contain a valid APIKEY and UserID. 
+  - The specified init file must contain a valid APIKEY and UserID. These are free.  See isc.sans.edu.
+  - The tool listens for http on port `8000`. This is not configurable. It uses `stunnel` listing on `8443` to forward https to 8000. This is also not configurable. All public listening ports are handled by port forward IPTABLES rules are configured by `install.sh` based on ports in the `dshield.ini`. 
 
-The specified init file can have the following optional values specified:
+  The specified init file can have the following optional values specified:
 
-```
-[plugin:tcp:http]
-dshield_url=https://www.dshield.com/submitapi   #Override the default submit url.
-enable_local_logs=true                          #When true local logs will be recorded 
-local_logs_file=/home/student/locallog.json     #Specify the path for the local logs
-submit_logs_rate=300                            #Frequency that local logs are submitted to ISC (seconds)
-queue_size_submit_trigger=100                   #When local log size reaches this submit to ISC is auto triggered
-web_log_limit=1000                              #If local queue reaches this size items are dropped                
-web_log_purge_rate=2                            #Number of items to drop from queue when web_log_limit is exceeded 2 means every other, 3 every third, etc
-```
+  ```
+  [plugin:tcp:http]
+  dshield_url=https://www.dshield.com/submitapi   
+  enable_local_logs=true                         
+  local_logs_file=/home/student/locallog.json     
+  submit_logs_rate=300                            
+  queue_size_submit_trigger=100                   
+  web_log_limit=1000                                           
+  web_log_purge_rate=2                           
+  ```
 
-  You can also provide a local file that provides customizations that are specific to your instance using the `--response customizations.json` command line argument.  For full details on this see [Customizations](./CUSTOMIZATIONS.md)
+  - dshield_url   - Override the default submit url.
+  - enable_local_logs - When true local logs will be recorded 
+  - local_logs_file - Specify the path for the local logs (default /srv/log/isc-agent.out)
+  - submit_logs_rate - Frequency that local logs are submitted to ISC (seconds)
+  - queue_size_submit_trigger - When local log size reaches this submit to ISC is auto triggered
+  - web_log_limit - If local queue reaches this size items are dropped                
+  - web_log_purge_rate - Number of items to drop from queue when web_log_limit is exceeded. 2 means every other, 3 every third, etc
+
+  You can also provide a local file that provides customizations that are specific to your instance using the `--response customizations.json` command line argument. For full details on this see [Customizations](./CUSTOMIZATIONS.md)
 
 ### Testing
 
@@ -131,14 +151,4 @@ web_log_purge_rate=2                            #Number of items to drop from qu
   - After creating your rules be sure to check them using the rules checker as described in [RULES TESTING Document](./RULES_TESTING.md)
 
 
-## Configuration
-
-The honeypot reads settings from a config file (default: `/etc/dshield.ini`):
-- The tool listens for http on port `8000`.
-- It uses `stunnel` listing on `8443` to forward https to 8000 
-
-This tool really only works if you have a dshield API key. Those are free.  Contact us for a key.
-
-
 ---
-*Maintained by [Mark Baggett](https://github.com/markbaggett). Last updated: April 2025.*
