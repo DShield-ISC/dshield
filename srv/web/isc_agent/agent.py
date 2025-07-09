@@ -53,8 +53,8 @@ class Agent:
         #Used to submit entries in queue to dshield
         self.executor = ThreadPoolExecutor(max_workers=2) #2 shoud be good
         
-        #self.url = 'https://www.dshield.org/submitapi/'  #production
-        self.url = 'https://isc.sans.edu/devsubmitapi'  #Development
+        self.url = 'https://www.dshield.org/submitapi/'  #production
+        # self.url = 'https://isc.sans.edu/devsubmitapi'  #Development
 
         #Flags control what is anonymized
         self.honeypotmask = -1
