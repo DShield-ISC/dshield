@@ -243,7 +243,7 @@ if [ ! -f "${DSHIELDINI}" ]; then
 	sudo mkdir -p "${ETCDIR}"
 	sudo mv /etc/dshield.ini "${DSHIELDINI}"
 	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
-	sudo ln -s "{$ETCDIR}/dshield.ini" "/etc/dshield.ini"
+	sudo ln -s "${ETCDIR}/dshield.ini" "/etc/dshield.ini"
     fi
 fi
 
