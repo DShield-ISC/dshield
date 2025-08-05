@@ -1080,7 +1080,7 @@ if [ "$record_local_repsonses" == "" ]; then
     record_local_repsonses=false
 fi
 if [ "$local_response_path" == "" ]; then
-    local_response_path='/srv/log/dshield/local_response_{date}.json'
+    local_response_path='/srv/log/local_response_{date}.json'
 fi
 
 if [ "$submit_log_rate" == "" ]; then
@@ -2095,21 +2095,21 @@ run "echo 'localips=$CONIPS' >> ${DSHIELDINI}"
 ADMINPORTS=$(quotespace "$ADMINPORTS")
 run "echo 'adminports=$ADMINPORTS ' >> ${DSHIELDINI}"
 nohoneyips=$(quotespace "$nohoneyips")
-run "echo 'nohoneyips=$nohoneyips  ; ignore connections from these IPs and do not log' >> ${DSHIELDINI}"
+run "echo 'nohoneyips=$nohoneyips' >> ${DSHIELDINI}"
 nohoneyports=$(quotespace "$nohoneyports")
-run "echo 'nohoneyports=$nohoneyports ; which ports not to log' >> ${DSHIELDINI}"
-run "echo 'manualupdates=$MANUPDATES ; false to enable automatic updates' >> ${DSHIELDINI}"
-run "echo 'telnet=$telnet ; enable telnet' >> ${DSHIELDINI} "
+run "echo 'nohoneyports=$nohoneyports' >> ${DSHIELDINI}"
+run "echo 'manualupdates=$MANUPDATES' >> ${DSHIELDINI}"
+run "echo 'telnet=$telnet' >> ${DSHIELDINI} "
 run "echo '[plugin:tcp:http]' >> ${DSHIELDINI}"
-run "echo 'http_ports=[8000] ; what http port to listen on' >> ${DSHIELDINI}"
-run "echo 'https_ports=[8443] ; what https port to listen on with stunnel' >> ${DSHIELDINI}"
-run "echo 'submit_log_rate=$submit_log_rate ; how often to submit logs in seconds' >> ${DSHIELDINI}"
-run "echo 'queue_trigger=$queue_trigger ; logs are submitted if this many entries are in the queue even' >> ${DSHIELDINI}"
-run "echo 'web_log_limit=$web_log_limit ; how many logs in the queue are considered excessive and trigger skipping' >> ${DSHIELDINI}"
-run "echo 'web_log_purgefactor=$web_log_purgefactor  ; if excessive logs are received, each 2nd log entry is dropped' >> ${DSHIELDINI}"
-run "echo 'debug=false  ; true enabled additional logging' >> ${DSHIELDINI}"
-run "echo 'local_response_path=$local_response_path ; where to store local responses' >> ${DSHIELDINI}"
-run "echo 'record_local_responses=$record_local_repsonses ; true to record local responses' >> ${DSHIELDINI}"
+run "echo 'http_ports=[8000]' >> ${DSHIELDINI}"
+run "echo 'https_ports=[8443]' >> ${DSHIELDINI}"
+run "echo 'submit_log_rate=$submit_log_rate' >> ${DSHIELDINI}"
+run "echo 'queue_trigger=$queue_trigger' >> ${DSHIELDINI}"
+run "echo 'web_log_limit=$web_log_limit' >> ${DSHIELDINI}"
+run "echo 'web_log_purgefactor=$web_log_purgefactor' >> ${DSHIELDINI}"
+run "echo 'debug=false' >> ${DSHIELDINI}"
+run "echo 'local_response_path=$local_response_path' >> ${DSHIELDINI}"
+run "echo 'record_local_responses=$record_local_repsonses' >> ${DSHIELDINI}"
 run "echo '# this section may disappear in future versions' >> ${DSHIELDINI}"
 run "echo '[iscagent]' >> ${DSHIELDINI}"
 database=$(quotespace "$database")
