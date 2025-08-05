@@ -12,6 +12,7 @@ import threading
 import signal
 import time
 import platform
+import pathlib
 
 import logging
 import logging.handlers
@@ -193,11 +194,11 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
 
         if record_local_responses:
             try:
-                fh = open(args.local_responses, "a")
+                fh = open(local_response_path, "a")
                 fh.write(f"{json.dumps(log_data)}\n")
                 fh.close()
             except Exception as e:
-                self.logger.error(f"Error writing to local response file {args.local_responses} - {e}")
+                self.logger.error(f"Error writing to local response file {local_response_path} - {e}")
 
     def do_GET(self):
         """Handles GET requests."""
@@ -231,8 +232,9 @@ def shutdown_handler(signum, frame):
     logger.debug(f"Active threads before ISC-AGENT shutdown: {[t.name for t in threading.enumerate()]}")
     isc_agent.shutdown()
     logger.debug(f"Active threads before STUNNEL shutdown: {[t.name for t in threading.enumerate()]}")
-    stun_mgr.shutdown()
-    logger.debug(f"Active threads before exit: {[t.name for t in threading.enumerate()]}")
+    if stun_mgr:
+        stun_mgr.shutdown()
+        logger.debug(f"Active threads before exit: {[t.name for t in threading.enumerate()]}")
     logger.info(f"Exiting honeypot web service")
     sys.exit(0)
 
@@ -266,12 +268,16 @@ if __name__ == "__main__":
     sh.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(sh)
 
+    default_ini = "/etc/dshield.ini"
+    if pathlib.Path("/srv/dshield/etc/dshield.ini").is_file():
+        default_ini = "/srv/dshield/etc/dshield.ini"
+
     # Parse command-line arguments for config file
     parser = argparse.ArgumentParser(description="Web Honeypot")
-    parser.add_argument("-c", "--config", default="/etc/dshield.ini", help="Configuration file")
+    parser.add_argument("-c", "--config", default=default_ini, help=f"Path to configuration file, Default is {default_ini}")
     parser.add_argument("-r", "--response", default="response_customizations.json", help="Response Customizations")
     parser.add_argument('-l', '--loglevel',  choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING', help='Set the logging level (default: WARNING)')
-    parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
+    #parser.add_argument('--local_responses', default='/srv/log/isc-agent.out', help='Path to record local response records  when "debug" is set to true in dshield.ini. (default: /srv/log/isc-agent.out)')  
 
     args = parser.parse_args()
 
@@ -286,8 +292,14 @@ if __name__ == "__main__":
     fh.setLevel(level=numeric_level)
     sh.setLevel(level=numeric_level)
 
-    #Set log level to debug if its in the config
-    record_local_responses = config.get("iscagent","debug") == "true"   #Its lowercase in the log file.
+    #Log the path to dshield.ini
+    logger.info(f"Using configuration file {args.config}.")
+
+    #Set whether or not we are going to use local logging
+    record_local_responses = config.get('plugin:tcp:http','enable_local_logs',fallback='false') == 'true'   #Its lowercase.
+
+    #Set local logfile path 
+    local_response_path = config.get('plugin:tcp:http','local_logs_file', fallback='/srv/log/isc-agent.out')
 
     #Start the ISC Agent threats for queueing and submission   
     isc_agent = Agent(config)
@@ -313,12 +325,8 @@ if __name__ == "__main__":
     else:
         response_customizations = {}
 
-
-    production = True  #False=Single threaded for debugging vs True = production (multithreaded)
-
     #Note: http_ports, https_ports in dshield.ini are used by setup process to create port forwards.
     #This process just needs to listen on port 8000 (HTTP) and 8443 (HTTPS)
-
     port = 8000
 
     logger.debug(f"start_production() called with port={port}")
@@ -333,7 +341,9 @@ if __name__ == "__main__":
             time.sleep(10)
         else:
             break
-    
+
+    production = True #False=Single threaded for debugging vs True = production (multithreaded)
+
     if production:
         server_class = socketserver.ThreadingTCPServer  #Multithreaded
     else: 
@@ -377,11 +387,17 @@ if __name__ == "__main__":
         httpd.daemon_threads = True
 
     #Start the Stunnel port forwarding
-    stun_mgr = StunnelManager(config)
-    stun_mgr_start_thread = stun_mgr.start(delay=2, port=8000)
-    if stun_mgr_start_thread:
-        stun_mgr_start_thread.join()
+    try:
+        stun_mgr = StunnelManager(config)
+        stun_mgr_start_thread = stun_mgr.start(delay=2, port=8000)
+        if stun_mgr_start_thread:
+            stun_mgr_start_thread.join()
+    except Exception as e:
+        stun_mgr = None
+        logger.error("Unable to start stunnel.")
+
 
     #Start the httpd server
+    logger.info("Serving honeypot.")
     httpd.serve_forever()
 

@@ -12,15 +12,13 @@ import http
 import requests
 import pathlib
 import threading
-
 from collections import deque
 from threading import Lock, Timer, Event
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Dict, Any
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(f"main.{__name__}")
-
 
 class Agent:
     """
@@ -29,45 +27,42 @@ class Agent:
     """
 
     def __init__(self, config_file):
-
         self.logger = logging.getLogger(f"main.{self.__class__.__name__}")
         self.logger.setLevel(logging.DEBUG)
         self.config = config_file
 
-        self.queue = deque()      #To be submitted to dshield
-        self.queue_lock = Lock()   #Locked while queue is updated
-        self.submit_lock = Lock()   #Locked while entries are being submitted to queue
-        self.rules_lock = Lock()   #Locked when rules are updating
+        self.queue = deque()      # To be submitted to dshield
+        self.queue_lock = Lock()   # Locked while queue is updated
+        self.submit_lock = Lock()   # Locked while entries are being submitted to queue
+        self.rules_lock = Lock()   # Locked when rules are updating
 
-        self.scheduler_timers = {}   #keeps track of scheduled timed jobs
-        self.scheduler_reschedule = Event()   #Used to stop the scheduler
+        self.scheduler_timers = {}   # keeps track of scheduled timed jobs
+        self.scheduler_reschedule = Event()   # Used to stop the scheduler
         self.scheduler_reschedule.set()  # By default scheduler is running
 
         self.RULES_RESPONSES = {}
         self.RULES_SIGNATURES = {}
 
-        #Keep some statistics
+        # Keep some statistics
         self.submission_errors = 0
         self.submission_timestamps = deque()
         
-        #Used to submit entries in queue to dshield
-        self.executor = ThreadPoolExecutor(max_workers=2) #2 shoud be good
+        # Used to submit entries in queue to dshield
+        self.executor = ThreadPoolExecutor(max_workers=2) # 2 should be good
         
         self.url = 'https://www.dshield.org/submitapi/'  #production
         # self.url = 'https://isc.sans.edu/devsubmitapi'  #Development
 
-        #Flags control what is anonymized
         self.honeypotmask = -1
         self.honeypotnet = -1
         self.replacehoneypotip = -1
         self.anonymizenet = -1
         self.anonymizenetmask = -1
         self.anonymizemask = -1
-        
 
     @property
     def responses(self):
-        #Make sure we don't read rules in the middle of an update
+        # Make sure we don't read rules in the middle of an update
         # Return a copy to prevent modification while iterating after the lock is released.
         with self.rules_lock:
             rules = self.RULES_RESPONSES.copy()
@@ -75,7 +70,7 @@ class Agent:
 
     @property
     def signatures(self):
-        #Make sure we don't read rules in the middle of an update
+        # Make sure we don't read rules in the middle of an update
         # Return a copy to prevent modification while iterating after the lock is released.
         with self.rules_lock:
             rules = self.RULES_SIGNATURES.copy()
@@ -85,10 +80,10 @@ class Agent:
         self.logger.debug("Agent start-up initiated.")
         self.my_ip = self.getmyip()
 
-        self.read_config()  #Sets additional attributes in self (overrides defaults above)
+        self.read_config()  # Sets additional attributes in self (overrides defaults above)
 
-        self._scheduler(self.hydrate_interval, self._scheduled_hydrate_rules) #interval defined in config
-        self._scheduler(self.submission_interval, self._scheduled_submissions)  #interval defined in config
+        self._scheduler(self.hydrate_interval, self._scheduled_hydrate_rules) # interval defined in config
+        self._scheduler(self.submission_interval, self._scheduled_submissions)  # interval defined in config
 
         self.logger.debug(
             f"Agent initialized: trigger_size={self.queue_trigger_size}, "
@@ -118,17 +113,28 @@ class Agent:
 
         self.id = self.config.getint('DShield', 'userid')
         if self.id == 0:
-            self.logger.error(" - No userid configured")
+            self.logger.error(" - No userid configured.  Expected 'userid' to be defined in the 'Dshield' section of dshield.ini.")
             sys.exit(1)
 
         key = self.config.get('DShield', 'apikey')
         if not key or not all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=+' for c in key):
-            self.logger.error(" - No valid API key configured")
+            self.logger.error(" - No valid API key configured. Expected 'apikey' to be defined in the 'Dshield' section of dshield.ini.")
             sys.exit(1)
         self.key = key
 
+        url = self.config.get("plugin:tcp:http","dshield_url",fallback="https://www.dshield.org/submitapi/")
+        try:
+            response = requests.head(url, timeout=10)  # Added timeout
+            response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        except Exception as e:
+            self.logger.exception(f"Invalid URL specified in configuration file. {url} {str(e)}")
+            sys.exit(1)
+        self.logger.debug(f" - Using this url for submissions: {url}.")
+        self.url = url
+
         log_rate = self.config.get('plugin:tcp:http', 'submit_logs_rate', fallback="300")
         if not log_rate or not log_rate.isnumeric() or int(log_rate) < 60:
+            self.logger.warning(f" - submit_log_rates can not be less than 60.  Using 300")
             self.submission_interval = 300
         else:
             self.submission_interval = int(log_rate)
@@ -136,17 +142,36 @@ class Agent:
 
         hydrate_interval = self.config.get('plugin:tcp:http', 'refresh_rules_interval', fallback="3600")
         if not hydrate_interval or not hydrate_interval.isnumeric() or int(hydrate_interval) > 86500:
+            self.logger.warning(f" - refresh_rules_interval can not be > 86500.  Using 3600.")
             self.hydrate_interval = 3600
         else:
             self.hydrate_interval = int(hydrate_interval)
         self.logger.debug(f" - Rule refresh rate set to {self.hydrate_interval} seconds.")
 
-        msg_trigger = self.config.get('DShield', 'queue_size_submit_trigger', fallback='100')
-        if not msg_trigger or not msg_trigger.isnumeric() or int(msg_trigger) > 1000:
+        msg_trigger = self.config.get('plugin:tcp:http', 'queue_size_submit_trigger', fallback='100')
+        if not msg_trigger or not msg_trigger.isnumeric() or (int(msg_trigger) > 1000) or (int(msg_trigger) < 10):
+            self.logger.warning(f" - queue_size_submit_trigger must be between 10 and 1000. Defaulting to 100.")
             self.queue_trigger_size = 100
         else:
             self.queue_trigger_size = int(msg_trigger)
         self.logger.debug(f" - Submission are automatically triggered if there are more than {self.queue_trigger_size} in queue.")
+
+        web_log_purge_rate = self.config.get('plugin:tcp:http', 'web_log_purge_rate', fallback='2')
+        if not web_log_purge_rate or not web_log_purge_rate.isnumeric() or int(web_log_purge_rate) < 2 or int(web_log_purge_rate) > 10 :
+            self.logger.warning(f" - web_log_purge_rate value must be between 2 and 10. Defaulting to 2")
+            self.web_log_purge_rate = 2
+        else:
+            self.web_log_purge_rate = int(web_log_purge_rate)
+        self.logger.debug(f" - When purging logs every {self.web_log_purge_rate} will be dropped.")
+
+        web_log_limit = self.config.get('plugin:tcp:http', 'web_log_limit', fallback='1000')
+        minimum_log_limit = self.queue_trigger_size * 2
+        if not web_log_limit or not web_log_limit.isnumeric() or (int(web_log_limit) < minimum_log_limit):
+            self.logger.warning(f" - web_log_limit must be at least double queue_size_submit_trigger. Setting it to {minimum_log_limit}")
+            self.web_log_limit = minimum_log_limit
+        else:
+            self.web_log_limit = int(web_log_limit)
+        self.logger.debug(f" - When the agent queue size exceeds {self.web_log_limit} messages will be purged.")
 
         translate = self.config.get('DShield', 'honeypotip')
         translate_result = self.cidr2long(translate)
@@ -175,7 +200,6 @@ class Agent:
 
         self.logger.debug(f"read_config completed: user_id={self.id}, honeypot_net={self.honeypotnet}, anonymize_net={self.anonymizenet}")
 
-
     def getmyip(self) -> str:
         """
         Retrieves the public IP address of the agent from the DShield API.
@@ -190,7 +214,6 @@ class Agent:
         header = {'User-Agent': 'DShield PyLib 0.1'}
         try:
             r = requests.get('https://www.dshield.org/api/myip?json', headers=header, timeout=5)
-            #r = custom_get('https://www.dshield.org/api/myip?json', headers=header, timeout=5)
             if r.status_code != 200:
                 self.logger.error(f" - Received status code {r.status_code} in response to getmyip request")
                 return_value = '127.0.0.1'
@@ -232,7 +255,6 @@ class Agent:
         self.logger.debug(f"make_auth_header returned {header}")
         return header
 
-
     def ip42long(self, ip: str) -> int:
         """
         Converts an IPv4 address string to its integer representation.
@@ -254,10 +276,8 @@ class Agent:
             self.logger.debug(f"ip42long({ip}) returned {result}")
             return result
         except socket.error:
-            self.logger.error(f" - Invalid IP address: '{ip}'")
             self.logger.debug(f"ip42long({ip}) returned -1 due to invalid IP")
             return -1
-
 
     def long2ip4(self, ip: int) -> str:
         """
@@ -282,7 +302,6 @@ class Agent:
             self.logger.error(f" - Error converting long to IP: {ip}, {e}")
             self.logger.debug(f"long2ip4({ip}) returned '127.0.0.1' due to exception")
             return '127.0.0.1'
-
 
     def cidr2long(self, ip: str) -> tuple[int, int]:
         """
@@ -313,7 +332,6 @@ class Agent:
         self.logger.debug(f"cidr2long({ip}) returned {result}")
         return result
 
-
     def mask42long(self, mask: int) -> int:
         """
         Converts a CIDR mask length (e.g., 24) into its integer netmask representation.
@@ -328,7 +346,6 @@ class Agent:
         result = 2**32 - (2**(32 - mask))
         self.logger.debug(f"mask42long({mask}) returned {result}")
         return result
-
 
     def translateip4(self, ip: str) -> str:
         """
@@ -367,7 +384,6 @@ class Agent:
         self.logger.debug(f"translateip4({ip}) returned {ip} (no translation needed)")
         return ip
 
-
     def anonymizeip4(self, ip: str) -> str:
         """
         Anonymizes an IP address if it falls within the configured 'anonymizeip' range.
@@ -403,7 +419,6 @@ class Agent:
         self.logger.debug(f"anonymizeip4({ip}) returned {ip} (no anonymization needed)")
         return ip
 
-
     def anontranslateip4(self, ip: str) -> str:
         """
         Applies both translation and anonymization to an IP address.
@@ -427,22 +442,24 @@ class Agent:
         self.logger.debug(f"anontranslateip4({ip}) returned {result}")
         return result
 
-
     def add_to_queue(self, msg: Dict[str, Any]) -> None:
         """
         Adds a log message dictionary to the agent's submission queue.
 
         Before adding, it processes the message by applying translation and
-        anonymization to 'dip' fields if they exist.
+        anonymization to 'dip' fields if they exist, converts 'time' to Unix timestamp,
+        and ensures 'useragent' is a string.
         If the queue size reaches the `queue_trigger_size` after adding,
         it triggers an immediate submission attempt via `_submit`.
 
         Args:
             msg: A dictionary representing the log message. Expected to potentially
-                 contain 'sip' and 'dip' keys with IP address strings.
+                 contain 'sip', 'dip', 'time', and 'useragent' keys.
 
         Depends on:
             - self.anontranslateip4
+            - datetime.fromisoformat
+            - timezone.utc
             - self.queue_lock
             - self.queue
             - self._submit
@@ -453,20 +470,46 @@ class Agent:
         if 'dip' in processed_msg:
             processed_msg['dip'] = self.anontranslateip4(processed_msg['dip'])
 
-        self.logger.info(f" - Adding Anonymized message to queue: {processed_msg}")
+        # Convert "time" to Unix timestamp
+        if 'time' in processed_msg:
+            try:
+                dt = datetime.fromisoformat(processed_msg['time']).replace(tzinfo=timezone.utc)
+                processed_msg['time'] = dt.timestamp()
+            except ValueError:
+                processed_msg['time'] = datetime.now(timezone.utc).timestamp()
+        else:
+            processed_msg['time'] = datetime.now(timezone.utc).timestamp()
+
+        # Ensure "useragent" is a string
+        if 'useragent' in processed_msg:
+            if isinstance(processed_msg['useragent'], list):
+                processed_msg['useragent'] = processed_msg['useragent'][0] if processed_msg['useragent'] else ""
+            elif not isinstance(processed_msg['useragent'], str):
+                processed_msg['useragent'] = str(processed_msg['useragent'])
+
+        self.logger.info(f" - Adding processed message to queue: {processed_msg}")
 
         with self.queue_lock:
             self.queue.append(processed_msg)
-            queue_size = len(self.queue)
 
+        queue_size = len(self.queue)
+
+        # Prevent ISC queue from being backlogged by purging every X records when web_log_limit reached
+        if queue_size >= self.web_log_limit:
+            self.logger.warning(f" - ISC Submit queue size exceeded max web_log_limit from ini {self.web_log_limit}. Purging every {self.web_log_purge_rate} records.")
+            with self.queue_lock:
+                temp_list = list(self.queue)
+                self.queue = deque(temp_list[::self.web_log_purge_rate])
+            queue_size = len(self.queue)
+        
+        # If this submit makes the length exceed the trigger size then start submitting.
         if queue_size >= self.queue_trigger_size:
-            self.logger.info(f" - Queue is getting large. ({queue_size} items) Submitting data to isc.")
-            self._submit()
+            self.logger.info(f" - ISC Submit queue is getting large. ({queue_size} items) Submitting data to isc.")
+            self._submit()   
         else:
-            self.logger.info(f" - Not triggering submit because (Queue size: {queue_size} < Trigger size {self.queue_trigger_size})")
+            self.logger.debug(f" - Not triggering submit because (Queue size: {queue_size} < Trigger size {self.queue_trigger_size})")
 
         self.logger.debug(f"add_to_queue completed, queue size = {len(self.queue)}")
-
 
     def shutdown(self) -> None:
         """
@@ -483,52 +526,43 @@ class Agent:
             - self._submit
             - self._cleanup
         """
-        #try:
         self.logger.debug("Agent shutdown called")
         print(" - Waiting for agent to submit final items... Please wait!")
 
         self.logger.debug(" - Preventing scheduling of future jobs.")
         self.scheduler_reschedule.clear()  # Stop future scheduling
 
-        if self.scheduler_timers:               #Stop currently scheduled timers
+        if self.scheduler_timers:               # Stop currently scheduled timers
             for each_name, each_timer in self.scheduler_timers.items():
                 self.logger.info(f" - Canceling scheduled timers for {each_name}.")
                 each_timer.cancel()
 
         self.logger.info(" - Submitting remaining items in queue")
-        self._submit()  #Submit remaining items.
+        self._submit()  # Submit remaining items.
         
-        #Shutdown executor which is submitting items to dshield
+        # Shutdown executor which is submitting items to dshield
         self.logger.debug(" - Shutting down Executor (dshield submission agent) ")            
         self.executor.shutdown(wait=True)
 
         self.logger.debug("Agent shutdown completed")
-        # except KeyboardInterrupt:
-        #     print("Canceling Submission and exiting ungracefully")
-        #     for each_name, each_timer in self.scheduler_timers.items():
-        #         self.logger.debug(f" - Canceling scheduled timers for {each_name}.")
-        #         each_timer.cancel()
-        #     self.executor.shutdown(wait=False)
 
-
-    def _scheduler(self, interval:int, task ) -> None:
+    def _scheduler(self, interval: int, task) -> None:
         """
         Schedules the next execution of the 'task' on the specified interval.
 
         Uses a `threading.Timer` to call `task` after `interval` seconds.
         
-
         Depends on:
             - threading.Timer
         """
-        task_name = task.__name__   #Get function name
+        task_name = task.__name__   # Get function name
         self.logger.info(f"_scheduler asked to run {task_name}")
         if self.scheduler_reschedule.is_set():
             self.logger.debug(f" - Scheduling another _scheduler for {task_name} in {self.submission_interval} seconds")
-            self.scheduler_timers[task_name] = Timer(interval, self._scheduler, (interval,task))  #Reschedule scheduler it on interval
-            self.scheduler_timers[task_name].name = f"scheduler-{task_name}"   #Helps debugging and logging
-            self.scheduler_timers[task_name].start()  #Reschedule scheduler to do this again
-            task() #Run the task
+            self.scheduler_timers[task_name] = Timer(interval, self._scheduler, (interval, task))  # Reschedule scheduler it on interval
+            self.scheduler_timers[task_name].name = f"scheduler-{task_name}"   # Helps debugging and logging
+            self.scheduler_timers[task_name].start()  # Reschedule scheduler to do this again
+            task() # Run the task
             self.logger.info(f"_scheduler completed running {task_name}")
         else:
             self.logger.debug("_scheduler is no longer scheduling tasks.")
@@ -540,8 +574,6 @@ class Agent:
         Returns:
             dict: A dictionary containing the honeypot rules, or None if the request fails.
         """
-
-
         self.logger.debug("get_rules() called")
         self.logger.debug("Connecting to dshield.org")
         # Establish a connection to dshield.org
@@ -581,15 +613,11 @@ class Agent:
         Periodic updating of honeypot rules task run by the scheduler.
 
         Depends on:
-
             - self._scheduler
         """
         self.logger.debug("_scheduled_hydrate_rules called by scheduler - Updating honeypot rules and signatures")
-
         self.update_honeypot_rules()
-
         self.logger.info("_scheduled_hydrate_rules completed")
-
 
     def _scheduled_submissions(self) -> None:
         """
@@ -604,20 +632,16 @@ class Agent:
             - self._scheduler
         """
         self.logger.info("scheduled_submissions called by scheduler - Running _health() and _submit()")
-
         self._health()
         self._submit()
-
         self.logger.info("scheduled_submissions completed")
-
 
     def _submit(self) -> None:
         """
-        Attempts to submit all currently queued messages to the DShield backend.
+        Attempts to submit batches of currently queued messages to the DShield backend.
 
-        Iterates through the queue, dequeuing messages one by one and submitting
-        each to `_send_to_backend` using a thread pool executor. Uses a lock
-        (`submit_lock`) to prevent concurrent submission attempts. Results are
+        Dequeues messages in batches (up to 100) and submits them using a thread pool executor.
+        Uses a lock (`submit_lock`) to prevent concurrent submission attempts. Results are
         handled asynchronously by `callback_result_handler`.
 
         Depends on:
@@ -631,92 +655,79 @@ class Agent:
         self.logger.debug(f"_submit called with {len(self.queue)} in queue.")
         with self.submit_lock:
             self.logger.debug(" - Starting submission process")
-
+            batch_size = 100  # Maximum batch size per submission
             while True:
                 with self.queue_lock:
                     if not self.queue:
                         break
-                    msg = self.queue.popleft()
-                    self.logger.debug(f" - Dequeued message: {msg}")
-
-                future = self.executor.submit(self._send_to_backend, msg)
-                future.add_done_callback(lambda f, m=msg: self.callback_result_handler(f, m))
-
+                    batch = [self.queue.popleft() for _ in range(min(batch_size, len(self.queue)))]
+                    self.logger.debug(f" - Dequeued batch of {len(batch)} messages")
+                future = self.executor.submit(self._send_to_backend, batch)
+                future.add_done_callback(lambda f, b=batch: self.callback_result_handler(f, b))
         self.logger.debug(f"_submit completed with {len(self.queue)} in queue")
 
-
-    def _send_to_backend(self, msg: Dict[str, Any]) -> bool:
+    def _send_to_backend(self, msgs: List[Dict[str, Any]]) -> bool:
         """
-        Sends a single processed message to the DShield backend API.
+        Sends a batch of processed messages to the DShield backend API.
 
-        Formats the message into the required DShield structure (including 'type'
-        and 'timestamp'), generates the authentication header, and makes a POST
-        request.
+        Formats the messages into the required DShield structure with 'type' and 'authheader',
+        where 'logs' is a list of log dictionaries. Makes a POST request with authentication
+        headers.
 
         Args:
-            msg: The processed log message dictionary to send.
+            msgs: A list of processed log message dictionaries to send.
 
         Returns:
             True if the submission was successful (HTTP 200 OK), False otherwise.
 
         Depends on:
-            - json.dumps
-            - datetime.now
             - self.make_auth_header
             - requests.post
-            - sys.getsizeof
             - self.url
         """
-        self.logger.debug(f"_send_to_backend called to submit msg={msg}")
-
-        # Hardcode type as 'webhoneypot' since all messages are web logs
-        dshield_msg = {
-            'type': 'webhoneypot',
-            'logs': json.dumps(msg),
-            'timestamp': msg.get('time', datetime.now().isoformat())
-        }
-        self.logger.debug(f" - Reformatted message for DShield: {dshield_msg}")
+        self.logger.debug(f"_send_to_backend called to submit batch of {len(msgs)} messages")
 
         auth_header = self.make_auth_header()
+        dshield_msg = {
+            'type': 'webhoneypot',
+            'logs': msgs,
+            'authheader': auth_header
+        }
         headers = {
             'content-type': 'application/json',
-            'User-Agent': 'DShield PyLib 0.1',
+            'User-Agent': f'DShield WebHoneypot-{self.config.get("DShield","version",fallback="XX")}-{self.config.get("DShield","userid",fallback="blank")}',
             'X-ISC-Authorization': auth_header,
             'X-ISC-LogType': 'webhoneypot'
         }
 
+        self.logger.debug(f"_send_to_backend json = {dshield_msg}")
+
         try:
             response = requests.post(self.url, json=dshield_msg, headers=headers, timeout=10)
-            #response = custom_post(self.url, msg=dshield_msg, headers=headers, timeout=10)
-            
             if response.status_code != 200:
                 self.logger.error(f" - Received status code {response.status_code} {response.reason} in response")
                 self.logger.debug("_send_to_backend returned False (non-200 status)")
                 return False
-
-            self.logger.debug(f" - Sent {sys.getsizeof(dshield_msg)} bytes to {self.url}")
+            self.logger.debug(f" - Sent batch of {len(msgs)} messages to {self.url}")
             self.logger.debug("_send_to_backend returned True")
             return True
-
         except Exception as e:
             self.logger.error(f" - Submission failed: {e}")
             self.logger.debug(f"_send_to_backend returned False due to exception: {e}")
             return False
 
-
-    def callback_result_handler(self, future: Future, msg: Dict[str, Any]) -> None:
+    def callback_result_handler(self, future: Future, batch: List[Dict[str, Any]]) -> None:
         """
         Callback function executed when a submission future completes.
 
         Checks the result of the submission (`future.result()`). If successful,
         increments the 24-hour submission count and records the timestamp.
         If unsuccessful (returned False or raised an exception), increments the
-        error count and requeues the message at the front of the queue.
+        error count and requeues the batch at the front of the queue.
 
         Args:
-            future: The `concurrent.futures.Future` object representing the
-                    submission task.
-            msg: The original message dictionary associated with this submission.
+            future: The `concurrent.futures.Future` object representing the submission task.
+            batch: The list of original message dictionaries associated with this submission.
 
         Depends on:
             - future.result
@@ -725,25 +736,22 @@ class Agent:
             - self.queue_lock
             - self.queue
         """
-        self.logger.debug(f"callback_result_handler is checking the ISC response.")
+        self.logger.debug(f"callback_result_handler is checking the ISC response for batch of {len(batch)} messages.")
         try:
             success = future.result()
             self.logger.debug(f" - ISC Submission was accepted: {success}")
             if success:
                 self.submission_timestamps.append(datetime.now())
-                self.logger.info(f" - Submission successful for msg: {msg}, submissions in last 24 hours={len(self.submission_timestamps)}")
+                self.logger.info(f" - Submission successful for batch of {len(batch)} messages, submissions in last 24 hours={len(self.submission_timestamps)}")
             else:
                 raise Exception(" - Submission returned False")
-
         except Exception as e:
             self.submission_errors += 1
-            self.logger.error(f" - Submission failed for msg {msg}: {e}")
+            self.logger.error(f" - Submission failed for batch: {e}")
             with self.queue_lock:
-                self.queue.appendleft(msg)
-                self.logger.debug(f" - Message requeued: {msg}, errors_24h={self.submission_errors}")
-
+                self.queue.extendleft(reversed(batch))
+            self.logger.debug(f" - Batch requeued, errors_24h={self.submission_errors}")
         self.logger.debug("callback_result_handler completed")
-
 
     def _health(self) -> None:
         """
@@ -780,9 +788,6 @@ class Agent:
         self.logger.debug(f"Health report generated: {health_report}")
         self.logger.debug("_health completed")
 
-
-
-# Example usage
 if __name__ == "__main__":
     # Configure logging to write to isc-agent.log
     log_formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
