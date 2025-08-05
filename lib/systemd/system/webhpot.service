@@ -1,0 +1,19 @@
+[Unit]
+Description=DShield Web Honeypot
+Documentation=https://isc.sans.edu/honeypot.html
+After=network.target
+
+[Service]
+Type=forking
+User=webhpot
+Group=webhpot
+PIDFile=/srv/webhpot/run/webhpot.pid
+ExecStart=/srv/webhpot/webhpot start
+ExecStop=/srv/webhpot/webhpot stop
+ExecReload=/srv/webhpot/webhpot restart
+WorkingDirectory=/srv/webhpot/
+Restart=on-failure
+TimeoutSec=300
+
+[Install]
+WanterBy=multi-user.target
