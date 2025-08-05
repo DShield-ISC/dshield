@@ -1075,7 +1075,6 @@ if [ "$piid" == "" ]; then
 else
   dlog "old piid ${piid}"
 fi
-
 if [ "$record_local_responses" == "" ]; then
     record_local_responses='false'
 fi
