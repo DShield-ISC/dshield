@@ -2109,7 +2109,7 @@ run "echo 'web_log_limit=$web_log_limit' >> ${DSHIELDINI}"
 run "echo 'web_log_purgefactor=$web_log_purgefactor' >> ${DSHIELDINI}"
 run "echo 'debug=false' >> ${DSHIELDINI}"
 run "echo 'local_response_path=$local_response_path' >> ${DSHIELDINI}"
-run "echo 'record_local_responses=$record_local_repsonses' >> ${DSHIELDINI}"
+run "echo 'record_local_responses=$record_local_responses' >> ${DSHIELDINI}"
 run "echo '# this section may disappear in future versions' >> ${DSHIELDINI}"
 run "echo '[iscagent]' >> ${DSHIELDINI}"
 database=$(quotespace "$database")
