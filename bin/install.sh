@@ -1077,7 +1077,7 @@ else
 fi
 
 if [ "$record_local_responses" == "" ]; then
-    record_local_repsonses=false
+    record_local_repsonses='false'
 fi
 if [ "$local_response_path" == "" ]; then
     local_response_path='/srv/log/local_response_{date}.json'
