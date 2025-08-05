@@ -2485,7 +2485,7 @@ fi
 # fixing legacy permissions
 ###
 
-sudo find CA -uid 0 -exec chown ${SYSUSERID} {} \;
+sudo find ${SCRIPTDIR}/../etc/CA -uid 0 -exec chown ${SYSUSERID} {} \;
 
 
 
