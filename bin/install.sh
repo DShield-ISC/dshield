@@ -1076,7 +1076,7 @@ else
   dlog "old piid ${piid}"
 fi
 
-if [ "$record_local_repsonses" == "" ]; then
+if [ "$record_local_responses" == "" ]; then
     record_local_repsonses=false
 fi
 if [ "$local_response_path" == "" ]; then
@@ -1097,7 +1097,7 @@ fi
 
 if [ "$web_log_purge_factor" == "" ]; then
     web_log_purge_factor=2
-}
+fi
 
 ###########################################################
 ## DShield Account
