@@ -2481,6 +2481,13 @@ else
 
 fi
 
+###
+# fixing legacy permissions
+###
+
+sudo find CA -uid 0 -exec chown ${SYSUSERID} {} \;
+
+
 
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
