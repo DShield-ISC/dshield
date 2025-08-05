@@ -13,12 +13,16 @@
 ## CONFIG SECTION
 ###########################################################
 
-# version 2025/04/23 01
+# version 2025/08/05
 
-readonly myversion=97
+readonly myversion=98
 
 
 # Major Changes (for details, see Github):
+#
+# - V98 (Johannes)
+#   - new web hpot (Mark Baggett)
+#   - installer no longer requires root / better priv separation 
 #
 # - V97 (Johannes)
 #   - swap in Mark's web honeypot to replace isc-agent
