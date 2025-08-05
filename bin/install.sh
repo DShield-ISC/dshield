@@ -1076,6 +1076,29 @@ else
   dlog "old piid ${piid}"
 fi
 
+if [ "$record_local_repsonses" == "" ]; then
+    record_local_repsonses=false
+fi
+if [ "$local_response_path" == "" ]; then
+    local_response_path='/srv/log/dshield/local_response_{date}.json'
+fi
+
+if [ "$submit_log_rate" == "" ]; then
+    submit_log_rate=900
+fi
+
+if [ "$queue_trigger" == "" ]; then
+    queue_trigger=100
+fi
+
+if [ "$web_log_limit" == "" ]; then
+    web_log_limit=1000
+fi
+
+if [ "$web_log_purge_factor" == "" ]; then
+    web_log_purge_factor=2
+}
+
 ###########################################################
 ## DShield Account
 ###########################################################
@@ -2080,13 +2103,13 @@ run "echo 'telnet=$telnet ; enable telnet' >> ${DSHIELDINI} "
 run "echo '[plugin:tcp:http]' >> ${DSHIELDINI}"
 run "echo 'http_ports=[8000] ; what http port to listen on' >> ${DSHIELDINI}"
 run "echo 'https_ports=[8443] ; what https port to listen on with stunnel' >> ${DSHIELDINI}"
-run "echo 'submit_logs_rate=300 ; how often to submit logs in seconds' >> ${DSHIELDINI}"
-run "echo 'queue_trigger=100 ; logs are submitted if this many entries are in the queue even' >> ${DSHIELDINI}"
-run "echo 'web_log_limit=1000 ; how many logs in the queue are considered excessive and trigger skipping' >> ${DSHIELDINI}"
-run "echo 'web_log_purgefactor=2  ; if excessive logs are received, each 2nd log entry is dropped' >> ${DSHIELDINI}"
+run "echo 'submit_log_rate=$submit_log_rate ; how often to submit logs in seconds' >> ${DSHIELDINI}"
+run "echo 'queue_trigger=$queue_trigger ; logs are submitted if this many entries are in the queue even' >> ${DSHIELDINI}"
+run "echo 'web_log_limit=$web_log_limit ; how many logs in the queue are considered excessive and trigger skipping' >> ${DSHIELDINI}"
+run "echo 'web_log_purgefactor=$web_log_purgefactor  ; if excessive logs are received, each 2nd log entry is dropped' >> ${DSHIELDINI}"
 run "echo 'debug=false  ; true enabled additional logging' >> ${DSHIELDINI}"
-run "echo 'local_response_path=/var/log/dshield/local_response_{date}.json ; where to store local responses' >> ${DSHIELDINI}"
-run "echo 'record_local_responses=false ; true to record local responses' >> ${DSHIELDINI}"
+run "echo 'local_response_path=$local_response_path ; where to store local responses' >> ${DSHIELDINI}"
+run "echo 'record_local_responses=$record_local_repsonses ; true to record local responses' >> ${DSHIELDINI}"
 run "echo '# this section may disappear in future versions' >> ${DSHIELDINI}"
 run "echo '[iscagent]' >> ${DSHIELDINI}"
 database=$(quotespace "$database")
