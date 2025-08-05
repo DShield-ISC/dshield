@@ -243,6 +243,7 @@ if [ ! -f "${DSHIELDINI}" ]; then
 	sudo mkdir -p "${ETCDIR}"
 	sudo mv /etc/dshield.ini "${DSHIELDINI}"
 	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
+	sudo ln -s "{$ETCDIR}/dshield.ini" "/etc/dshield.ini"
     fi
 fi
 
@@ -295,10 +296,11 @@ HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
 
 # create and setup log directory
 if [ ! -d ${LOGDIR} ]; then
-    sudo mkdir -m 0770 -p ${LOGDIR}
+    sudo mkdir -m 1777 -p ${LOGDIR}
 fi
 # for legacy systems that used to run as root
 sudo chown -R "${SYSUSERID}":"${GROUPID}" "${LOGDIR}"
+sudo chmod 1777 "${LOGDIR}"
 # and the local etc dir may need cleaning up from legacy files as root
 sudo chown -R "${SYSUSERID}":"${GROUPID}" "$progdir"
 # which port the real sshd should listen to
@@ -2008,6 +2010,11 @@ echo "${offset1} ${offset2} * * * root /sbin/reboot" >>"${TMPDIR}"/cron.dshield
 offset1=$(shuf -i0-59 -n1)
 offset2=$(shuf -i0-23 -n1)
 echo "${offset1} ${offset2} * * * root ${DSHIELDDIR}/updatehoneypotip.sh" >>"${TMPDIR}"/cron.dshield
+offset1=$(shuf -i0-59 -n1)
+offset2=$(shuf -i0-23 -n1)
+echo "${offset1} ${offset2} * * * root /usr/bin/journalctl --vacuum-time=7d" >>"${TMPDIR}"/cron.dshield
+
+
 # run status check 5 minutes before reboot
 if [ "$offset1" -gt 5 ]; then
   offset1=$((offset1 - 5))
