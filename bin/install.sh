@@ -2085,6 +2085,8 @@ run "echo 'queue_trigger=100 ; logs are submitted if this many entries are in th
 run "echo 'web_log_limit=1000 ; how many logs in the queue are considered excessive and trigger skipping' >> ${DSHIELDINI}"
 run "echo 'web_log_purgefactor=2  ; if excessive logs are received, each 2nd log entry is dropped' >> ${DSHIELDINI}"
 run "echo 'debug=false  ; true enabled additional logging' >> ${DSHIELDINI}"
+run "echo 'local_response_path=/var/log/dshield/local_response_{date}.json ; where to store local responses' >> ${DSHIELDINI}"
+run "echo 'record_local_responses=false ; true to record local responses' >> ${DSHIELDINI}"
 run "echo '# this section may disappear in future versions' >> ${DSHIELDINI}"
 run "echo '[iscagent]' >> ${DSHIELDINI}"
 database=$(quotespace "$database")
