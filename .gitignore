@@ -31,3 +31,4 @@ etc/openssl.cnf.bak
 etc/dshield.sslca
 etc/CA/keys/
 etc/openssl.cnf
+srv/web/isc_agent.pyz
