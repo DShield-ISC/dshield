@@ -309,7 +309,7 @@ for key in "${!TESTS[@]}"; do
   data="$data, { '${key}': '${TESTS[$key]}' }"
 done
 data="$data ]"
-curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$verison/$piid -d "$data" > /dev/null
+curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$version/$piid -d "$data" > /dev/null
 echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
 echo "to see that your reports arrive."
