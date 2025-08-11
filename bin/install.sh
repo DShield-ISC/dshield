@@ -2227,15 +2227,17 @@ sudorun "chown ${SYSUSERID}:cowrie ${COWRIEDIR}"
 sudorun "chmod 0770 $COWRIEDIR"
 cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
+run 'sudo chgrp -R cowrie /srv/cowrie'
+run 'sudo chmod g+w cowrie-env/lib'
 run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
-    run 'sudo -u cowrie -g cowrie "pip3 install --require-virtualenv --upgrade pip"'
-    run 'sudo -u cowrie -g cowrie "pip3 install --require-virtualenv --upgrade bcrypt"'
-    run 'sudo -u cowrie -g cowrie "pip3 install --require-virtualenv --upgrade requests"'
-    run 'sudo -u cowrie -g cowrie "pip3 install --require-virtualenv -r requirements.txt"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade pip"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
@@ -2251,7 +2253,7 @@ fi
 # dlog "installing dependencies requirements-output.txt"
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
-    run 'sudo -u cowrie -g cowrie "pip3 install --require-virtualenv --upgrade requests"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
 	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
