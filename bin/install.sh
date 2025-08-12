@@ -2228,7 +2228,7 @@ sudorun "chmod 0770 $COWRIEDIR"
 cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
 run 'sudo chgrp -R cowrie /srv/cowrie'
-run 'sudo chmod g+w cowrie-env/lib'
+run 'sudo chmod g+w /srv/cowrie/cowrie-env/lib'
 run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
