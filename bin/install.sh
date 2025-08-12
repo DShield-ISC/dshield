@@ -2056,6 +2056,7 @@ fi
 echo "${offset1} ${offset2} * * * root cd ${DSHIELDDIR}; ./status.sh >/dev/null " >> "${TMPDIR}"/cron.dshield
 echo "0 10 * * * root find /srv/cowrie/var/log/cowrie -name 'cowrie.*' -ctime +7 -delete" >> "${TMPDIR}"/cron.dshield
 sudorun "cp ${TMPDIR}/cron.dshield /etc/cron.d/dshield"
+sudorun "chmod 775 /etc/cron.d/dshield"
 dsudorun 'cat /etc/cron.d/dshield'
 
 #
