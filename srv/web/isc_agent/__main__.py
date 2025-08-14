@@ -195,9 +195,11 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
         if record_local_responses:
             try:
                 # if the file name "local_response_path" includes the string {date} then replace it with the current date
-                if "{date}" in local_response_path:
-                    local_response_path = local_response_path.replace("{date}", datetime.datetime.now().strftime("%Y-%m-%d"))
-                fh = open(local_response_path, "a")
+                #"local_response_path" is a global variable and can only be read not assigned so a local variable log_path is used
+                log_path = local_response_path
+                if "{date}" in log_path:
+                    log_path = log_path.replace("{date}", datetime.datetime.now().strftime("%Y-%m-%d"))
+                fh = open(log_path, "a")
                 fh.write(f"{json.dumps(log_data)}\n")
                 fh.close()
             except Exception as e:
