@@ -80,8 +80,9 @@ mkdir install
 cd install
 git clone https://github.com/DShield-ISC/dshield.git
 cd dshield/bin
-sudo ./install.sh
+./install.sh
 ```
+(as of August 2025, install.sh should no longer be executed as root via sudo)
 
 Post-Install Notes
 -------------------
