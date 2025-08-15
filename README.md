@@ -2,20 +2,20 @@
 
 ## DShield Raspberry Pi Sensor
 
-This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
+This is a set of scripts to set up a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi 3 or later, n100 mini PC or a virtual machine work fine)
 - minimum of 1GB of RAM and 16GB of Disk (SD Card for Raspberry Pis). 4GB of RAM works better. Larger SD Cards (e.g. 64 GB) are recommended for longevity and to prevent logs from filling up the disk.
 - current Raspberry Pi OS ("Lite" version will suffice) or current version of Ubuntu Linux
-- easy installation / configuration (and therefore not that much configurable)
-- disposable (when something breaks (e.g. during upgrade): re-install from scratch)
-- minimize complexity and overhead (e.g. no virtualization like docker)
+- easy installation/configuration (and therefore not that configurable)
+- disposable (when something breaks (e.g., during upgrade): re-install from scratch)
+- minimize complexity and overhead (e.g., no virtualization like Docker)
 - support for IPv4 only (for the internal net)
-- one interface only (e.g. eth0)
+- one interface only (e.g,. eth0)
 
 The current version is only tested on Raspberry Pi OS and Ubuntu 22.04 LTS Server, not on other distros, sorry.
-If there is the need for other distros, "someone" has to check and maintain the installation script.
+If there is a need for other distros, "someone" has to check and maintain the installation script.
 
 ## Installation
 
@@ -29,17 +29,18 @@ Reference the following files for OS-specific installation instructions:
 
 This script will:
 
-- disable IPv6 on the Pi
-- enable firewall logging and submitting of logs to DShield
-- change your ssh server to listen on port 12222
-- install the ssh honeypot cowrie (for ssh)
-- install needed environment (e.g. MySQL server, Python packages, ...)
+- Disable IPv6 on the Pi
+- enable firewall logging and submission of logs to DShield
+- Change your SSH server to listen on port 12222
+- install the SSH honeypot Cowrie (for SSH)
+- install the HTTP honeypot ("isc_agent")
+- install needed environment (Python packages, stunnel for https, ...)
 
 ## Troubleshooting
 
-- logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by ['My Account' -> 'My Reports'](https://www.dshield.org/myreports.html)
-- have a look at the output from the status script: `/home/pi/install/dshield/bin/status.sh`
-- if you get strange python / pip errors during installation / updates you may try the following commands as root:
+- Logs are sent twice an hour to the [dshield portal](https://www.dshield.org) by the cron job `/etc/cron.d/dshield`, this can be verified by ['My Account' -> 'My Reports'](https://www.dshield.org/myreports.html)
+- Have a look at the output from the status script: `/srv/dshield/status.sh`
+- If you get strange Python or pip-related errors during installation or during updates, try the following commands as root:
 `pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs -n1 pip install -U`
 
 - Check our [Trouble Shooting Guide](https://github.com/DShield-ISC/dshield/blob/main/docs/general-guides/Troubleshooting.md) for help identifying issues.
@@ -60,56 +61,8 @@ Configuration parameters like your API Key will be retained. To edit the configu
 
 A new feature has been introduced, especially for automatic updates. At the end of the installation the install.sh script will search for the file /root/bin/postinstall.sh and execute its content, if it exists. If you need some extra changes in the newly installed files, this is the location to put them. This file NEEDS execute rights.
 
-Please make sure to keep special port and network configuration up to date (e.g. manually configure recently added telnet / web ports in firewall config), e.g. no-log config, no-honey config, ... unfortunately this can't be done automagically as of now. If unsure delete respective lines in `/etc/dshield.ini` and re-run the installation script.
+Please make sure to keep special port and network configuration up to date (e.g., manually configure recently added telnet / web ports in firewall config), e.g., no-log config, no-honey config, ... unfortunately, this can't be done automagically as of now. If unsure, delete respective lines in `/etc/dshield.ini` and re-run the installation script.
 
-Testing of update procedure is normally done (between two releases) as follows:
-- update on Pi 3 from the last version to current
-- install on a current clean image of raspbian lite on a Pi 3
-
-### Special Update Note: Versions < 0.4 to >= 0.4
-
-The handling of Python packages had to be changed from distro package manager to pip. This means the update is pain. Sorry for that.
-
-You have three alternatives:
-
-#### Easy
-
-The easiest, preferred and warmly recommended way: backup old installation (if you can't stand a complete loss), reinstall from scratch using current Raspbian image.
-
-#### Manual
-
-The manual procedure: uninstall all below mentioned packages and then autoremove and cross fingers:
-```
-sudo su -
-/etc/init.d/cowrie stop
-dpkg --remove python-crypto
-dpkg --remove python-gmpy
-dpkg --remove python-gmpy2
-dpkg --remove python-mysqldb
-dpkg --remove python-pip
-dpkg --remove python-pyasn1
-dpkg --remove python-twisted
-dpkg --remove python-virtualenv
-dpkg --remove python-zope.interface
-apt-get autoremove
-apt-get update
-apt-get dist-upgrade
-```
-
-#### Automatic
-
-The "automatic" **brutal** procedure (chances to break your system are **VERY** high, but hey, it's a disposable honeypot anyway ...): backup (if needed), uninstall all Python distro packages (and hope that's it):
-```
-sudo su -
-/etc/init.d/cowrie stop
-for PKG in `dpkg --list | grep python- | cut -d " " -f 3 | grep "^python"` ; do echo "uninstalling ${PKG}"; dpkg --force-depends --purge ${PKG}; done
-apt-get update
-apt-get -f install
-apt-get dist-upgrade
-apt-get autoremove
-apt-get update
-apt-get dist-upgrade
-```
 
 ## Hints
 
@@ -133,14 +86,14 @@ To test your set up you may use a public port scanner and point it to the router
 - ESC: exit the form (Cancel)
 - cursor up / down: navigate through form / between input fields
 - cursor left / right: navigate within an input field
-- TAB: switch between input field and "buttons"
+- TAB: switch between the input fields and "buttons"
 - don't use Pos 1 / End
 
-## Todos
+## TODOs
 
 - see comments in `install.sh`
 - provide a script to update all Python packages to most recent version using pip
-- configure a default web server and submit logs to DShield
+- Configure a default web server and submit logs to DShield
 - enable other honeypot ports than ssh
 - do all the user input stuff at the beginning of the script so it will run the long lasting stuff afterwards
 - create update script
