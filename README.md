@@ -1,8 +1,8 @@
 # DShield
 
-## DShield Raspberry Pi Sensor
+## DShield Sensor
 
-This is a set of scripts to set up a Raspberry Pi as a DShield Sensor.
+This is a set of scripts to set up a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi 3 or later, n100 mini PC or a virtual machine work fine)
