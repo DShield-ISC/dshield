@@ -44,19 +44,15 @@ Please ask for additional help if your system uses nft)
 
 ## /etc/cron.d/dshield
 
-missing this file usally indicates a failed install. Reinstall the honeypot.
+Missing this file usually indicates a failed install. Reinstall the honeypot.
 
 ## /etc/dshield.ini
 
-missing this file usally indicates a failed install. Reinstall the honeypot.
+Missing this file usually indicates a failed install. Reinstall the honeypot.
 
-## /etc/cowrie/cowrie.cfg
+## /srv/cowrie/cowrie.cfg
 
-missing this file usally indicates a failed install. Reinstall the honeypot.
-
-## /etc/cowrie/cowrie.cfg
-
-missing this file usally indicates a failed install. Reinstall the honeypot.
+Missing this file usually indicates a failed install. Reinstall the honeypot.
 
 ## ip-firewall rules
 
@@ -91,7 +87,7 @@ If that doesn't work, see below or send the content of /srv/log/isc-agent.err to
 
 ### Details ###
 
-Check the file ```/srv/log/isc-agent.err```. It should display any startup errors. Often the issue is caused by a missing python module. For example:
+Check the file ```/srv/log/isc-agent.err```. It should display any startup errors. Often, the issue is caused by a missing Python module. For example:
 
 ```
 Traceback (most recent call last):
