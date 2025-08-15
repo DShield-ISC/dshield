@@ -23,8 +23,10 @@ Finally, clone the following Git repository and run the install script. Make sur
 
 ```
 git clone https://github.com/DShield-ISC/dshield.git
-sudo dshield/bin/install.sh
+dshield/bin/install.sh
 sudo reboot
 ```
 
 For additional details, see the global README.md file.    
+
+Older versions required the "install.sh" script to run as "sudo". As of August 2025, only specific commands inside install.sh are run as sudo.
