@@ -48,7 +48,8 @@ git clone https://github.com/DShield-ISC/dshield.git
 - run the installation script, in case you do have an earlier system, copy the files `/etc/dshield.ini` and `/etc/dshield.sslca` from that system to `/etc`; you will be able to reuse the data entered for that system.
 ```
 cd dshield/bin
-sudo ./install.sh
+./install.sh
+(older versions required sudo)
 ```
 - if curious watch the debug log file in parallel to the installation: connect with an additional ssh session to the system and run (name of the log file will be printed out by the installation script):
 ```

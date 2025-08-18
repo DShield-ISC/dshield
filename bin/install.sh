@@ -1082,11 +1082,11 @@ if [ "$piid" == "" ]; then
 else
   dlog "old piid ${piid}"
 fi
-if [ "$record_local_responses" == "" ]; then
-    record_local_responses='false'
+if [ "$enable_local_logs" == "" ]; then
+    enable_local_logs='false'
 fi
-if [ "$local_response_path" == "" ]; then
-    local_response_path='/srv/log/local_response_{date}.json'
+if [ "$local_logs_file" == "" ]; then
+    local_logs_file='/srv/log/webhoneypot_{date}.json'
 fi
 
 if [ "$submit_log_rate" == "" ]; then
@@ -2115,8 +2115,8 @@ run "echo 'queue_trigger=$queue_trigger' >> ${DSHIELDINI}"
 run "echo 'web_log_limit=$web_log_limit' >> ${DSHIELDINI}"
 run "echo 'web_log_purgefactor=$web_log_purgefactor' >> ${DSHIELDINI}"
 run "echo 'debug=false' >> ${DSHIELDINI}"
-run "echo 'local_response_path=$local_response_path' >> ${DSHIELDINI}"
-run "echo 'record_local_responses=$record_local_responses' >> ${DSHIELDINI}"
+run "echo 'local_logs_file=$local_logs_file' >> ${DSHIELDINI}"
+run "echo 'enable_local_logs=$enable_local_logs' >> ${DSHIELDINI}"
 run "echo '# this section may disappear in future versions' >> ${DSHIELDINI}"
 run "echo '[iscagent]' >> ${DSHIELDINI}"
 database=$(quotespace "$database")
