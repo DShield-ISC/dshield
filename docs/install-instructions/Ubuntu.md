@@ -1,8 +1,8 @@
-Installing on Ubuntu Server 22.04 LTS
+Installing on Ubuntu Server 24.04 LTS
 =====================================
 
 **Via ISO Image**
-Install the default version Ubuntu Server 22.04 LTS. Don't select any additional packages when prompted. During installation, create a user called "dshield."
+Install the default version Ubuntu Server 24.04 LTS. Don't select any additional packages when prompted. During installation, create a user called "dshield."
 
 
 **Deploying As VPS**
