@@ -733,7 +733,7 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q install python3-defusedxml'
     sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
     
-    for b in python3 python3-pip python3-requests python3-appdirs python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
+    for b in cron python3 python3-pip python3-requests python3-appdirs python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
       run "sudo apt -y -q install $b"
       if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -745,6 +745,9 @@ if [ "$FAST" == "0" ]; then
       fi
     done
   fi
+
+  sudorun "systemctl start cron"
+  sudorun "systemctl enable cron"
 
   if [ "$ID" == "amzn" ]; then
     outlog "Updating your Operating System"
