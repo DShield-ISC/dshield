@@ -592,6 +592,11 @@ if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "12" ]; then
   distversion=r12
 fi
 
+if [ "$ID" == "debian" ] && [ "$VERSION_ID" == "13" ]; then
+  dist='apt'
+  distversion=r13
+fi
+
 if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "8" ]; then
   dist='apt'
   distversion=r8
@@ -2360,6 +2365,9 @@ sudo -u webhpot python3 -m zipapp ./isc_agent
 sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
 sudo_copy "${progdir}"/../srv/web/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
+# disable old service in case it is still enabled
+sudorun "systemctl disable isc-agent.service"
+# enable new service
 sudorun "systemctl daemon-reload"
 sudorun "systemctl enable web-honeypot.service"
 
