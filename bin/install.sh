@@ -622,6 +622,12 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "12" ]; then
   distversion=r12
 fi
 
+if [ "$ID" == "debian" ]  && [ "$VERSION_ID" == "13" ]; then
+    dist='apt'
+    distversion=r13
+fi
+
+
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
   dist='apt'
   distversion='u20'
@@ -657,9 +663,9 @@ if [ "$dist" == "invalid" ]; then
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ] && [ "$VERSION_ID" != "20.04" ]; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "13" ] ; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
-  outlog " - Raspbian OS"
+  outlog " - Raspbian OS (up to trixie, release October 1st 2025)"
   outlog " - Ubuntu 20.04"  
   outlog " - Ubuntu 22.04"
   outlog " - Ubuntu 24.04"  

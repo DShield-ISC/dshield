@@ -186,7 +186,7 @@ else
 fi
 
 if [ -f /var/tmp/dshield/skipvalue ]; then
-    skip=$(cat /var/tmp/dshield/skipvalue)
+    skip=$(cat /var/tmp/dshield/skipvalue | cut -f1 -d'.')
     if [ "$skip" == "" ]; then
 	skip=1
 	rm /var/tmp/dshield/skipvalue
