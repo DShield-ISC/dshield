@@ -11,7 +11,7 @@ import syslog
 from time import strptime
 from time import mktime
 from time import time
-from datetime import datetime
+from datetime import datetime, timezone
 from DShield import DshieldSubmit
 
 maxlines=100000;
@@ -105,7 +105,10 @@ piddir="/var/run/dshield/"
 lastdir="/var/tmp/dshield/"
 config = "/etc/dshield.ini"
 startdate = 0
-now = datetime.utcnow()
+if sys.version_info < (3, 12):
+    now = datetime.utcnow()
+else:
+    now = datetime.now(timezone.utc)
 fieldmap = {'SRC': 'sip', 'DST': 'dip', 'PROTO': 'proto', 'TYPE': 'sport',
             'CODE': 'dport', 'SPT': 'sport', 'DPT': 'dport'}
 protomap = {'ICMP': 1, 'IGMP': 2, 'TCP': 6, 'UDP': 17, 'ESP': 50, 'AH': 51, 'ICMPv6': 58}
