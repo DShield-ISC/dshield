@@ -80,7 +80,7 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
         resp = dict(isc_agent.responses.get(response_id))
 
         if not resp:
-            logger.error(f"responder({response_id}) called and that response_id does not exist.")
+            logger.error("responder(%s) called and that response_id does not exist.", (response_id,))
 
         #Before we call send_response we must set the new server string.
         headers = resp.get("headers", {})
@@ -145,7 +145,11 @@ class HoneypotRequestHandler(BaseHTTPRequestHandler):
 
         request = RequestShim(path, method, remote_addr, headers)
         content_length = int(request.headers.get('Content-Length',0))
-        post_data = self.rfile.read(content_length).decode()
+        try:
+            post_data = self.rfile.read(content_length).decode()
+        except UnicodeDecodeError as e:
+            self.logger.exception("Post data unicode decode error for request from {remote_addr} Exception {e}")
+            post_data = ''
 
         best_score = -1
         best_signature = None
@@ -370,11 +374,11 @@ if __name__ == "__main__":
             exc_type, exc_value, _ = sys.exc_info()
             # Expected errors: log as INFO to track without clutter
             if exc_type == ConnectionResetError:
-                logger.info(f"Connection reset by {client_address[0]}:{client_address[1]}")
+                logger.info("Connection reset by %s:%s", (client_address[0], client_address[1]))
             elif exc_type == BrokenPipeError:
-                logger.info(f"Broken pipe to {client_address[0]}:{client_address[1]}")
+                logger.info(f"Broken pipe to %s:%s", (client_address[0], client_address[1]))
             elif exc_type in (TimeoutError, socket.timeout):
-                logger.info(f"Timeout from {client_address[0]}:{client_address[1]}")
+                logger.info(f"Timeout from %s:%s", (client_address[0], client_address[1]))
             elif exc_type == OSError and exc_value.errno in (113, 111):
                 logger.info(f"Network error (errno {exc_value.errno}) from {client_address[0]}:{client_address[1]}")
             elif exc_type == IncompleteRead:
