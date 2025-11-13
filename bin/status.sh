@@ -128,7 +128,7 @@ fi
 if echo $status | grep -q '<result>ok</result>'; then
   echo "${GREEN}API Key configuration ok${NC}"
   if [ "$version" != "" ]; then
-    currentversion=$(echo $status | egrep -o '<version>([0-9\.]+)</version>' | egrep -o '[0-9\.]+')
+    currentversion=$(echo $status | grep -E -o '<version>([0-9\.]+)</version>' | grep -E -o '[0-9\.]+')
     if [ "$currentversion" != "$version" ]; then
       echo "
 ${RED}Software Version Mismatch
