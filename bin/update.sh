@@ -49,7 +49,7 @@ hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 
 checkapikey=$(curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid)
 if echo $checkapikey | grep -q '<result>ok</result>'; then
     echo "API Key OK"
-    newversion=$(echo $checkapikey | egrep -o '<version>[^<]+</version>'|egrep -o '[0-9]+')
+    newversion=$(echo $checkapikey | grep -E -o '<version>[^<]+</version>'|grep -E -o '[0-9]+')
 else
     echo "Bad API Key. check API key in /etc/dshield.ini"
     exit
