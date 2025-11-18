@@ -7,26 +7,28 @@ This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi, any model as [per](https://isc.sans.edu/forums/diary/Using+a+Raspberry+Pi+honeypot+to+contribute+data+to+DShieldISC/22680/))
-- current openSUSE system for Raspberry Pi (JeOS version will suffice)
+- current openSUSE system for Raspberry Pi (JeOS version for Tumbleweed or Minimal Image of Leap 16.0 will suffice)
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is tested on openSUSE Tumbleweed.
+The current version is tested on openSUSE Tumbleweed and Leap 16.0.
 
 ## Installation
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it. For openSUSE it is assumed that you are using openSUSE for this preparation.
 
 - get the openSUSE image for your Raspberry Pi for Tumbleweed [RPi3 and RPi4 from](https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi.aarch64.raw.xz)
+- for Leap 16.0 [aarch64](https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-Image.aarch64-RaspberryPi-Build16.2.raw.xz)
   
 - put it onto a micro-SD card (e.g. using procedures described [here for RPi3](https://en.opensuse.org/HCL:Raspberry_Pi3) or [here for RPi4](https://en.opensuse.org/HCL:Raspberry_Pi4)
+- similar procedure for Leap 16.0.
 - insert the micro-SD card in the Pi and power it on, to boot the Pi from the micro-SD card.
     - the system will use DHCP to get network parameters o.a. the IP address.
-- if you do not have a monitor connected you will be able to use ssh to connect.
-- connect to the device using a ssh client (port 22), log in with user *root*, password *linux*
+- if you do not have a monitor and keyboard connected you will be able to use ssh to connect. However for Leap 16.0 you do need that or a connection via the serial interface to configure access via ssh.
+- connect to the device using a ssh client (port 22), log in with user *root*, password *linux* or for Leap 16.0 with the configured access data.
 - __CHANGE THE DEFAULT PASSWORD__ for the *root* user (better: use keys to authenticate and change yes for *PermitRootLogin* to *prohibit-password* in */etc/ssh/sshd_config.d/PermitRootLogin.conf*)  
 
     *passwd*  
@@ -49,7 +51,7 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
     *passwd dsmaint*
 
 - this account needs a lot of sudo to generate the DShield honypot. This is best served with a sudoers definition:
-    *echo "dsmaint ALL=NOPASSWD: ALL" > /etc/sudoers.d/dsmaint*
+    *echo "dsmaint ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/dsmaint*
     *chmod 600 /etc/sudoers.d/dsmaint*
     
 - if GIT isn't already installed (it is not installed in the JeOS images): install GIT  
@@ -87,14 +89,11 @@ After this restart, you need to login as user dsmaint or as root, and become the
     *tail -f LOGFILE*
     
 - answer the questions of the installation routine
-- during the execution of the installation script you will be asked for the passwords of cowrie and webhpot. You can set the passwords as root with *passwd cowrie*, or, when in dsmaint as *sudo passwd cowrie*.
-- both accounts, cowrie and webhpot will be generated during the script, so you need to interrupt the viewing of the LOGFILE and set a password for both accounts, which you can enter again in the other screen, when asked for.
 - if everything goes fine and the script finishes OK: reboot the device  
 
     *shutdown -r now*  
 
 - from now on you have to use port 12222 to connect to the device by SSH
-- WARNING: Tumbleweed runs with selinux in enforcing mode. This prevents cowrie to start using *systenctl start cowrie.service*. Use the tools of selinux, audit2iallow, to solve this issue.
 - expose the Pi to inbound traffic. For example, in many firewalls and home routers
   you will be able to configure it as a "DMZ Host", "exposed devices", ... see [hints below](#how-to-place-the-dshield-sensor--honeypot) for - well - hints ...
 

@@ -660,6 +660,12 @@ if [ "$ID" == "opensuse-tumbleweed" ]; then
   distversion=Tumbleweed
 fi
 
+if [ "$ID" == "opensuse-leap" ]; then
+  ID="opensuse"
+  dist='yum'
+  distversion=Leap
+fi
+
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
@@ -775,11 +781,13 @@ if [ "$FAST" == "0" ]; then
 
   if [ "$ID" == "opensuse" ]; then
     outlog "Updating your openSUSE Operating System will now be done."
+    case $distversion in
+    esac
     sudorun 'zypper --non-interactive dup --no-recommends'
     outlog "Installing additional packages"
     sudorun 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
     sudorun 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
-    sudorun 'zypper --non-interactive install --no-recommends python3-pycryptodome python3-virtualenv python3-dateutils'
+    sudorun 'zypper --non-interactive install --no-recommends python3-pycryptodome python3-virtualenv'
     sudorun 'zypper --non-interactive install --no-recommends python3-pip rng-tools curl openssh unzip'
     sudorun 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
     sudorun 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
@@ -2207,10 +2215,15 @@ sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-if [ "$BETA" == 1 ]; then
-  run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
+if [ "$ID" != "opensuse" ] ; then
+  if [ "$BETA" == 1 ]; then
+    run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
+  else
+    run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+  fi
 else
-  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+    # the version of cowrie on dshield.org is too old for openSUSE
+    run "git clone https://github.com/cowrie/cowrie.git" ${TMPDIR}/cowrie
 fi
 
 # shellcheck disable=SC2181
@@ -2218,11 +2231,18 @@ if [ ${?} -ne 0 ]; then
   outlog "Something went wrong downloading cowrie, ZIP corrupt."
   exit 9
 fi
-if [ -f "${TMPDIR}"/cowrie.zip ]; then
-  run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
+if [ "$ID" != "opensuse" ] ; then
+  if [ -f "${TMPDIR}"/cowrie.zip ]; then
+    run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
+  else
+    outlog "Can not find cowrie.zip in ${TMPDIR}"
+    exit 9
+  fi
 else
-  outlog "Can not find cowrie.zip in ${TMPDIR}"
-  exit 9
+  if [ ! -d "${TMPDIR}"/cowrie ] ; then
+    outlog "Can not find directory cowrie in ${TMPDIR}"
+    exit 9
+  fi
 fi
 
 #
@@ -2377,10 +2397,12 @@ sudorun chmod cowrie:cowrie /srv/cowrie/bin/cowrie
 sudo_copy "$progdir"/../etc/cron.hourly/cowrie /etc/cron.hourly 755
 if [ "$ID" = opensuse ] ; then
   # add some selinux policy rules to let cowrie.service succeed
-  sudo_copy "$progdir"/../etc/cowrie.pp /etc/ 644
-  sudo_copy "$progdir"/../etc/cowrie1.pp /etc/ 644
-  sudorun semodule -i /etc/cowrie.pp  
-  sudorun semodule -i /etc/cowrie1.pp
+  #sudo_copy "$progdir"/../etc/cowrie.pp /etc/ 644
+  #sudo_copy "$progdir"/../etc/cowrie1.pp /etc/ 644
+  #sudorun semodule -i /etc/cowrie.pp  
+  #sudorun semodule -i /etc/cowrie1.pp
+  sudorun semanage fcontext -a -t bin_t /srv/cowrie/bin/cowrie
+  sudorun restorecon -vR /srv/cowrie/bin/cowrie
 fi
 
 # make sure to remove old cowrie start if they exist
