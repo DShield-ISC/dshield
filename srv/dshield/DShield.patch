@@ -1,11 +1,11 @@
---- /srv/dshield/DShield.py	2021-11-06 12:42:10.524316474 +0100
-+++ /omcc/dshield/DShield.py	2021-11-02 18:19:16.653303356 +0100
+--- DShield.py	2025-10-22 00:01:58.037027995 +0200
++++ DShield.py	2025-10-20 11:23:29.557128402 +0200
 @@ -34,7 +34,7 @@
  
      types = ['email', 'firewall', 'sshlogin', 'telnetlogin', '404report', 'httprequest', 'webhoneypot']
-     logtypesregex={'generic': '^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
--                   'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
-+                   'pi': '(^\d+) \S+ kernel:\[[0-9\. ]+\]\[\s*\w*\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
-                    'aws': '(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
+     logtypesregex={'generic': r'^([A-Z][a-z]{2})\s+([0-9]+)\s([0-9:]+).*(IN=.*)',
+-                   'pi': r'(^\d+) \S+ kernel:\[[0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
++                   'pi': r'(^\d+) \S+ kernel:\[[C0-9\. ]+\]\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                    'iptables': r'(^\d+) \S+ kernel:\s+DSHIELDINPUT IN=\S+ .* (SRC=.*)',
+                    'aws': r'(^\d+) \S+ kernel: DSHIELDINPUT IN=\S+ .* (SRC=.*)'}
      authheader = ''
- 

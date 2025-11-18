@@ -20,6 +20,11 @@ readonly myversion=98
 
 # Major Changes (for details, see Github):
 #
+# - V99 (Freek)
+#   - fixed some missing sudos
+#   - adapted to support newest openSUSE
+#   - added the https port 8443
+#
 # - V98 (Johannes)
 #   - new web hpot (Mark Baggett)
 #   - installer no longer requires root / better priv separation 
@@ -293,10 +298,11 @@ LOGFILE="${LOGDIR}/install_${INSTDATE}.log"
 SSHHONEYPORT=2222
 TELNETHONEYPORT=2223
 WEBHONEYPORT=8000
+HTTPSHONEYPORT=8443
 SSHREDIRECT="22"
 TELNETREDIRECT="23 2323"
 WEBREDIRECT="80 8080 7547 5555 9000"
-HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
+HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT} ${HTTPSHONYPORT}"
 
 # create and setup log directory
 if [ ! -d ${LOGDIR} ]; then
@@ -654,6 +660,12 @@ if [ "$ID" == "opensuse-tumbleweed" ]; then
   distversion=Tumbleweed
 fi
 
+if [ "$ID" == "opensuse-leap" ]; then
+  ID="opensuse"
+  dist='yum'
+  distversion=Leap
+fi
+
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
@@ -769,12 +781,14 @@ if [ "$FAST" == "0" ]; then
 
   if [ "$ID" == "opensuse" ]; then
     outlog "Updating your openSUSE Operating System will now be done."
+    case $distversion in
+    esac
     sudorun 'zypper --non-interactive dup --no-recommends'
     outlog "Installing additional packages"
-    sudorun 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python311-devel libopenssl-devel rsyslog dialog'
+    sudorun 'zypper --non-interactive install --no-recommends cron gcc libffi-devel python3-devel libopenssl-devel rsyslog dialog'
     sudorun 'zypper --non-interactive install --no-recommends perl-libwww-perl perl-Switch perl-LWP-Protocol-https python3-requests'
     sudorun 'zypper --non-interactive install --no-recommends python3-pycryptodome python3-virtualenv'
-    sudorun 'zypper --non-interactive install --no-recommends python311-pip rng-tools curl openssh unzip'
+    sudorun 'zypper --non-interactive install --no-recommends python3-pip rng-tools curl openssh unzip'
     sudorun 'zypper --non-interactive install --no-recommends net-tools-deprecated patch logrotate'
     sudorun 'zypper --non-interactive install --no-recommends system-user-mail mariadb libmariadb-devel python3-PyMySQL jq'
     sudorun 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
@@ -886,7 +900,7 @@ if [ -x /etc/init.d/cowrie ]; then
 fi
 # in case systemd is used
 outlog "Stopping cowrie via systemd"
-sudo systemctl stop cowrie
+[ "$(sudo systemcl is-active cowrie.service)" = "active" ] && sudo systemctl stop cowrie
 
 if [ "$FAST" == "0" ]; then
 
@@ -980,16 +994,8 @@ EOF
   drun "cat /etc/modprobe.d/ipv6.conf.bak"
   drun "cat /etc/modprobe.d/ipv6.conf"
 else # in openSUSE
-  run "grep -q 'ipv6.conf' /etc/sysctl.d/70-yast.conf"
-  # shellcheck disable=SC2181
-  if [ ${?} -ne 0 ]; then
-    dlog "Disabling IPv6 in /etc/sysctl.d/70-yast.conf"
-    dsudorun 'echo "net.ipv4.ip_forward = 0" >> /etc/sysctl.d/70-yast.conf'
-    dsudorun 'echo "net.ipv6.conf.all.forwarding = 0" >> /etc/sysctl.d/70-yast.conf'
-    dsudorun 'echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.d/70-yast.conf'
-  else
-    dlog "IPv6 already disabled in /etc/sysctl.d/70-yast.conf"
-  fi
+  iface=$(ip -4 route show | grep '^default ' | head -1 | cut -f5 -d' ')
+  dsudorun "nmcli device modify $iface  ipv6.method 'disabled'"
 fi
 
 ###########################################################
@@ -1001,7 +1007,8 @@ if ! grep -qE '^webhpot' /etc/passwd; then
     if [ "$ID" != "opensuse" ]; then
 	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
     else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
+        sudorun 'passwd -d webhpot' #disable password
     fi
     outlog "Added user 'webhpot'"
 else
@@ -1778,7 +1785,7 @@ EOF
   
 else # use_iptables = False -> use nftables
   dlog "using nftables, not iptables"
-  cat > /etc/network/ruleset.nft <<EOF
+  cat > ${TMPDIR}/ruleset.nft <<EOF
 # NFT ruleset generated on $(date)
 add table ip filter
 add chain ip filter INPUT { type filter hook input priority 0; policy drop; }
@@ -1789,7 +1796,7 @@ add rule ip filter INPUT iifname "${interface}" ct state related,established  co
 EOF
 
   # allow pings from localnet
-  echo "# allow ping from local network" >>/etc/network/ruleset.nft
+  echo "# allow ping from local network" >>${TMPDIR}/ruleset.nft
   echo "add rule ip filter INPUT iifname \"$interface\" ip saddr ${localnet} icmp type echo-request counter accept" >>"${TMPDIR}"/ruleset.nft
 
   # insert IPs and ports for which honeypot has to be disabled
@@ -1928,24 +1935,53 @@ fi
 if [ "$INTERACTIVE" == 1 ]; then
   dlog "changing port for sshd"
 
-  run "sed \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" < /etc/ssh/sshd_config > ${TMPDIR}/sshd_config"
-  sudorun "mv ${TMPDIR}/sshd_config /etc/ssh/sshd_config"
-
-  dlog "checking if modification was successful"
-  if [ "$(grep -c "^Port ${SSHDPORT}$" /etc/ssh/sshd_config)" -ne 1 ]; then
-    dialog --title 'sshd port' --ok-label 'Understood.' --cr-wrap --msgbox "Congrats, you had already changed your sshd port to something other than 22.
-
+  if [ -f /etc/ssh/sshd_config ] ; then
+    run "sed \"s/^[#\s]*Port 22\s*$/Port ${SSHDPORT}/\" < /etc/ssh/sshd_config > ${TMPDIR}/sshd_config"
+    sudorun "mv ${TMPDIR}/sshd_config /etc/ssh/sshd_config"
+    dlog "checking if modification was successful"
+    if [ "$(grep -c "^Port ${SSHDPORT}$" /etc/ssh/sshd_config)" -ne 1 ]; then
+      dialog --title 'sshd port' --ok-label 'Understood.' --cr-wrap --msgbox "Congrats, you had already changed your sshd port to something other than 22.
 Please clean up and either
   - change the port manually to ${SSHDPORT}
      in  /etc/ssh/sshd_config    OR
   - clean up the firewall rules and
      other stuff reflecting YOUR PORT" 13 50
-    clear
+      clear
 
-    dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
-    drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
-  else
-    dlog "check successful, port change to ${SSHDPORT} in sshd_config"
+      dlog "check unsuccessful, port ${SSHDPORT} not found in sshd_config"
+      drun 'cat /etc/ssh/sshd_config  | grep -v "^\$" | grep -v "^#"'
+    else
+      dlog "check successful, port change to ${SSHDPORT} in sshd_config"
+    fi
+  else # when /etc/ssh/sshd_config does not exist
+    if [ "$(cat /etc/ssh/sshd_config.d/*.conf | grep -c "^Port ${SSHDPORT}\$")" -ne 0 ] ; then
+      dlog "check succesfull, port changed to ${SSHDPORT} in a file in /etc/ssh/sshd.config.d/"
+    else
+      if [ -n "$(cat /etc/ssh/sshd_config.d/*.conf)" ] && [ "$(cat /etc/ssh/sshd_config.d/*.conf | grep -c "^Port ")" -ge 1 ] ; then
+        dialog --title 'sshd port' --ok-label 'Understood.' --cr-wrap --msgbox "Congrats, you had already changed your sshd port to something other than 22.
+Please clean up and either
+  - change the port manually to ${SSHDPORT}
+     in a file in /etc/ssh/sshd_config.d/*.conf    OR
+  - clean up the firewall rules and
+     other stuff reflecting YOUR PORT" 13 50
+        clear
+      else # a file Port*.conf does not exist
+        echo "Port ${SSHDPORT}" > "${TMPDIR}"/Port_${SSHDPORT}.conf
+        sudorun "mv ${TMPDIR}/Port_${SSHDPORT}.conf /etc/ssh/sshd_config.d/"
+        sudorun "chown root:root /etc/ssh/sshd_config.d/Port_${SSHDPORT}.conf"
+        if [ -x /usr/sbin/getenforce ] ; then
+          if [ "$(sudo /usr/sbin/getenforce)" = "Enforcing" ] ; then
+            if [ ! -x /usr/sbin/semanage ] ; then
+              sudorun "zypper --non-interactive in --no-recommends policycoreutils-python-utils"
+            else
+              echo "ERROR utility semanage needs to be installed, exiting!!"
+              exit 9
+            fi
+          fi
+          sudorun "semanage port -a -t ssh_port_t -p tcp ${SSHDPORT}"
+        fi
+      fi
+    fi
   fi
 fi # interactive
 ###########################################################
@@ -1964,7 +2000,7 @@ fi
 
 
 
-dsudorun 'cat /etc/rsyslog.d/dshield.conf'
+dsudorun 'cat /etc/rsyslog.d/10-dshield.conf'
 
 ###########################################################
 ## Further copying / configuration
@@ -1987,7 +2023,8 @@ if ! grep -qE '^webhpot' /etc/passwd; then
     if [ "$ID" != "opensuse" ]; then
 	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
     else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'	
+	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
+        sudorun 'passwd -d webhpot' # disable password	
     fi
     outlog "Added user 'webhpot'"
 else
@@ -2022,8 +2059,9 @@ if [ -f ${DSHIELDDIR}/updatehoneypotip.sh ]; then
     run "rm ${DSHIELDDIR}/updatehoneypotip.sh"
 fi
 do_copy "$progdir"/updatehoneypotip.sh ${DSHIELDDIR} 700
-[ "$ID" = "opensuse" ] &&
+if [ "$ID" = "opensuse" ]; then
   run "patch ${DSHIELDDIR}/DShield.py $progdir/../srv/dshield/DShield.patch"
+fi
 
 # check: automatic updates allowed?
 
@@ -2164,6 +2202,7 @@ if ! grep '^cowrie:' -q /etc/passwd; then
     sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
   else
     sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
+    sudorun 'passwd -d cowrie' # disable password
   fi
   outlog "Added user 'cowrie'"
 else
@@ -2176,10 +2215,15 @@ sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
 # step 3 (Checkout the code)
 # (we will stay with zip instead of using GIT for the time being)
 dlog "downloading and unzipping cowrie"
-if [ "$BETA" == 1 ]; then
-  run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
+if [ "$ID" != "opensuse" ] ; then
+  if [ "$BETA" == 1 ]; then
+    run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
+  else
+    run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+  fi
 else
-  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+    # the version of cowrie on dshield.org is too old for openSUSE
+    run "git clone https://github.com/cowrie/cowrie.git" ${TMPDIR}/cowrie
 fi
 
 # shellcheck disable=SC2181
@@ -2187,11 +2231,18 @@ if [ ${?} -ne 0 ]; then
   outlog "Something went wrong downloading cowrie, ZIP corrupt."
   exit 9
 fi
-if [ -f "${TMPDIR}"/cowrie.zip ]; then
-  run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
+if [ "$ID" != "opensuse" ] ; then
+  if [ -f "${TMPDIR}"/cowrie.zip ]; then
+    run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
+  else
+    outlog "Can not find cowrie.zip in ${TMPDIR}"
+    exit 9
+  fi
 else
-  outlog "Can not find cowrie.zip in ${TMPDIR}"
-  exit 9
+  if [ ! -d "${TMPDIR}"/cowrie ] ; then
+    outlog "Can not find directory cowrie in ${TMPDIR}"
+    exit 9
+  fi
 fi
 
 #
@@ -2254,6 +2305,8 @@ if [ "$FAST" == "0" ]; then
     run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
     run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
     run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv dateutils"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv -e ."'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
        outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
@@ -2282,7 +2335,8 @@ outlog "Doing further cowrie configuration."
 
 # step 6 (Generate a DSA key)
 dlog "generating cowrie SSH host key"
-sudorun "ssh-keygen -t dsa -b 1024 -N '' -f ${COWRIEDIR}/var/lib/cowrie/ssh_host_dsa_key "
+# dsa is too insecure and possibly not supported anymore in ssh-keygen; so use rsa
+sudorun "ssh-keygen -t rsa -b 1024 -N '' -f ${COWRIEDIR}/var/lib/cowrie/ssh_host_rsa_key "
 
 # step 5 (Install configuration file)
 dlog "copying cowrie.cfg and adding entries"
@@ -2315,13 +2369,20 @@ dlog "creating output for text commands"
 
 sudorun "mkdir -p ${TXTCMDS}/bin"
 sudorun "mkdir -p ${TXTCMDS}/usr/bin"
-sudorun "df > ${TXTCMDS}/bin/df"
-sudorun "dmesg > ${TXTCMDS}/bin/dmesg"
-sudorun "mount > ${TXTCMDS}/bin/mount"
-sudorun "ulimit > ${TXTCMDS}/bin/ulimit"
-sudorun "lscpu > ${TXTCMDS}/usr/bin/lscpu"
-sudorun "echo '-bash: emacs: command not found' > ${TXTCMDS}/usr/bin/emacs"
-sudorun "echo '-bash: locate: command not found' > ${TXTCMDS}/usr/bin/locate"
+sudorun "df > ${TMPDIR}/df"
+sudorun "mv ${TMPDIR}/df ${TXTCMDS}/bin/df"
+sudorun "dmesg > ${TMPDIR}/dmesg"
+sudorun "mv ${TMPDIR}/dmesg ${TXTCMDS}/bin/dmesg"
+sudorun "mount > ${TMPDIR}/mount"
+sudorun "mv ${TMPDIR}/mount ${TXTCMDS}/bin/mount"
+run "ulimit > ${TMPDIR}/ulimit"
+sudorun "mv ${TMPDIR}/ulimit ${TXTCMDS}/bin/ulimit"
+sudorun "lscpu > ${TMPDIR}/lscpu"
+sudorun "mv ${TMPDIR}/lscpu ${TXTCMDS}/usr/bin/lscpu"
+sudorun "echo '-bash: emacs: command not found' > ${TMPDIR}/emacs"
+sudorun "mv ${TMPDIR}/emacs ${TXTCMDS}/usr/bin/emacs"
+sudorun "echo '-bash: locate: command not found' > ${TMPDIR}/locate"
+sudorun "mv ${TMPDIR}/locate ${TXTCMDS}/usr/bin/locate"
 
 sudorun "chown -R cowrie:cowrie ${COWRIEDIR}"
 
@@ -2330,7 +2391,19 @@ sudorun "chown -R cowrie:cowrie ${COWRIEDIR}"
 dlog "copying cowrie system files"
 
 sudo_copy "$progdir"/../lib/systemd/system/cowrie.service /lib/systemd/system/cowrie.service 644
+# file copied/added from previous version of cowrie
+sudo_copy "$progdir"/../srv/cowrie/bin/cowrie /srv/cowrie/bin/cowrie
+sudorun chmod cowrie:cowrie /srv/cowrie/bin/cowrie
 sudo_copy "$progdir"/../etc/cron.hourly/cowrie /etc/cron.hourly 755
+if [ "$ID" = opensuse ] ; then
+  # add some selinux policy rules to let cowrie.service succeed
+  #sudo_copy "$progdir"/../etc/cowrie.pp /etc/ 644
+  #sudo_copy "$progdir"/../etc/cowrie1.pp /etc/ 644
+  #sudorun semodule -i /etc/cowrie.pp  
+  #sudorun semodule -i /etc/cowrie1.pp
+  sudorun semanage fcontext -a -t bin_t /srv/cowrie/bin/cowrie
+  sudorun restorecon -vR /srv/cowrie/bin/cowrie
+fi
 
 # make sure to remove old cowrie start if they exist
 if [ -f /etc/init.d/cowrie ]; then
@@ -2347,7 +2420,8 @@ sudorun 'systemctl daemon-reload'
 sudorun 'systemctl enable cowrie.service'
 
 dlog 'deactivate cowrie venv'
-sudorun 'deactivate'
+#sudorun 'deactivate'
+run deactivate
 
 
 ###########################################################
@@ -2372,7 +2446,9 @@ sudo -u webhpot find ./isc_agent -mindepth 1 -type d -exec rm -rf {} +
 sudo_copy "${progdir}"/../srv/web/web-honeypot.service /etc/systemd/system/web-honeypot.service 644
 cd "${WEBHPOTDIR}" || exit
 # disable old service in case it is still enabled
-sudorun "systemctl disable isc-agent.service"
+if [ "$(sudo systemctl is-enabled isc-agent.service)" = "enabled" ] ; then
+  sudorun "systemctl disable isc-agent.service"
+fi
 # enable new service
 sudorun "systemctl daemon-reload"
 sudorun "systemctl enable web-honeypot.service"
@@ -2542,7 +2618,7 @@ run 'mkdir -p /var/tmp/dshield'
 
 # rotate dshield firewall logs
 sudo_copy "$progdir"/../etc/logrotate.d/dshield /etc/logrotate.d 644
-[ "$ID" = "opensuse" ] && sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
+[ "$ID" = "opensuse" ] && sudo sed -e 's/\/usr\/lib.*$/systemctl reload rsyslog/' -i /etc/logrotate.d/dshield
 if [ -f "/etc/cron.daily/logrotate" ]; then
   sudorun "mv /etc/cron.daily/logrotate /etc/cron.hourly"
 fi
@@ -2568,7 +2644,7 @@ fi
 ###########################################################
 
 if [ -f /root/bin/postinstall.sh ]; then
-  run "/root/bin/postinstall.sh"
+  sudorun "/root/bin/postinstall.sh"
 else
   outlog
   outlog
