@@ -6,7 +6,7 @@ Install the default version Ubuntu Server 24.04 LTS. Don't select any additional
 
 
 **Deploying As VPS**
-Select the appropriate Ubuntu Server 22.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well:
+Select the appropriate Ubuntu Server 24.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well:
 
 ```adduser --disabled-password --gecos "DShield Honeypot" dshield```
 
