@@ -6,7 +6,7 @@ Install the default version Ubuntu Server 24.04 LTS. Don't select any additional
 
 
 **Deploying As VPS**
-Select the appropriate Ubuntu Server 24.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well:
+Select the appropriate Ubuntu Server 24.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well (optionally):
 
 ```adduser --disabled-password --gecos "DShield Honeypot" dshield```
 
@@ -29,4 +29,4 @@ sudo reboot
 
 For additional details, see the global README.md file.    
 
-Older versions required the "install.sh" script to run as "sudo". As of August 2025, only specific commands inside install.sh are run as sudo.
+Older versions required the "install.sh" script to run as "sudo". As of August 2025, only specific commands inside install.sh are run as root as needed. The script will prompt you for your password to use sudo as needed.
