@@ -6,7 +6,7 @@ This is a set of scripts to set up a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi 3 or later, n100 mini PC or a virtual machine work fine)
-- minimum of 1GB of RAM and 16GB of Disk (SD Card for Raspberry Pis). 4GB of RAM works better. Larger SD Cards (e.g. 64 GB) are recommended for longevity and to prevent logs from filling up the disk.
+- minimum of 1GB of RAM and 16GB of Disk (SD Card for Raspberry Pis). 4GB of RAM works better. Larger SD Cards (e.g., 64 GB) are recommended for longevity and to prevent logs from filling up the disk.
 - current Raspberry Pi OS ("Lite" version will suffice) or current version of Ubuntu Linux
 - easy installation/configuration (and therefore not that configurable)
 - disposable (when something breaks (e.g., during upgrade): re-install from scratch)
@@ -14,13 +14,13 @@ Current design goals and prerequisites for using the automated installation proc
 - support for IPv4 only (for the internal net)
 - one interface only (e.g,. eth0)
 
-The current version is only tested on Raspberry Pi OS and Ubuntu 22.04 LTS Server, not on other distros, sorry.
+The current version is only tested on Raspberry Pi OS (64-bit) and Ubuntu 24.04 LTS Server, not on other distros, sorry.
 If there is a need for other distros, "someone" has to check and maintain the installation script.
 
 ## Installation
 
 Reference the following files for OS-specific installation instructions:
-[Raspbian](docs/install-instructions/Raspbian.md) (Recommended),
+[Raspberry Pi OS](docs/install-instructions/Raspbian.md) (Recommended),
 [Ubuntu](docs/install-instructions/Ubuntu.md),
 [openSUSE](docs/install-instructions/openSUSE.md) and
 [AWS](docs/install-instructions/AWS.md)
@@ -57,27 +57,27 @@ sudo bin/install.sh --update
 ```
 The "--update" parameter will automatically use the existing configuration and not prompt the user for any configuration options.
 
-Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, to configure the firewall edit `/etc/network/iptables` (note: nat table is also used).
+Configuration parameters like your API Key will be retained. To edit the configuration, edit `/etc/dshield.ini`, to configure the firewall, edit `/etc/network/iptables` (note: nat table is also used).
 
-A new feature has been introduced, especially for automatic updates. At the end of the installation the install.sh script will search for the file /root/bin/postinstall.sh and execute its content, if it exists. If you need some extra changes in the newly installed files, this is the location to put them. This file NEEDS execute rights.
+A new feature has been introduced, especially for automatic updates. At the end of the installation, the install.sh script will search for the file /root/bin/postinstall.sh and execute its content, if it exists. If you need some extra changes in the newly installed files, this is the location to put them. This file NEEDS execute rights.
 
-Please make sure to keep special port and network configuration up to date (e.g., manually configure recently added telnet / web ports in firewall config), e.g., no-log config, no-honey config, ... unfortunately, this can't be done automagically as of now. If unsure, delete respective lines in `/etc/dshield.ini` and re-run the installation script.
+Please make sure to keep special port and network configuration up to date (e.g., manually configure recently added telnet/web ports in firewall config), e.g., no-log config, no-honey config, ... unfortunately, this can't be done automagically as of now. If unsure, delete respective lines in `/etc/dshield.ini` and re-run the installation script.
 
 
 ## Hints
 
-### How to place the DShield sensor / honeypot
+### How to place the DShield sensor/honeypot
 
-This DShield sensor and honeypot is meant to only analyze Internet related traffic, i.e. traffic which is issued from public IP addresses:
-- this is due to how the DShield project works (collection of information about the current state of the Internet)
+This DShield sensor and honeypot is meant to only analyze Internet-related traffic, i.e. traffic which is issued from public IP addresses:
+- This is due to how the DShield project works (collection of information about the current state of the Internet)
 - only in this way information which is interesting for the Internet security community can be gathered
 - only in this way it can be ensured that no internal, non-public information is leaked from your Pi to DShield
 
 So you must place the Pi on a network where it can be exposed to the Internet (and won't be connected to from the inner networks, except for administrative tasks). For a maximum sensor benefit it is desirable that the Pi is exposed to the whole traffic the Internet routes to a public IP (and not only selected ports).
 
-For SoHo users there is normally an option in the DSL or cable router to direct all traffic from the public IP the router is using (i.e. has been assigned by the ISP) to an internal IP. This has to be the Pi. This feature is named e.g. "exposed host", "DMZ" (here you may have to enable further configuration to ensure ___all___ traffic is being routed to the Pi's internal IP address and not only e.g. port 80).
+For SoHo users, there is normally an option in the DSL or cable router to direct all traffic from the public IP the router is using (i.e. has been assigned by the ISP) to an internal IP. This has to be the Pi. This feature is named e.g. "exposed host", "DMZ" (here you may have to enable further configuration to ensure ___all___ traffic is being routed to the Pi's internal IP address and not only e.g. port 80).
 
-For enterprises a protected DMZ would be a suitable place (protected: if the sensor / honeypot is hacked this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the DShield project and the community which can be tracked via whois to your company.
+For enterprises, a protected DMZ would be a suitable place (protected: if the sensor/honeypot is hacked, this incident is contained and doesn't affect other hosts in the DMZ). Please be aware that - if using static IPs - you're exposing attacks / scans to your IP to the DShield project and the community which can be tracked via whois to your company.
 
 To test your set up you may use a public port scanner and point it to the router's public IP (which is then internally forwarded to the Pi). This port scan should be directly visible in `/var/log/dshield.log` and later in your online report accessible via your DShield account. Use only for quick and limited testing purposes, please, so that DShield data isn't falsified.
 
@@ -86,7 +86,7 @@ To test your set up you may use a public port scanner and point it to the router
 - ESC: exit the form (Cancel)
 - cursor up / down: navigate through form / between input fields
 - cursor left / right: navigate within an input field
-- TAB: switch between the input fields and "buttons"
+- TAB: switch between the input fields and "buttons."
 - don't use Pos 1 / End
 
 ## TODOs
@@ -120,7 +120,7 @@ python sitecopy.py http://www.yoursite.com
 web.py - do not need to run sitecopy however it will serve up a very basic page that can accept input and files. 
 Todo:
 - Need to figure out how to serve up vulnerable pages - probably from the path
-- SQL Injection - will likely use separate dorked database
+- SQL Injection - will likely use a separate dorked database
 - Would like to integrate with cowrie for shell attacks - (BHAG)
 
 Any input appreciated - Please file a bug report / issue via github - thanks!
