@@ -1,6 +1,8 @@
 Installing on Ubuntu Server 24.04 LTS
 =====================================
 
+Note: Ubuntu Server 22.04 LTS is no longer supported.
+
 **Via ISO Image**
 Install the default version Ubuntu Server 24.04 LTS. Don't select any additional packages when prompted. During installation, create a user called "dshield."
 
@@ -14,7 +16,7 @@ Select the appropriate Ubuntu Server 24.04 package from your provider. You won't
 Upgrade the base system and ensure git and openssh-server are already installed:
 
 ```
-sudo apt update && sudo apt upgrade
+sudo apt update && sudo apt upgrade -y
 sudo apt install -y git openssh-server
 sudo reboot
 ```
