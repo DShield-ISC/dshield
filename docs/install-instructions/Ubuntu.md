@@ -31,4 +31,4 @@ sudo reboot
 
 For additional details, see the global README.md file.    
 
-Older versions required the "install.sh" script to run as "sudo". As of August 2025, only specific commands inside install.sh are run as root as needed. The script will prompt you for your password to use sudo as needed.
+Older versions required the "install.sh" script to run as "root". As of August 2025, only specific commands inside install.sh are run as root as needed. The script will prompt you for your password to use sudo as needed.
