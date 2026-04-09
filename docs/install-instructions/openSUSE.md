@@ -7,27 +7,29 @@ This is a set of scripts to setup a Raspberry Pi as a DShield Sensor.
 
 Current design goals and prerequisites for using the automated installation procedure:
 - use of a __dedicated__ device (Raspberry Pi, any model as [per](https://isc.sans.edu/forums/diary/Using+a+Raspberry+Pi+honeypot+to+contribute+data+to+DShieldISC/22680/))
-- current openSUSE system for Raspberry Pi (JeOS version will suffice)
+- current openSUSE system for Raspberry Pi (JeOS version for Tumbleweed or Minimal Image of Leap 16.0 will suffice)
 - easy installation / configuration (and therefor not that much configurable)
 - disposable (when something breaks (e.g. during upgrade): re-install from scratch)
 - minimize complexity and overhead (e.g. no virtualization like docker)
 - support for IPv4 only (for the internal net)
 - one interface only (e.g. eth0)
 
-The current version is tested on openSUSE Tumbleweed.
+The current version is tested on openSUSE Tumbleweed and Leap 16.0.
 
 ## Installation
 
 In order to use the installation script on the Raspberry Pi, you will need to first prepare it. For openSUSE it is assumed that you are using openSUSE for this preparation.
 
-- get the openSUSE image for your Raspberry Pi for Tumbleweed [RPi3 and RPi4 from](http://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi3.aarch64.raw.xz)
+- get the openSUSE image for your Raspberry Pi for Tumbleweed [RPi3 and RPi4 from](https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-ARM-JeOS-raspberrypi.aarch64.raw.xz)
+- for Leap 16.0 [aarch64](https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-Image.aarch64-RaspberryPi-Build16.2.raw.xz)
   
 - put it onto a micro-SD card (e.g. using procedures described [here for RPi3](https://en.opensuse.org/HCL:Raspberry_Pi3) or [here for RPi4](https://en.opensuse.org/HCL:Raspberry_Pi4)
+- similar procedure for Leap 16.0.
 - insert the micro-SD card in the Pi and power it on, to boot the Pi from the micro-SD card.
     - the system will use DHCP to get network parameters o.a. the IP address.
-- if you do not have a monitor connected you will be able to use ssh to connect.
-- connect to the device using a ssh client (port 22), log in with user *root*, password *linux*
-- __CHANGE THE DEFAULT PASSWORD__ for the *root* user (better: use keys to authenticate and set *PermitRootLogin* to *prohibit-password* in */etc/ssh/sshd_config*)  
+- if you do not have a monitor and keyboard connected you will be able to use ssh to connect. However for Leap 16.0 you do need that or a connection via the serial interface to configure access via ssh.
+- connect to the device using a ssh client (port 22), log in with user *root*, password *linux* or for Leap 16.0 with the configured access data.
+- __CHANGE THE DEFAULT PASSWORD__ for the *root* user (better: use keys to authenticate and change yes for *PermitRootLogin* to *prohibit-password* in */etc/ssh/sshd_config.d/PermitRootLogin.conf*)  
 
     *passwd*  
     *new pw*  
@@ -35,26 +37,49 @@ In order to use the installation script on the Raspberry Pi, you will need to fi
 
 - make sure the Pi can reach out to the Internet using http(s), can resolve DNS, ... (DHCP)
 - you may use the command *yast language* to set your language as the default language, the layout of the keyboard and the timezone.
-- The first thing the install script will do is update the system.  
-    - For Tumbleweed it uses:  
 
-        *zypper dup --no-interactive --no-recommends*  
+- give your system a proper name with:
 
-- reboot  
+    echo *"dshonypot" > /etc/hostname*
 
-    *shutdown -r now*
+- the DSield system needs to be installed from a normal user, on the **Raspberry Pi OS** there is already the account pi, but on openSUSE you need to create such an account with:
+
+    *useradd -c 'DShield maintenace' -m -U dsmaint*
+
+- set the password for this account with:
+
+    *passwd dsmaint*
+
+- this account needs a lot of sudo to generate the DShield honypot. This is best served with a sudoers definition:
+    *echo "dsmaint ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/dsmaint*
+    *chmod 600 /etc/sudoers.d/dsmaint*
     
-- if GIT isn't already installed (will be the case with the JeOS images): install GIT  
+- if GIT isn't already installed (it is not installed in the JeOS images): install GIT  
 
     *zypper in --no-recommends git*
     
+- git will download the DShield system and contains an install script to install that system. 
+  - the first thing the install script will do is update the system.  
+    - It is recommended to do this before running the install script.
+    - For Tumbleweed the next command line will do that, after that restart the system with:  
+
+        *zypper --non-interactive dup --no-recommends*  
+        *reboot*
+        or
+        *shutdown -r now*
+  
+After this restart, you need to login as user dsmaint or as root, and become the user dsmain with:
+
+    *su - dsmaint*
+
 - get GIT repository  
 
-    <em>git clone <span>https</span>://github.com/Dshield-ISC/dshield.git</em>
+    **git clone https://github.com/Dshield-ISC/dshield.git**
 
-– in case you do a reinstall of a previous system, you should have saved the files `/etc/dshield.ini` and `/etc/dshield.sslca`, copy these files in the same locations; when you run the installation script answers are filled in and you only need to acknowledge the questions
-    
-- run the installation script  
+– in case you do a reinstall of a previous system, you should have saved the files `/etc/dshield.ini` and `/etc/dshield.sslca`, copy these files in the same locations; when you run the installation script answers are filled in and you only need to acknowledge the questions.
+
+
+- run the installation script as user dsmaint:
 
     *cd dshield/bin*  
     *./install.sh*  
