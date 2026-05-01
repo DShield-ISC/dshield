@@ -15,10 +15,13 @@
 
 # version 2025/08/05
 
-readonly myversion=98
+readonly myversion=99
 
 
 # Major Changes (for details, see Github):
+#
+# - V99 (Johannes)
+#   - removing support for Ubuntu 20/22, adding support for 26.04
 #
 # - V98 (Johannes)
 #   - new web hpot (Mark Baggett)
@@ -627,20 +630,14 @@ if [ "$ID" == "debian" ]  && [ "$VERSION_ID" == "13" ]; then
     distversion=r13
 fi
 
-
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
-  dist='apt'
-  distversion='u20'
-fi
-
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
-  dist='apt'
-  distversion='u22'
-fi
-
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "24.04" ]; then
   dist='apt'
   distversion='u24'
+fi
+
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "26.04" ]; then
+  dist='apt'
+  distversion='u26'
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ]; then
