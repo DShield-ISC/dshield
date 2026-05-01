@@ -10,7 +10,12 @@ Install the default version Ubuntu Server 24.04 LTS. Don't select any additional
 **Deploying As VPS**
 Select the appropriate Ubuntu Server 24.04 package from your provider. You won't be prompted to install additional packages or add users when using this method. You'll need to manually add a user named "dshield" here as well (optionally):
 
-```adduser --disabled-password --gecos "DShield Honeypot" dshield```
+```
+sudo adduser --disabled-password --gecos "DShield Honeypot" dshield
+sudo adduser dshield sudo
+```
+
+If you installed the "minimum server": Make sure to install the editor of your choice. (for example, "sudo apt install emacs-nox")
 
 **After Completing Installation**
 Upgrade the base system and ensure git and openssh-server are already installed:
@@ -24,6 +29,7 @@ sudo reboot
 Finally, clone the following Git repository and run the install script. Make sure to retrieve your API key from either dshield.org or isc.sans.edu.
 
 ```
+sudo su - dshield
 git clone https://github.com/DShield-ISC/dshield.git
 dshield/bin/install.sh
 sudo reboot
