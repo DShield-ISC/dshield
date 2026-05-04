@@ -19,6 +19,8 @@ readonly myversion=99
 
 
 # Major Changes (for details, see Github):
+# - V100 (Johannes)
+#   - moving to PyPi version of cowrie
 #
 # - V99 (Johannes)
 #   - removing support for Ubuntu 20/22, adding support for 26.04
@@ -2149,47 +2151,6 @@ sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 dlog "installing cowrie"
 
-# step 1 (Install OS dependencies): done
-
-
-
-# step 2 (Create a user account)
-dlog "checking if cowrie OS user already exists"
-if ! grep '^cowrie:' -q /etc/passwd; then
-  dlog "... no, creating"
-  if [ "$ID" != "opensuse" ]; then
-    sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
-  else
-    sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
-  fi
-  outlog "Added user 'cowrie'"
-else
-  outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
-fi
-
-# add current user to cowrie group to help with permissions for install later
-sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
-
-# step 3 (Checkout the code)
-# (we will stay with zip instead of using GIT for the time being)
-dlog "downloading and unzipping cowrie"
-if [ "$BETA" == 1 ]; then
-  run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
-else
-  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
-fi
-
-# shellcheck disable=SC2181
-if [ ${?} -ne 0 ]; then
-  outlog "Something went wrong downloading cowrie, ZIP corrupt."
-  exit 9
-fi
-if [ -f "${TMPDIR}"/cowrie.zip ]; then
-  run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
-else
-  outlog "Can not find cowrie.zip in ${TMPDIR}"
-  exit 9
-fi
 
 #
 # deleting old backups
