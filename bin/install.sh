@@ -2149,7 +2149,6 @@ sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 dlog "installing cowrie"
 
-
 #
 # deleting old backups
 #
@@ -2172,17 +2171,6 @@ if [ -d ${COWRIEDIR} ]; then
 fi
 
 
-dlog "moving extracted cowrie to ${COWRIEDIR}"
-if [ -d "${TMPDIR}"/cowrie ]; then
-  sudorun "mv ${TMPDIR}/cowrie ${COWRIEDIR}"
-else
-    if [ -d "${TMPDIR}"/cowrie-master ]; then
-	sudorun "mv ${TMPDIR}/cowrie-master ${COWRIEDIR}"
-    else
-	outlog "${TMPDIR}/cowrie / cowrie-master not found"
-	exit 9
-    fi
-fi
 
 
 
@@ -2204,25 +2192,10 @@ run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 
-if [ "$FAST" == "0" ]; then
-    dlog "installing cowrie dependencies: requirements.txt"
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade pip"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
-    # shellcheck disable=SC2181
-    if [ ${?} -ne 0 ]; then
-       outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
-       exit 9
-    fi
-else
-    dlog "skipping requirements in fast mode"
-fi
+run 'pip3 install cowrie'
+# TODO.. check
+exit
 
-
-# older Pis have issues with the slack dependency.
-# we only need 'requests'
-# dlog "installing dependencies requirements-output.txt"
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
     run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
