@@ -656,19 +656,17 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
-  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian, Ubuntu 20.04/22.04/24.04, "
+  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian, Ubuntu 24.04,26.04,"
   outlog "openSUSE Tumbleweed and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "13" ] ; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "26.04" ] && [ "$VERSION_ID" != "13" ] ; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS (up to trixie, release October 1st 2025)"
-  outlog " - Ubuntu 20.04"  
-  outlog " - Ubuntu 22.04"
-  outlog " - Ubuntu 24.04"  
-  outlog " - openSUSE Tumbleweed."
+  outlog " - Ubuntu 24.04"
+  outlog " - Ubuntu 26.04"    
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
   read
