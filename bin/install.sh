@@ -15,7 +15,7 @@
 
 # version 2025/08/05
 
-readonly myversion=99
+readonly myversion=100
 
 
 # Major Changes (for details, see Github):
@@ -2149,6 +2149,45 @@ sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 dlog "installing cowrie"
 
+# step 1 (Create cowrie account)
+
+dlog "checking if cowrie OS user already exists"
+if ! grep '^cowrie:' -q /etc/passwd; then
+  dlog "... no, creating"
+  if [ "$ID" != "opensuse" ]; then
+    sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/cowrie --no-create-home cowrie'
+  else
+    sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/cowrie cowrie'
+  fi
+  outlog "Added user 'cowrie'"
+else
+  outlog "User 'cowrie' already exists in OS. Making no changes to OS user."
+fi
+
+# add current user to cowrie group to help with permissions for install later
+sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
+
+# step 2 (Download the code)
+
+dlog "downloading and unzipping cowrie"
+if [ "$BETA" == 1 ]; then
+  run "$CURL https://www.dshield.org/cowrie-beta.zip > ${TMPDIR}/cowrie.zip"
+else
+  run "$CURL -m 60 --connect-timeout 5 https://www.dshield.org/cowrie.zip > ${TMPDIR}/cowrie.zip"
+fi
+
+# shellcheck disable=SC2181
+if [ ${?} -ne 0 ]; then
+  outlog "Something went wrong downloading cowrie, ZIP corrupt."
+  exit 9
+fi
+if [ -f "${TMPDIR}"/cowrie.zip ]; then
+  run "unzip -qq -d ${TMPDIR} ${TMPDIR}/cowrie.zip "
+else
+  outlog "Can not find cowrie.zip in ${TMPDIR}"
+  exit 9
+fi
+
 #
 # deleting old backups
 #
@@ -2170,7 +2209,17 @@ if [ -d ${COWRIEDIR} ]; then
   sudorun "chown -R ${SYSUSERID}:${GROUPID} ${COWRIEDIR}.${INSTDATE}"
 fi
 
-
+dlog "moving extracted cowrie to ${COWRIEDIR}"
+if [ -d "${TMPDIR}"/cowrie ]; then
+  sudorun "mv ${TMPDIR}/cowrie ${COWRIEDIR}"
+else
+    if [ -d "${TMPDIR}"/cowrie-master ]; then
+       sudorun "mv ${TMPDIR}/cowrie-master ${COWRIEDIR}"
+    else
+       outlog "${TMPDIR}/cowrie / cowrie-master not found"
+       exit 9
+    fi
+fi
 
 
 
@@ -2192,9 +2241,21 @@ run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 
-run 'pip3 install cowrie'
-# TODO.. check
-exit
+if [ "$FAST" == "0" ]; then
+    dlog "installing cowrie dependencies: requirements.txt"
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade pip"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
+    run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
+    # shellcheck disable=SC2181
+    if [ ${?} -ne 0 ]; then
+       outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
+       exit 9
+    fi
+else
+    dlog "skipping requirements in fast mode"
+fi
+
 
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
