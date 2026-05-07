@@ -239,6 +239,10 @@ INTERACTIVE=1
 FAST=0
 BETA=0
 
+if git branch --show-current | grep -q 'dev'; then
+    BETA=1
+fi
+
 DSHIELDINI=/srv/dshield/etc/dshield.ini
 # userid and uid are used by the dshield.ini configuration and script building it
 SYSUSERID=$(id -u) 
@@ -2299,6 +2303,13 @@ ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ssh_version
 export ttylog='false'
 export telnet
+cowriebatchsize=20
+cowriedebug=0
+if [ "$BETA" == 1 ]; then
+    export cowriebatchsize=2
+    export cowriedebug=1
+fi
+
 dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
 
 # make output of simple text commands more real
