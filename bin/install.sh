@@ -14,7 +14,6 @@
 
 readonly myversion=100
 
-
 # Major Changes (for details, see Github):
 # - V100 (Johannes)
 #   - moving to PyPi version of cowrie
@@ -747,14 +746,8 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q install python3-bcrypt'
     sudorun 'apt -y -q install python3-cffi'
     sudorun 'apt -y -q install python3-ply'
-    sudorun 'apt -y -q install python3-pycparser'
-    sudorun 'apt -y -q install python3-constantly'
-    sudorun 'apt -y -q install python3-cryptography'
-    sudorun 'apt -y -q install python3-constantly'
-    sudorun 'apt -y -q install python3-defusedxml'
-    sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
-    
-    for b in cron python3 python3-pip python3-requests python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables util-linux-extra rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
+
+    for b in cron python3 python3-pip python3-requests python3-attr python3-certifi build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables util-linux-extra rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
       sudorun "apt -y -q install $b"
       if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
@@ -898,54 +891,6 @@ fi
 outlog "Stopping cowrie via systemd"
 sudorun "systemctl stop cowrie"
 
-if [ "$FAST" == "0" ]; then
-
-  ###########################################################
-  ## PIP
-  ###########################################################
-
-  outlog "check if pip3 is already installed"
-
-  run 'pip3 > /dev/null'
-
-  # shellcheck disable=SC2181
-  if [ ${?} -gt 0 ]; then
-    outlog "no pip3 found, installing pip3"
-    run "$CURL https://bootstrap.pypa.io/get-pip.py > ${TMPDIR}/get-pip.py"
-    if [ ${?} -ne 0 ]; then
-      outlog "Error downloading get-pip, aborting."
-      exit 9
-    fi
-    run "python3 ${TMPDIR}/get-pip.py"
-    if [ ${?} -ne 0 ]; then
-      outlog "Error running get-pip3, aborting."
-      exit 9
-    fi
-  else
-    outlog "pip3 found .... Checking which pip3 is installed...."
-    drun 'pip3 -V'
-    drun 'pip3  -V | cut -d " " -f 4 | cut -d "/" -f 3'
-    drun 'find /usr -name pip3'
-    drun 'find /usr -name pip3 | grep -v local'
-
-    # if local is in the path then it's normally not a distro package, so if we only find local, then it's OK
-    # - no local in pip3 -V output
-    #   OR
-    # - pip3 below /usr without local
-    # -> potential distro pip3 found
-    if [ "$(pip3 -V | cut -d " " -f 4 | cut -d "/" -f 3)" != "local" ] || [ "$(find /usr -name pip3 | grep -cv local)" -gt 0 ]; then
-      # pip3 may be distro pip3
-      outlog "Potential distro pip3 found."
-    else
-      outlog "pip found, which doesn't seem to be installed as a distro package. Looks ok to me."
-    fi
-  fi
-
-  drun 'pip3 list --format=columns'
-  
-else
-  outlog "Skipping PIP check in FAST mode"
-fi
 
 ###########################################################
 ## Random number generator
@@ -1003,7 +948,7 @@ else # in openSUSE
 fi
 
 ###########################################################
-## Handling existing config
+## Creating webhpot user
 ###########################################################
 
 if ! grep -qE '^webhpot' /etc/passwd; then
@@ -1018,14 +963,15 @@ else
     outlog "User 'webhpot' already exists"
 fi
 
+###########################################################
+## checking existing configuration and update it if needed
+###########################################################
+
+
 if [ ! -d /srv/dshield/etc ]; then
     sudorun "mkdir -m 0770 -p /srv/dshield/etc"
-    
     sudorun "chown -R ${SYSUSERID}:webhpot /srv/dshield"
 fi
-
-
-
 
 if [ -f /etc/dshield.ini ]; then
     if [ ! -f ${DSHIELDINI} ]; then
@@ -1035,7 +981,6 @@ if [ -f /etc/dshield.ini ]; then
     fi
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 fi
-
 
 if [ -f ${DSHIELDINI} ]; then
   dlog "dshield.ini found, content follows"
@@ -1050,7 +995,6 @@ if [ -f ${DSHIELDINI} ]; then
     dlog "modified content of dshield.ini follows"
     drun 'cat /etc/dshield.ini'
   fi
-
   manualupdates=0
   userid=0
   # believe it or not, bash has a built in .ini parser. Just need to remove spaces around "="
@@ -1084,6 +1028,8 @@ if ! [ -d "${TMPDIR}" ]; then
   outlog "${TMPDIR} not found, aborting."
   exit 9
 fi
+
+
 if [ "$INTERACTIVE" == "0" ]; then
   MANUPDATES=$manualupdates
   uid=$userid
@@ -2347,7 +2293,7 @@ sudorun 'deactivate'
 
 outlog "Installing Velociraptor"
 TMPFILE=$(mktemp)
-wget -o ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
+wget -O ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
 sudorun "dpkg -i ${TMPFILE}"
 rm ${TMPFILE}
 outlog "Done Installing Velociraptor"
