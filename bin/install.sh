@@ -2349,6 +2349,13 @@ sudorun 'systemctl enable cowrie.service'
 dlog 'deactivate cowrie venv'
 sudorun 'deactivate'
 
+###########################################################
+## Installing Velociraptor
+###########################################################
+TMPFILE=$(mktemp)
+wget -o ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
+dpkg -i ${TMPFILE}
+rm ${TMPFILE}
 
 ###########################################################
 ## Installing web honeypot
