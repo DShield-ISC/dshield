@@ -253,10 +253,10 @@ SYSUSERNAME=$(id -ng)
 ETCDIR=$(dirname $DSHIELDINI)
 if [ ! -f "${DSHIELDINI}" ]; then
     if [ -f /etc/dshield.ini ]; then
-	sudo mkdir -p "${ETCDIR}"
-	sudo mv /etc/dshield.ini "${DSHIELDINI}"
-	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
-	sudo ln -s "${ETCDIR}/dshield.ini" "/etc/dshield.ini"
+	sudorun "mkdir -p ${ETCDIR}"
+	sudorun "/etc/dshield.ini ${DSHIELDINI}"
+	sudorun "chown -R ${SYSUSERID}:${GROUPID} ${ETCDIR}"
+	sudorun "ln -s ${ETCDIR}/dshield.ini /etc/dshield.ini"
     fi
 fi
 
@@ -309,13 +309,21 @@ HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
 
 # create and setup log directory
 if [ ! -d ${LOGDIR} ]; then
-    sudo mkdir -m 1777 -p ${LOGDIR}
+    sudorun "mkdir -m 1777 -p ${LOGDIR}"
+fi
+# create cowrie log dir
+if [ ! -d ${LOGDIR}/cowrie ]; then
+    sudorun "mkdir -m 1777 -p ${LOGDIR}/cowrie"
+fi
+# create cowrie log dir
+if [ ! -d ${LOGDIR}/web ]; then
+    sudorun "mkdir -m 1777 -p ${LOGDIR}/web"
 fi
 # for legacy systems that used to run as root
-sudo chown -R "${SYSUSERID}":"${GROUPID}" "${LOGDIR}"
-sudo chmod 1777 "${LOGDIR}"
+sudorun "chown -R ${SYSUSERID}:${GROUPID} ${LOGDIR}"
+sudorun "chmod 1777 ${LOGDIR}"
 # and the local etc dir may need cleaning up from legacy files as root
-sudo chown -R "${SYSUSERID}":"${GROUPID}" "$progdir"
+sudorun "chown -R ${SYSUSERID}:${GROUPID} $progdir"
 # which port the real sshd should listen to
 SSHDPORT="12222"
 
@@ -746,7 +754,7 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
     
     for b in cron python3 python3-pip python3-requests python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables util-linux-extra rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
-      run "sudo apt -y -q install $b"
+      sudorun "apt -y -q install $b"
       if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
         outlog "This may be a temporary network issue. You may"
@@ -781,8 +789,8 @@ if [ "$FAST" == "0" ]; then
     sudorun 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
     sudorun 'zypper --non-interactive install --no-recommends stunnel'
     # opensuse does not have packet wamerican so copy it
-    sudo mkdir -p /usr/share/dict
-    sudo cp "$progdir"/../dict/american-english /usr/share/dict/
+    sudorun "mkdir -p /usr/share/dict"
+    sudorun "cp ${progdir}/../dict/american-english /usr/share/dict/"
   fi
 else
   outlog "Skipping OS Update / Package install and security check in FAST mode"
@@ -887,7 +895,7 @@ if [ -x /etc/init.d/cowrie ]; then
 fi
 # in case systemd is used
 outlog "Stopping cowrie via systemd"
-sudo systemctl stop cowrie
+sudorun "systemctl stop cowrie"
 
 if [ "$FAST" == "0" ]; then
 
@@ -1439,6 +1447,11 @@ adminports="'${ADMINPORTS}'"
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
+if [ ! -d /srv/db ]; then
+    sudorun 'mkdir /srv/db'
+    sudorun 'chmod 1777 /srv/db'
+fi
+
 if [ "${database}" == "" ]; then
     database='sqlite+pysqlite:////srv/db/isc-agent.sqlite'
 fi
@@ -1632,7 +1645,7 @@ if [ "$use_iptables" = "True" ] ; then
 # iptables -n iptables.local
 #
 EOF
-        sudo cp "${TMPDIR}"/iptables.local /etc/network/iptables.local
+        sudorun "cp ${TMPDIR}/iptables.local /etc/network/iptables.local"
     fi
   cat >"${TMPDIR}"/iptables <<EOF
 
