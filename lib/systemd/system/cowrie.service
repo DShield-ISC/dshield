@@ -1,21 +1,24 @@
 [Unit]
-Description=Cowrie SSH and Telnet Honeypot
-Documentation=https://github.com/micheloosterhof/cowrie
+Description=A SSH and Telnet honeypot service
 After=network.target
-#Wants=syslog.target
-#Wants=mysql.service
+After=rsyslog.service
+# Requires=cowrie.socket
 
 [Service]
-Type=forking
 User=cowrie
 Group=cowrie
-PIDFile=/srv/cowrie/var/run/cowrie.pid
-ExecStart=/srv/cowrie/bin/cowrie start
-ExecStop=/srv/cowrie/bin/cowrie stop
-ExecReload=/srv/cowrie/bin/cowrie stop && sleep 10 && /srv/cowrie/bin/cowrie start
-WorkingDirectory=/srv/cowrie/
-Restart=on-failure
-TimeoutSec=300
+
+Restart=always
+RestartSec=5
+
+Environment=PYTHONPATH=/srv/cowrie/src
+WorkingDirectory=/srv/cowrie
+
+ExecStart=/srv/cowrie/cowrie-env/bin/python /srv/cowrie/cowrie-env/bin/twistd --umask 0022 --nodaemon --pidfile= -l - cowrie
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=cowrie
 
 [Install]
 WantedBy=multi-user.target
