@@ -145,8 +145,9 @@ pidfile = piddir+"fwparser.pid"
 lastcount = lastdir+"lastfwlog"
 skipvalue = lastdir+"skipvalue"
     
-if os.path.isfile(logfile) is None:
-    sys.exit('Can not find logfile %s ' % logfile)
+if os.path.isfile(logfile) is None or os.path.getsize(logfile) == 0:
+    d.log('Can not find logfile or file is empty %s ' % logfile)
+    sys.exit()
 if os.path.isfile(pidfile):
     checklock(pidfile)
 
