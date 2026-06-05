@@ -2257,24 +2257,8 @@ run 'sudo chgrp -R cowrie /srv/cowrie'
 run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-run 'python -m pip install -e .'
-
-if [ "$FAST" == "0" ]; then
-    dlog "installing cowrie dependencies: requirements.txt"
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade pip"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade bcrypt"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade python-dateutil"'    
-    run 'sg cowrie -c "pip3 install --require-virtualenv -r requirements.txt"'
-    # shellcheck disable=SC2181
-    if [ ${?} -ne 0 ]; then
-       outlog "Error installing dependencies from requirements.txt. See ${LOGFILE} for details."
-       exit 9
-    fi
-else
-    dlog "skipping requirements in fast mode"
-fi
-
+run 'sudo -u cowrie pip install cowrie'
+run 'sudo -u cowrie cowrie init'
 
 # run 'pip3 install --upgrade -r requirements-output.txt'
 if [ "$ID" != "opensuse" ] ; then
