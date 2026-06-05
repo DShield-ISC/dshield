@@ -2258,18 +2258,9 @@ run 'sudo chgrp -R cowrie /srv/cowrie'
 run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-run 'sudo -u cowrie pip install cowrie'
-run 'sudo -u cowrie cowrie init'
+run 'pip install cowrie'
+run 'sudo -u cowrie /srv/cowrie/cowrie-env/bin/cowrie init'
 
-# run 'pip3 install --upgrade -r requirements-output.txt'
-if [ "$ID" != "opensuse" ] ; then
-    run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
-    # shellcheck disable=SC2181
-    if [ ${?} -ne 0 ]; then
-	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
-	exit 9
-    fi
-fi
 cd "${OLDDIR}" || exit
 
 outlog "Doing further cowrie configuration."
@@ -2353,10 +2344,13 @@ sudorun 'deactivate'
 ###########################################################
 ## Installing Velociraptor
 ###########################################################
+
+outlog "Installing Velociraptor"
 TMPFILE=$(mktemp)
 wget -o ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
-dpkg -i ${TMPFILE}
+sudorun "dpkg -i ${TMPFILE}"
 rm ${TMPFILE}
+outlog "Done Installing Velociraptor"
 
 ###########################################################
 ## Installing web honeypot
