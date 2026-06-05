@@ -219,6 +219,8 @@ checkfile "/etc/dshield.ini"
 TESTS['ini']=$?
 checkfile "/srv/cowrie/cowrie.cfg"
 TESTS['cowriecfg']=$?
+checkfile "/srv/cowrie/cowrie-env/bin/cowrie"
+TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/10-dshield.conf"
 TESTS['dshieldconf']=$?
 IPTABLES=/usr/sbin/iptables
