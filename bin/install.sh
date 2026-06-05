@@ -9,9 +9,6 @@
 #
 ####
 
-###########################################################
-## CONFIG SECTION
-###########################################################
 
 # version 2025/08/05
 
@@ -233,6 +230,10 @@ readonly myversion=100
 #
 #
 
+###########################################################
+## CONFIG SECTION
+###########################################################
+
 TERM=vt100
 
 INTERACTIVE=1
@@ -309,7 +310,7 @@ HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT}"
 
 # create and setup log directory
 if [ ! -d ${LOGDIR} ]; then
-    sudorun "mkdir -m 1777 -p ${LOGDIR}"
+    sudo mkdir -m 1777 -p "${LOGDIR}"
 fi
 # create cowrie log dir
 if [ ! -d ${LOGDIR}/cowrie ]; then
