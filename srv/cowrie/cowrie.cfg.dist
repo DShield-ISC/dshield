@@ -20,13 +20,13 @@
 # server as the sensor name.
 #
 # (default: not specified)
-sensor_name=$sensorname
+#sensor_name=myhostname
 
 # Hostname for the honeypot. Displayed by the shell prompt of the virtual
 # environment
 #
 # (default: svr04)
-hostname = $hostname
+hostname = svr04
 
 
 # Directory where to save log files in.
@@ -102,12 +102,12 @@ ttylog_path = ${honeypot:state_path}/tty
 # Idle timeout determines when logged in sessions are
 # terminated for being idle. In seconds.
 # (default: 180)
-idle_timeout = 150
+idle_timeout = 180
 
 # Authentication Timeout
 # The server disconnects after this time if the user has not successfully logged in.
 # The default is 120 seconds.
-authentication_timeout = 60
+authentication_timeout = 120
 
 # EXPERIMENTAL: back-end to user for Cowrie, options: shell, proxy or llm
 # (default: shell)
@@ -160,7 +160,7 @@ timezone = UTC
 # behaviour).
 #
 # (default: not specified)
-fake_addr = $fake_addr
+#fake_addr = 192.168.66.254
 
 
 # The IP address on which this machine is reachable on from the internet.
@@ -193,15 +193,15 @@ fake_addr = $fake_addr
 # a user login after a random number of attempts.
 # It will also cache username/password combinations that allow login.
 #
-auth_class = AuthRandom
+auth_class = UserDB
 
 # When AuthRandom is used also set the
 #  auth_class_parameters: <min try>, <max try>, <maxcache>
 #  for example: 2, 5, 10 = allows access after randint(2,5) attempts
 #  and cache 10 combinations.
 #
-auth_class = AuthRandom
-auth_class_parameters = 4, 7, 50
+#auth_class = AuthRandom
+#auth_class_parameters = 2, 5, 10
 
 
 [backend_pool]
@@ -535,9 +535,9 @@ arch = linux-x64-lsb
 
 # Modify the response of '/bin/uname'
 # Default (uname -a): Linux <hostname> <kernel_version> <kernel_build_string> <hardware_platform> <operating system>
-kernel_version = $kernel_version
-kernel_build_string = $kernel_build_string
-hardware_platform = $arch
+kernel_version = 3.2.0-4-amd64
+kernel_build_string = #1 SMP Debian 3.2.68-1+deb7u1
+hardware_platform = x86_64
 operating_system = GNU/Linux
 
 # SSH Version as printed by "ssh -V" in shell emulation
@@ -591,10 +591,9 @@ public_key_auth = ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519
 # SSH-2.0-OpenSSH_5.9p1 Debian-5ubuntu1
 # SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2
 # SSH-2.0-OpenSSH_5.9
-# SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3
 #
 # (default: "SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2")
-version = SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2
+version = SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3
 
 # Cipher encryption algorithms to be used.
 #
@@ -723,7 +722,7 @@ auth_keyboard_interactive_enabled = false
 [telnet]
 
 # Enable Telnet support, disabled by default
-enabled = $telnet
+enabled = false
 
 # Endpoint to listen on for incoming Telnet connections.
 # See https://twistedmatrix.com/documents/current/core/howto/endpoints.html#servers
@@ -841,12 +840,10 @@ index = cowrie
 # Once registered, find your details at: https://isc.sans.edu/myaccount.html
 #
 [output_dshield]
-userid = $uid
-auth_key = $apikey
-batch_size = $cowriebatchsize
-enabled = true
-debug = $cowriedebug
-
+enabled = false
+userid = userid_here
+auth_key = auth_key_here
+batch_size = 100
 #
 # Graylog logging module for GELF http input
 [output_graylog]
