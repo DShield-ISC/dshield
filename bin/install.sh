@@ -2246,7 +2246,7 @@ if [ "$BETA" == 1 ]; then
     export cowriedebug=1
 fi
 
-dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
+dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/etc/cowrie.cfg"
 
 # make output of simple text commands more real
 
