@@ -2200,9 +2200,9 @@ dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
-run 'pip install cowrie'
-# run 'pip install -r requirements.txt'
-# run 'pip install -r requirements-output.txt'
+run 'pip install --upgrade -q cowrie'
+run 'pip install --upgrade -qr requirements.txt'
+run 'pip install --upgrade -qr requirements-output.txt'
 sudorun "chmod 0770 $COWRIEDIR"
 run "sudo chown -R cowrie ${COWRIEDIR}"
 run "sudo chmod -R g+w ${COWRIEDIR}"
