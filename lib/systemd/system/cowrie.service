@@ -11,10 +11,9 @@ Group=cowrie
 Restart=always
 RestartSec=5
 
-Environment=PYTHONPATH=/srv/cowrie/src
+Environment=PYTHONPATH=/srv/cowrie/cowrie-env/bin
 WorkingDirectory=/srv/cowrie
-
-ExecStart=/srv/cowrie/cowrie-env/bin/python /srv/cowrie/cowrie-env/bin/twistd --umask 0022 --nodaemon --pidfile= -l - cowrie
+ExecStart=/srv/cowrie/cowrie-env/bin/python /srv/cowrie/cowrie-env/bin/twistd --umask 0022 --nodaemon --pidfile=/srv/cowrie/cowrie.pid -l - cowrie
 
 StandardOutput=syslog
 StandardError=syslog
