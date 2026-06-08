@@ -97,14 +97,14 @@ if [ ! "$uid" = "0" ]; then
 fi
 
 # Parsing configuration file
-if [ -f /etc/dshield.ini ]; then
-  source <(grep '=' /etc/dshield.ini | sed 's/ *= */=/g')
+if [ -f /srv/dshield/etc/dshield.ini ]; then
+  source <(grep '=' /srv/dshield/etc/dshield.ini | sed 's/ *= */=/g')
 else
   echo "Bad Installation: No Configuration File Found"
   exit
 fi
 if [ "$email" == "" ]; then
-  echo "The configuration file '/etc/dshield.ini' does not include your e-mail address"
+  echo "The configuration file '/srv/dshield/etc/dshield.ini' does not include your e-mail address"
   echo "This is likely due to you installing an older version of this software."
   echo "Please edit the file, and add a line like:"
   echo "email=myemail@example.com"
@@ -143,7 +143,7 @@ Details: https://dshield.org/updatehoneypot.html${NC}
     fi
   fi
 else
-  echo "{$RED}API Key may not be configured right. Check /etc/dshield.ini or re-run the install.sh script{$NC}"
+  echo "{$RED}API Key may not be configured right. Check /srv/dshield/etc/dshield.ini or re-run the install.sh script{$NC}"
 fi
 
 echo "Honeypot Version: $version"
@@ -216,9 +216,9 @@ checkfile "/var/log/dshield.log"
 TESTS['dshieldlog']=$?
 checkfile "/etc/cron.d/dshield"
 TESTS['cron']=$?
-checkfile "/etc/dshield.ini"
+checkfile "/srv/dshield/etc/dshield.ini"
 TESTS['ini']=$?
-checkfile "/srv/cowrie/cowrie.cfg"
+checkfile "/srv/cowrie/etc/cowrie.cfg"
 TESTS['cowriecfg']=$?
 checkfile "/srv/cowrie/cowrie-env/bin/cowrie"
 TESTS['cowriecfg']=$?
@@ -295,7 +295,7 @@ fi
 if [ $defaultinterface == $interface ]; then
     echo ${GREEN}OK${NC}: correct interface
 else
-    echo ${RED}ERROR${NC}: wrong interface. Should be $defaultinterface but is $interface. See /etc/dshield.ini
+    echo ${RED}ERROR${NC}: wrong interface. Should be $defaultinterface but is $interface. See /srv/dshield/etc/dshield.ini
 fi
 
 if [ -f "/var/log/messages" ]; then
