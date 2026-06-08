@@ -370,7 +370,7 @@ do_log() {
     
 
     if [ ! -f "${LOGFILE}" ]; then
-       touch "${LOGFILE}"
+       touch "${LOGFILE}" || { echo "ERROR: permission issues. Did sudo work?" >&2; exit 1; }
        chmod 600 "${LOGFILE}"
        outlog "Log ${LOGFILE} started."
        outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, "
