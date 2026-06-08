@@ -2200,9 +2200,12 @@ dlog "setting up virtual environment"
 run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
+run '/srv/cowrie/cowrie-env/bin/python -m pip install -U pip'
 run 'pip install --upgrade -q cowrie'
 run 'pip install --upgrade -qr requirements.txt'
 run 'pip install --upgrade -qr requirements-output.txt'
+# not sure if the next line is needed to make sure cowrie/twisted are up to date
+run '/srv/cowrie/cowrie-env/bin/python -m pip install -U cowrie twisted'
 sudorun "chmod 0770 $COWRIEDIR"
 run "sudo chown -R cowrie ${COWRIEDIR}"
 run "sudo chmod -R g+w ${COWRIEDIR}"
