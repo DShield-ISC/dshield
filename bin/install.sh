@@ -2193,19 +2193,20 @@ OLDDIR=$(pwd)
 
 if [ ! -d ${COWRIEDIR} ]; then
     sudorun "mkdir ${COWRIEDIR}"
-
 fi
-sudorun "chown ${SYSUSERID}:cowrie ${COWRIEDIR}"
-sudorun "chmod 0770 $COWRIEDIR"
+sudorun "chown -R ${SYSUSERID}:cowrie ${COWRIEDIR}"
 cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
-run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
-run 'sudo chgrp -R cowrie /srv/cowrie'
-run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
+run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
 run 'pip install cowrie'
-run 'sudo -u cowrie /srv/cowrie/cowrie-env/bin/cowrie init'
+# run 'pip install -r requirements.txt'
+# run 'pip install -r requirements-output.txt'
+sudorun "chmod 0770 $COWRIEDIR"
+run "sudo chown -R cowrie ${COWRIEDIR}"
+run "sudo chmod -R g+w ${COWRIEDIR}"
+run "sudo -u cowrie ${COWRIEDIR}/cowrie-env/bin/cowrie init"
 
 cd "${OLDDIR}" || exit
 
