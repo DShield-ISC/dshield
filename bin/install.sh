@@ -2248,7 +2248,7 @@ if [ "$BETA" == 1 ]; then
     export cowriebatchsize=2
     export cowriedebug=1
 fi
-
+dsudorun "chmod 1777 ${COWRIEDIR}/etc"
 dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/etc/cowrie.cfg"
 
 # make output of simple text commands more real
