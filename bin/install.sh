@@ -1050,7 +1050,7 @@ else
   dlog "old piid ${piid}"
 fi
 if [ "$enable_local_logs" == "" ]; then
-    enable_local_logs='false'
+    enable_local_logs='true'
 fi
 if [ "$local_logs_file" == "" ]; then
     local_logs_file='/srv/log/webhoneypot_{date}.json'
