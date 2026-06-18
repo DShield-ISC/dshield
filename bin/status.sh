@@ -119,7 +119,7 @@ user=$(urlencode "${email}")
 osversionplain=$(grep 'VERSION=' /etc/os-release | cut -f2- -d'"')
 osversion=$(echo $osversionplain | jq -sRr @uri)
 url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid/$osversion"
-prettyname=$(grep PRETTY_NAME /etc/os-release|jq -rr@url)
+prettyname=$(grep PRETTY_NAME /etc/os-release|jq -sRr @uri)
 status=$(curl --get -s --data-urlencode "osname=$prettyname" $url)
 if [ "$status" = "" ]; then
   echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
