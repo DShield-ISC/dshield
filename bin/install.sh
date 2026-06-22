@@ -2297,7 +2297,12 @@ sudorun 'deactivate'
 
 outlog "Installing Velociraptor"
 TMPFILE=$(mktemp)
-wget -qO ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
+if [ "$arch" == "aarch64" ]; then
+    wget -qO ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_arm64.deb
+fi
+if [ "$arch" == "x86_64" ]; then
+    wget -qO ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
+fi
 sudorun "dpkg -i ${TMPFILE}"
 rm ${TMPFILE}
 outlog "Done Installing Velociraptor"
