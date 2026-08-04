@@ -32,3 +32,4 @@ etc/dshield.sslca
 etc/CA/keys/
 etc/openssl.cnf
 srv/web/isc_agent.pyz
+srv/web/rule_checker.log
