@@ -12,9 +12,12 @@
 
 # version 2025/08/05
 
-readonly myversion=100
+readonly myversion=101
 
 # Major Changes (for details, see Github):
+# - V101 (Johannes)
+#   - adding user agents to all requests
+#
 # - V100 (Johannes)
 #   - moving to PyPi version of cowrie
 #
