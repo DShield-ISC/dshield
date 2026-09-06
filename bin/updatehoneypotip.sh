@@ -26,7 +26,7 @@ fi
 
 
 
-honeypotip=$(curl -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
+honeypotip=$(curl -A "update honeypotip" -s https://www4.dshield.org/api/myip?json | jq .ip | tr -d '"')
 if echo -n $honeypotip | egrep -q '^[0-9\.]+$'; then
     sed -i "s/^honeypotip=.*/honeypotip=$honeypotip/" /srv/dshield/etc/dshield.ini
     if ! grep -q '^piid=' dshield.ini; then

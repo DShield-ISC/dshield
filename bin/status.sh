@@ -120,10 +120,11 @@ osversionplain=$(grep 'VERSION=' /etc/os-release | cut -f2- -d'"')
 osversion=$(echo $osversionplain | jq -sRr @uri)
 url="https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid/$osversion"
 prettyname=$(grep PRETTY_NAME /etc/os-release|jq -sRr @uri)
-status=$(curl --get -s --data-urlencode "osname=$prettyname" $url)
+useragent="dshield status check $version $userid" 
+status=$(curl -A "$useragent" --get -s --data-urlencode "osname=$prettyname" $url)
 if [ "$status" = "" ]; then
   echo "Error connecting to DShield. Try again in 5 minutes. For details, run:"
-  echo "curl -s $url"
+  echo "curl -A "$useragent" -s $url"
 fi
 
 if echo $status | grep -q '<result>ok</result>'; then
@@ -259,7 +260,7 @@ fi
 
 # no need to test if the server is exposed, if web honeypot is not running
 if [ ${TESTS['webhpotrunning']} -eq 1 ]; then
-  portcheck=$(curl -s 'https://isc.sans.edu/api/portcheck?json' --max-time 5)
+  portcheck=$(curl -A "$useragent" -s 'https://isc.sans.edu/api/portcheck?json' --max-time 5)
   port=$(echo $portcheck | jq .port80 | tr -d '"')
   webconfig=$(echo $portcheck | jq .webconfig | tr -d '"')
   if [[ "$port" == "open" ]]; then
@@ -312,7 +313,7 @@ for key in "${!TESTS[@]}"; do
   data="$data, { '${key}': '${TESTS[$key]}' }"
 done
 data="$data ]"
-curl -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$version/$piid -d "$data" > /dev/null
+curl -A "$useragent" -s https://isc.sans.edu/api/hpstatusreport/$user/$nonce/$hash/$version/$piid -d "$data" > /dev/null
 echo
 echo "also check https://isc.sans.edu/myreports.html (after logging in)"
 echo "to see that your reports arrive."
