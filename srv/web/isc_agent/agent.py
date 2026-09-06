@@ -586,7 +586,7 @@ class Agent:
         }
         # Request the honeypot rules
         try:
-            conn.request("GET", "/api/honeypotrules")
+            conn.request("GET", "/api/honeypotrules", headers=headers)
         except Exception as e:
             self.logger.exception(f"Failed to retrieve honeypotrules.")
             return
