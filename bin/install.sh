@@ -347,7 +347,7 @@ LINE="##########################################################################
 : "${DIALOG_ESC=255}"
 
 export NCURSES_NO_UTF8_ACS=1
-export CURL="curl -A 'dshield installer $myversion' -s"
+export CURL="curl -A dshield_installer_$myversion -s"
 ###########################################################
 ## FUNCTION SECTION
 ###########################################################
