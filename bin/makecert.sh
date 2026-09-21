@@ -14,16 +14,21 @@ if [ ! -f ${d}/../etc/CA/ca.serial ]; then
     echo -n $serial > "${d}/../etc/CA/ca.serial"
 fi
 
-if [ -f $d/../etc/dshield.sslca ] ; then
-	. $d/../etc/dshield.sslca
-else
-	country="US"
-	state="Florida"
-	city="Jacksonville"
-	company="DShield"
-	depart="Decoy"
+dshieldsslca="/etc/dshield.sslca"
+if [ ! -f $dshieldsslca ] ; then
+  dshieldsslca="$d/../etc/dshield.sslca"
 fi
-hostname=$(hostname);
+if [ -f $dshieldsslca ] ; then
+  . $dshieldsslca
+fi
+if [ -z "$country" ] ; then
+      country="US"
+      state="Florida"
+      city="Jacksonville"
+      company="DShield"
+      depart="Decoy"
+fi
+hostname=$(hostname)
 if [ "$interactive" -eq "1" ]; then
     exec 3>&1
     dialog --title 'Creating SSL Certificate' --separate-widget $'\n' --form\
@@ -47,6 +52,7 @@ if [ "$interactive" -eq "1" ]; then
 	echo "city=\"$city\"" >> $d/../etc/dshield.sslca
 	echo "company=\"$company\"" >> $d/../etc/dshield.sslca
 	echo "depart=\"$department\"" >> $d/../etc/dshield.sslca
+	sudo cp $d/../etc/dshield.sslca /etc/dshield.sslca
 	}
 fi
 if [ ! -d $d/../etc/CA/keys ]; then
