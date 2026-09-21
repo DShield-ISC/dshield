@@ -211,7 +211,9 @@ class Agent:
             - requests.get
         """
         self.logger.debug("getmyip called")
-        header = {'User-Agent': 'DShield PyLib 0.1'}
+        header = {
+            'User-Agent': f'DShield WebHoneypot-{self.config.get("DShield","version",fallback="XX")}-{self.config.get("DShield","userid",fallback="blank")}'
+            }
         try:
             r = requests.get('https://www.dshield.org/api/myip?json', headers=header, timeout=5)
             if r.status_code != 200:
@@ -579,9 +581,12 @@ class Agent:
         # Establish a connection to dshield.org
         conn = http.client.HTTPSConnection("dshield.org")
         self.logger.debug("Requesting honeypot rules")
+        headers = {
+            'User-Agent': f'DShield WebHoneypot-{self.config.get("DShield","version",fallback="XX")}-{self.config.get("DShield","userid",fallback="blank")}'
+        }
         # Request the honeypot rules
         try:
-            conn.request("GET", "/api/honeypotrules")
+            conn.request("GET", "/api/honeypotrules", headers=headers)
         except Exception as e:
             self.logger.exception(f"Failed to retrieve honeypotrules.")
             return

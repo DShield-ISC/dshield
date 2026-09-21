@@ -46,7 +46,8 @@ echo Version installed: $version
 user=`echo $email | sed 's/+/%2b/' | sed 's/@/%40/'`
 nonce=`openssl rand -hex 10`
 hash=`echo -n $email:$apikey | openssl dgst -hmac $nonce -sha512 -hex | cut -f2 -d'=' | tr -d ' '`
-checkapikey=$(curl -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid)
+useragent="dshield status check version $version $userid"
+checkapikey=$(curl -A "$useragent" -s https://isc.sans.edu/api/checkapikey/$user/$nonce/$hash/$version/$piid)
 if echo $checkapikey | grep -q '<result>ok</result>'; then
     echo "API Key OK"
     newversion=$(echo $checkapikey | grep -E -o '<version>[^<]+</version>'|grep -E -o '[0-9]+')

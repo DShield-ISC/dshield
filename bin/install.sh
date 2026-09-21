@@ -9,16 +9,20 @@
 #
 ####
 
-###########################################################
-## CONFIG SECTION
-###########################################################
 
 # version 2025/08/05
 
-readonly myversion=98
-
+readonly myversion=101
 
 # Major Changes (for details, see Github):
+# - V101 (Johannes)
+#   - adding user agents to all requests
+#
+# - V100 (Johannes)
+#   - moving to PyPi version of cowrie
+#
+# - V99 (Johannes)
+#   - removing support for Ubuntu 20/22, adding support for 26.04
 #
 # - V99 (Freek)
 #   - fixed some missing sudos
@@ -233,11 +237,19 @@ readonly myversion=98
 #
 #
 
+###########################################################
+## CONFIG SECTION
+###########################################################
+
 TERM=vt100
 
 INTERACTIVE=1
 FAST=0
 BETA=0
+
+if git branch --show-current | grep -q 'dev'; then
+    BETA=1
+fi
 
 DSHIELDINI=/srv/dshield/etc/dshield.ini
 # userid and uid are used by the dshield.ini configuration and script building it
@@ -249,10 +261,10 @@ SYSUSERNAME=$(id -ng)
 ETCDIR=$(dirname $DSHIELDINI)
 if [ ! -f "${DSHIELDINI}" ]; then
     if [ -f /etc/dshield.ini ]; then
-	sudo mkdir -p "${ETCDIR}"
-	sudo mv /etc/dshield.ini "${DSHIELDINI}"
-	sudo chown -R "${SYSUSERID}":"${GROUPID}" "${ETCDIR}"
-	sudo ln -s "${ETCDIR}/dshield.ini" "/etc/dshield.ini"
+	sudorun "mkdir -p ${ETCDIR}"
+	sudorun "/etc/dshield.ini ${DSHIELDINI}"
+	sudorun "chown -R ${SYSUSERID}:${GROUPID} ${ETCDIR}"
+	sudorun "ln -s ${ETCDIR}/dshield.ini /etc/dshield.ini"
     fi
 fi
 
@@ -306,13 +318,21 @@ HONEYPORTS="${SSHHONEYPORT} ${TELNETHONEYPORT} ${WEBHONEYPORT} ${HTTPSHONYPORT}"
 
 # create and setup log directory
 if [ ! -d ${LOGDIR} ]; then
-    sudo mkdir -m 1777 -p ${LOGDIR}
+    sudo mkdir -m 1777 -p "${LOGDIR}"
+fi
+# create cowrie log dir
+if [ ! -d ${LOGDIR}/cowrie ]; then
+    sudorun "mkdir -m 1777 -p ${LOGDIR}/cowrie"
+fi
+# create cowrie log dir
+if [ ! -d ${LOGDIR}/web ]; then
+    sudorun "mkdir -m 1777 -p ${LOGDIR}/web"
 fi
 # for legacy systems that used to run as root
-sudo chown -R "${SYSUSERID}":"${GROUPID}" "${LOGDIR}"
-sudo chmod 1777 "${LOGDIR}"
+sudorun "chown -R ${SYSUSERID}:${GROUPID} ${LOGDIR}"
+sudorun "chmod 1777 ${LOGDIR}"
 # and the local etc dir may need cleaning up from legacy files as root
-sudo chown -R "${SYSUSERID}":"${GROUPID}" "$progdir"
+sudorun "chown -R ${SYSUSERID}:${GROUPID} $progdir"
 # which port the real sshd should listen to
 SSHDPORT="12222"
 
@@ -333,7 +353,7 @@ LINE="##########################################################################
 : "${DIALOG_ESC=255}"
 
 export NCURSES_NO_UTF8_ACS=1
-export CURL="curl -s"
+export CURL="curl -A dshield_installer_$myversion -s"
 ###########################################################
 ## FUNCTION SECTION
 ###########################################################
@@ -359,7 +379,7 @@ do_log() {
     
 
     if [ ! -f "${LOGFILE}" ]; then
-       touch "${LOGFILE}"
+       touch "${LOGFILE}" || { echo "ERROR: permission issues. Did sudo work?" >&2; exit 1; }
        chmod 600 "${LOGFILE}"
        outlog "Log ${LOGFILE} started."
        outlog "ATTENTION: the log file contains sensitive information (e.g. passwords, "
@@ -628,25 +648,24 @@ if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "12" ]; then
   distversion=r12
 fi
 
+if [ "$ID" == "raspbian" ] && [ "$VERSION_ID" == "13" ]; then
+  dist='apt'
+  distversion=r13
+fi
+
 if [ "$ID" == "debian" ]  && [ "$VERSION_ID" == "13" ]; then
     dist='apt'
     distversion=r13
 fi
 
-
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "20.04" ]; then
-  dist='apt'
-  distversion='u20'
-fi
-
-if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "22.04" ]; then
-  dist='apt'
-  distversion='u22'
-fi
-
 if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "24.04" ]; then
   dist='apt'
   distversion='u24'
+fi
+
+if [ "$ID" == "ubuntu" ] && [ "$VERSION_ID" == "26.04" ]; then
+  dist='apt'
+  distversion='u26'
 fi
 
 if [ "$ID" == "amzn" ] && [ "$VERSION_ID" == "2" ]; then
@@ -669,19 +688,17 @@ fi
 dlog "dist: ${dist}, distversion: ${distversion}"
 
 if [ "$dist" == "invalid" ]; then
-  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian, Ubuntu 20.04/22.04/24.04, "
+  outlog "You are not running a supported operating system. Right now, this script only works for Raspbian, Ubuntu 24.04,26.04,"
   outlog "openSUSE Tumbleweed and Amazon Linux AMI."
   outlog "Please ask info@dshield.org for help to add support for your OS. Include the /etc/os-release file."
   exit 9
 fi
 
-if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "22.04" ] && [ "$VERSION_ID" != "20.04" ] && [ "$VERSION_ID" != "13" ] ; then
+if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ] && [ "$VERSION_ID" != "24.04" ] && [ "$VERSION_ID" != "26.04" ] && [ "$VERSION_ID" != "13" ] ; then
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS (up to trixie, release October 1st 2025)"
-  outlog " - Ubuntu 20.04"  
-  outlog " - Ubuntu 22.04"
-  outlog " - Ubuntu 24.04"  
-  outlog " - openSUSE Tumbleweed."
+  outlog " - Ubuntu 24.04"
+  outlog " - Ubuntu 26.04"    
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
   read
@@ -749,15 +766,9 @@ if [ "$FAST" == "0" ]; then
     sudorun 'apt -y -q install python3-bcrypt'
     sudorun 'apt -y -q install python3-cffi'
     sudorun 'apt -y -q install python3-ply'
-    sudorun 'apt -y -q install python3-pycparser'
-    sudorun 'apt -y -q install python3-constantly'
-    sudorun 'apt -y -q install python3-cryptography'
-    sudorun 'apt -y -q install python3-constantly'
-    sudorun 'apt -y -q install python3-defusedxml'
-    sudorun 'apt -y -q install python-babel-localedata python3-babel python3-markupsafe python3-tz'
-    
-    for b in cron python3 python3-pip python3-requests python3-attr python3-certifi authbind build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
-      run "sudo apt -y -q install $b"
+
+    for b in cron python3 python3-pip python3-requests python3-attr python3-certifi build-essential curl dialog gcc git jq libffi-dev libmariadb-dev-compat libmpc-dev libmpfr-dev libpython3-dev libssl-dev libswitch-perl libwww-perl net-tools python3-dev python3-minimal python3-requests python3-urllib3 python3-virtualenv rng-tools sqlite3 unzip wamerican zip libsnappy-dev virtualenv lsof iptables util-linux-extra rsyslog stunnel python3-openssl python3-hamcrest python3-priority; do
+      sudorun "apt -y -q install $b"
       if ! sudo dpkg -l $b >/dev/null 2>/dev/null; then
         outlog "ERROR I was unable to install the $b package via apt"
         outlog "This may be a temporary network issue. You may"
@@ -794,8 +805,8 @@ if [ "$FAST" == "0" ]; then
     sudorun 'zypper --non-interactive install --no-recommends python3-python-snappy snappy-devel gcc-c++'
     sudorun 'zypper --non-interactive install --no-recommends stunnel'
     # opensuse does not have packet wamerican so copy it
-    sudo mkdir -p /usr/share/dict
-    sudo cp "$progdir"/../dict/american-english /usr/share/dict/
+    sudorun "mkdir -p /usr/share/dict"
+    sudorun "cp ${progdir}/../dict/american-english /usr/share/dict/"
   fi
 else
   outlog "Skipping OS Update / Package install and security check in FAST mode"
@@ -944,12 +955,8 @@ if [ "$FAST" == "0" ]; then
       outlog "pip found, which doesn't seem to be installed as a distro package. Looks ok to me."
     fi
   fi
+sudorun "systemctl stop cowrie"
 
-  drun 'pip3 list --format=columns'
-  
-else
-  outlog "Skipping PIP check in FAST mode"
-fi
 
 ###########################################################
 ## Random number generator
@@ -999,7 +1006,7 @@ else # in openSUSE
 fi
 
 ###########################################################
-## Handling existing config
+## Creating webhpot user
 ###########################################################
 
 if ! grep -qE '^webhpot' /etc/passwd; then
@@ -1015,14 +1022,15 @@ else
     outlog "User 'webhpot' already exists"
 fi
 
+###########################################################
+## checking existing configuration and update it if needed
+###########################################################
+
+
 if [ ! -d /srv/dshield/etc ]; then
     sudorun "mkdir -m 0770 -p /srv/dshield/etc"
-    
     sudorun "chown -R ${SYSUSERID}:webhpot /srv/dshield"
 fi
-
-
-
 
 if [ -f /etc/dshield.ini ]; then
     if [ ! -f ${DSHIELDINI} ]; then
@@ -1032,7 +1040,6 @@ if [ -f /etc/dshield.ini ]; then
     fi
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 fi
-
 
 if [ -f ${DSHIELDINI} ]; then
   dlog "dshield.ini found, content follows"
@@ -1047,7 +1054,6 @@ if [ -f ${DSHIELDINI} ]; then
     dlog "modified content of dshield.ini follows"
     drun 'cat /etc/dshield.ini'
   fi
-
   manualupdates=0
   userid=0
   # believe it or not, bash has a built in .ini parser. Just need to remove spaces around "="
@@ -1081,6 +1087,8 @@ if ! [ -d "${TMPDIR}" ]; then
   outlog "${TMPDIR} not found, aborting."
   exit 9
 fi
+
+
 if [ "$INTERACTIVE" == "0" ]; then
   MANUPDATES=$manualupdates
   uid=$userid
@@ -1101,7 +1109,7 @@ else
   dlog "old piid ${piid}"
 fi
 if [ "$enable_local_logs" == "" ]; then
-    enable_local_logs='false'
+    enable_local_logs='true'
 fi
 if [ "$local_logs_file" == "" ]; then
     local_logs_file='/srv/log/webhoneypot_{date}.json'
@@ -1445,6 +1453,11 @@ adminports="'${ADMINPORTS}'"
 
 dlog "firewall config: IPs / nets for which firewall logging should NOT be done"
 
+if [ ! -d /srv/db ]; then
+    sudorun 'mkdir /srv/db'
+    sudorun 'chmod 1777 /srv/db'
+fi
+
 if [ "${database}" == "" ]; then
     database='sqlite+pysqlite:////srv/db/isc-agent.sqlite'
 fi
@@ -1638,7 +1651,7 @@ if [ "$use_iptables" = "True" ] ; then
 # iptables -n iptables.local
 #
 EOF
-        sudo cp "${TMPDIR}"/iptables.local /etc/network/iptables.local
+        sudorun "cp ${TMPDIR}/iptables.local /etc/network/iptables.local"
     fi
   cat >"${TMPDIR}"/iptables <<EOF
 
@@ -2190,11 +2203,8 @@ sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 
 dlog "installing cowrie"
 
-# step 1 (Install OS dependencies): done
+# step 1 (Create cowrie account)
 
-
-
-# step 2 (Create a user account)
 dlog "checking if cowrie OS user already exists"
 if ! grep '^cowrie:' -q /etc/passwd; then
   dlog "... no, creating"
@@ -2212,8 +2222,8 @@ fi
 # add current user to cowrie group to help with permissions for install later
 sudorun "usermod -a -G cowrie ${SYSUSERNAME}"
 
-# step 3 (Checkout the code)
-# (we will stay with zip instead of using GIT for the time being)
+# step 2 (Download the code)
+
 dlog "downloading and unzipping cowrie"
 if [ "$ID" != "opensuse" ] ; then
   if [ "$BETA" == 1 ]; then
@@ -2266,16 +2276,15 @@ if [ -d ${COWRIEDIR} ]; then
   sudorun "chown -R ${SYSUSERID}:${GROUPID} ${COWRIEDIR}.${INSTDATE}"
 fi
 
-
 dlog "moving extracted cowrie to ${COWRIEDIR}"
 if [ -d "${TMPDIR}"/cowrie ]; then
   sudorun "mv ${TMPDIR}/cowrie ${COWRIEDIR}"
 else
     if [ -d "${TMPDIR}"/cowrie-master ]; then
-	sudorun "mv ${TMPDIR}/cowrie-master ${COWRIEDIR}"
+       sudorun "mv ${TMPDIR}/cowrie-master ${COWRIEDIR}"
     else
-	outlog "${TMPDIR}/cowrie / cowrie-master not found"
-	exit 9
+       outlog "${TMPDIR}/cowrie / cowrie-master not found"
+       exit 9
     fi
 fi
 
@@ -2287,17 +2296,23 @@ OLDDIR=$(pwd)
 
 if [ ! -d ${COWRIEDIR} ]; then
     sudorun "mkdir ${COWRIEDIR}"
-
 fi
-sudorun "chown ${SYSUSERID}:cowrie ${COWRIEDIR}"
-sudorun "chmod 0770 $COWRIEDIR"
+sudorun "chown -R ${SYSUSERID}:cowrie ${COWRIEDIR}"
 cd ${COWRIEDIR} || exit
 dlog "setting up virtual environment"
-run 'sudo -u cowrie virtualenv --python=python3 cowrie-env'
-run 'sudo chgrp -R cowrie /srv/cowrie'
-run 'sudo chmod -R g+w /srv/cowrie/cowrie-env/'
+run 'virtualenv --python=python3 cowrie-env'
 dlog "activating virtual environment"
 run 'source cowrie-env/bin/activate'
+run '/srv/cowrie/cowrie-env/bin/python -m pip install -U pip'
+run 'pip install --upgrade -q cowrie'
+run 'pip install --upgrade -qr requirements.txt'
+run 'pip install --upgrade -qr requirements-output.txt'
+# not sure if the next line is needed to make sure cowrie/twisted are up to date
+run '/srv/cowrie/cowrie-env/bin/python -m pip install -U cowrie twisted'
+sudorun "chmod 0770 $COWRIEDIR"
+run "sudo chown -R cowrie ${COWRIEDIR}"
+run "sudo chmod -R g+w ${COWRIEDIR}"
+run "sudo -u cowrie ${COWRIEDIR}/cowrie-env/bin/cowrie init"
 
 if [ "$FAST" == "0" ]; then
     dlog "installing cowrie dependencies: requirements.txt"
@@ -2361,7 +2376,14 @@ ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ssh_version
 export ttylog='false'
 export telnet
-dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/cowrie.cfg"
+cowriebatchsize=20
+cowriedebug=0
+if [ "$BETA" == 1 ]; then
+    export cowriebatchsize=2
+    export cowriedebug=1
+fi
+dsudorun "chmod 1777 ${COWRIEDIR}/etc"
+dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/etc/cowrie.cfg"
 
 # make output of simple text commands more real
 
@@ -2423,6 +2445,21 @@ dlog 'deactivate cowrie venv'
 #sudorun 'deactivate'
 run deactivate
 
+###########################################################
+## Installing Velociraptor
+###########################################################
+
+outlog "Installing Velociraptor"
+TMPFILE=$(mktemp)
+if [ "$arch" == "aarch64" ]; then
+    wget -qO ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_arm64.deb
+fi
+if [ "$arch" == "x86_64" ]; then
+    wget -qO ${TMPFILE} https://velociraptor.dshield.org/public/velociraptor_dshield_org_debian.deb
+fi
+sudorun "dpkg -i ${TMPFILE}"
+rm ${TMPFILE}
+outlog "Done Installing Velociraptor"
 
 ###########################################################
 ## Installing web honeypot

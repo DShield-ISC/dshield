@@ -2,7 +2,7 @@ Overview
 ========
 Use the following guide to deploy DShield honeypot using the [free compute tier](https://aws.amazon.com/free/).
 
-This guide uses the Ubuntu 22.04 LTS Server AMI (Amazon Machine Image).
+This guide uses the Ubuntu 26.04 LTS Server AMI (Amazon Machine Image).
 
 This guide assumes you already have an AWS account and some basic knowledge of the platform. If you need help getting started, see [this link](https://docs.aws.amazon.com/SetUp/latest/UserGuide/setup-AWSsignup.html).
 
@@ -18,10 +18,10 @@ Create the EC2 Instance
 
 2. Under "Names and tags", enter a name for the instance.  
 
-3. Under "Application and OS Images", there are a number of "Quick Start" images, including Ubuntu. Select "Ubuntu" from this menu. In the dropdown below that, select "Ubuntu Server 22.04 LTS (HVM), SSD Volume Type". This is the current, tested version for dshield.
+3. Under "Application and OS Images", there are a number of "Quick Start" images, including Ubuntu. Select "Ubuntu" from this menu. In the dropdown below that, select "Ubuntu Server 26.04 LTS (HVM), SSD Volume Type". This is the current, tested version for dshield.
 ![OS Selection](https://github.com/MHeezy/images/blob/main/ubuntu_ami_selection.png)
 
-4. Under "Instance type", the default "t2.micro" will suffice for dshield, and is free-tier eligible. For certain use cases, feel free to adjust this setting, at the risk of incurring increased costs.
+4. Under "Instance type", the default "t3.micro" will suffice for dshield, and is free-tier eligible. For certain use cases, feel free to adjust this setting, at the risk of incurring increased costs.
 ![Select Instance Type](https://github.com/MHeezy/images/blob/main/aws_instance_type.png)
 
 5. Under "Key pair (login)", it is recommended to use a key pair for secure access to your EC2 instance.
