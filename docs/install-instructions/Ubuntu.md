@@ -13,6 +13,9 @@ Select the appropriate Ubuntu Server 24.04 package from your provider. You won't
 ```
 sudo adduser --disabled-password --gecos "DShield Honeypot" dshield
 sudo adduser dshield sudo
+echo 'dshield ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/dshield sudo
+chmod 440 /etc/sudoers.d/dshield
+sudo visudo -cf /etc/sudoers.d/dshield
 ```
 
 If you installed the "minimum server": Make sure to install the editor of your choice. (for example, "sudo apt install emacs-nox").
