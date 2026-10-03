@@ -31,7 +31,7 @@ readonly myversion=101
 #
 # - V98 (Johannes)
 #   - new web hpot (Mark Baggett)
-#   - installer no longer requires root / better priv separation 
+#   - installer no longer requires root / better priv separation
 #
 # - V97 (Johannes)
 #   - swap in Mark's web honeypot to replace isc-agent
@@ -253,7 +253,7 @@ fi
 
 DSHIELDINI=/srv/dshield/etc/dshield.ini
 # userid and uid are used by the dshield.ini configuration and script building it
-SYSUSERID=$(id -u) 
+SYSUSERID=$(id -u)
 GROUPID=$(id -g)
 SYSUSERNAME=$(id -ng)
 
@@ -261,10 +261,10 @@ SYSUSERNAME=$(id -ng)
 ETCDIR=$(dirname $DSHIELDINI)
 if [ ! -f "${DSHIELDINI}" ]; then
     if [ -f /etc/dshield.ini ]; then
-	sudorun "mkdir -p ${ETCDIR}"
-	sudorun "/etc/dshield.ini ${DSHIELDINI}"
-	sudorun "chown -R ${SYSUSERID}:${GROUPID} ${ETCDIR}"
-	sudorun "ln -s ${ETCDIR}/dshield.ini /etc/dshield.ini"
+        sudorun "mkdir -p ${ETCDIR}"
+        sudorun "/etc/dshield.ini ${DSHIELDINI}"
+        sudorun "chown -R ${SYSUSERID}:${GROUPID} ${ETCDIR}"
+        sudorun "ln -s ${ETCDIR}/dshield.ini /etc/dshield.ini"
     fi
 fi
 
@@ -376,7 +376,7 @@ quotespace() {
 
 # write log
 do_log() {
-    
+
 
     if [ ! -f "${LOGFILE}" ]; then
        touch "${LOGFILE}" || { echo "ERROR: permission issues. Did sudo work?" >&2; exit 1; }
@@ -698,7 +698,7 @@ if [ "$ID" != "raspbian" ] && [ "$ID" != "opensuse" ] && [ "$ID" != "raspbian" ]
   outlog "ATTENTION: the latest versions of this script have been tested on:"
   outlog " - Raspbian OS (up to trixie, release October 1st 2025)"
   outlog " - Ubuntu 24.04"
-  outlog " - Ubuntu 26.04"    
+  outlog " - Ubuntu 26.04"
   outlog "It may or may not work with your distro. Feel free to test and contribute."
   outlog "Press ENTER to continue, CTRL+C to abort."
   read
@@ -911,7 +911,7 @@ if [ -x /etc/init.d/cowrie ]; then
 fi
 # in case systemd is used
 outlog "Stopping cowrie via systemd"
-[ "$(sudo systemcl is-active cowrie.service)" = "active" ] && sudo systemctl stop cowrie
+[ "$(sudo systemctl is-active cowrie.service)" = "active" ] && sudo systemctl stop cowrie
 
 if [ "$FAST" == "0" ]; then
 
@@ -1012,9 +1012,9 @@ fi
 if ! grep -qE '^webhpot' /etc/passwd; then
     dlog "creating webhpot user"
     if [ "$ID" != "opensuse" ]; then
-	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+        sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'
     else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
+        sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
         sudorun 'passwd -d webhpot' #disable password
     fi
     outlog "Added user 'webhpot'"
@@ -1034,9 +1034,9 @@ fi
 
 if [ -f /etc/dshield.ini ]; then
     if [ ! -f ${DSHIELDINI} ]; then
-	sudorun "mv /etc/dshield.ini ${DSHIELDINI}"
+        sudorun "mv /etc/dshield.ini ${DSHIELDINI}"
     else
-	sudorun 'rm /etc/dshield.ini'
+        sudorun 'rm /etc/dshield.ini'
     fi
     sudorun "ln -s ${DSHIELDINI} /etc/dshield.ini"
 fi
@@ -1359,9 +1359,9 @@ fi
 
 if [ ${netstatexists} -eq 0 ]; then
     if ss 2>/dev/null >/dev/null; then
-	ssexists=1
+        ssexists=1
     else
-	ssexists=0
+        ssexists=0
     fi
 else
     ssexists=0
@@ -1463,7 +1463,7 @@ if [ "${database}" == "" ]; then
 fi
 if [ "${archivedatabase}" == "" ]; then
     archivedatabase='none'
-fi    
+fi
 
 if [ "${nofwlogging}" == "" ]; then
   # default: local net & connected IPs (as the user confirmed)
@@ -1656,7 +1656,7 @@ EOF
   cat >"${TMPDIR}"/iptables <<EOF
 
 #
-# 
+#
 #
 
 *filter
@@ -1766,9 +1766,9 @@ EOF
   done
 
   echo "# - telnet ports" >> "${TMPDIR}"/iptables
-  if [ "$telnet" != "no" ]; then   
+  if [ "$telnet" != "no" ]; then
       for PORT in ${TELNETREDIRECT}; do
-	  echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>"${TMPDIR}"/iptables
+          echo "-A PREROUTING -p tcp -m tcp --dport ${PORT} -j REDIRECT --to-ports ${TELNETHONEYPORT}" >>"${TMPDIR}"/iptables
       done
   fi
 
@@ -1795,7 +1795,7 @@ EOF
       sudorun "systemctl daemon-reload"
       sudorun "systemctl enable dshieldfw.service"
   fi
-  
+
 else # use_iptables = False -> use nftables
   dlog "using nftables, not iptables"
   cat > ${TMPDIR}/ruleset.nft <<EOF
@@ -1889,9 +1889,9 @@ EOF
   done
 
   echo "# - telnet ports" >>"${TMPDIR}"/ruleset.nft
-  if [ "$telnet" != "no" ]; then   
+  if [ "$telnet" != "no" ]; then
       for PORT in ${TELNETREDIRECT}; do
-	        echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${TELNETHONEYPORT}" >>"${TMPDIR}"/ruleset.nft
+                echo "add rule ip nat PREROUTING tcp dport ${PORT} counter redirect to :${TELNETHONEYPORT}" >>"${TMPDIR}"/ruleset.nft
       done
   fi
 
@@ -2034,10 +2034,10 @@ fi
 if ! grep -qE '^webhpot' /etc/passwd; then
     dlog "creating webhpot user"
     if [ "$ID" != "opensuse" ]; then
-	sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'	
+        sudorun 'adduser --gecos "Honeypot,A113,555-1212,555-1212" --disabled-password --quiet --home /srv/web --no-create-home webhpot'
     else
-	sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
-        sudorun 'passwd -d webhpot' # disable password	
+        sudorun 'useradd -c "Honeypot,A113,555-1212,555-1212" -M -U -d /srv/web webhpot'
+        sudorun 'passwd -d webhpot' # disable password
     fi
     outlog "Added user 'webhpot'"
 else
@@ -2340,11 +2340,12 @@ if [ "$ID" != "opensuse" ] ; then
     run 'sg cowrie -c "pip3 install --require-virtualenv --upgrade requests"'
     # shellcheck disable=SC2181
     if [ ${?} -ne 0 ]; then
-	outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
-	exit 9
+        outlog "Error installing dependencies from requirements-output.txt. See ${LOGFILE} for details."
+        exit 9
     fi
 fi
 cd "${OLDDIR}" || exit
+fi
 
 outlog "Doing further cowrie configuration."
 
@@ -2421,7 +2422,7 @@ if [ "$ID" = opensuse ] ; then
   # add some selinux policy rules to let cowrie.service succeed
   #sudo_copy "$progdir"/../etc/cowrie.pp /etc/ 644
   #sudo_copy "$progdir"/../etc/cowrie1.pp /etc/ 644
-  #sudorun semodule -i /etc/cowrie.pp  
+  #sudorun semodule -i /etc/cowrie.pp
   #sudorun semodule -i /etc/cowrie1.pp
   sudorun semanage fcontext -a -t bin_t /srv/cowrie/bin/cowrie
   sudorun restorecon -vR /srv/cowrie/bin/cowrie
@@ -2613,12 +2614,12 @@ if [ ! -f $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ]; then
     GENCERT=1
 else
     if ! sudo grep -q 'BEGIN PRIVATE KEY' /srv/web/combined_stunnel.pem; then
-	GENCERT=1
+        GENCERT=1
     fi
     if ! sudo grep -q 'BEGIN CERTIFICATE' /srv/web/combined_stunnel.pem; then
        GENCERT=1
     fi
-	
+
 
 fi
 
@@ -2632,7 +2633,7 @@ sudo find ${SCRIPTDIR}/../etc/CA -uid 0 -exec chown ${SYSUSERID} {} \;
 
 if [ ${GENCERT} -eq 1 ]; then
   dlog "generating new CERTs using ./makecert.sh"
-  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE 
+  "${SCRIPTDIR}"/makecert.sh $INTERACTIVE
   dlog "moving certs to /srv/web honeypot"
   run "cat $SCRIPTDIR/../etc/CA/certs/honeypot.crt $SCRIPTDIR/../etc/CA/keys/honeypot.key > $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem"
   sudorun "cp $SCRIPTDIR/../etc/CA/keys/combined_stunnel.pem ${WEBHPOTDIR}/combined_stunnel.pem"
