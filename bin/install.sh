@@ -545,7 +545,8 @@ if [ "${SYSUSERID}" = "0" ]; then
 else
   do_log "Check OK: User-ID is ${SYSUSERID}."
 fi
-
+# this was added to allow the user to enter their sudo password if needed.
+sudo echo starting
 if sudo -n true; then
     do_log "check OK: sudo"
 else
