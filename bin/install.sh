@@ -12,9 +12,13 @@
 
 # version 2025/08/05
 
-readonly myversion=101
+readonly myversion=102
 
 # Major Changes (for details, see Github):
+# - V102 (Johannes)
+#   - making install.sh more robust for sudo with password
+#   - fixing common cowrie config issues in status.sh
+#
 # - V101 (Johannes)
 #   - adding user agents to all requests
 #
