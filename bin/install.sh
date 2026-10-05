@@ -2378,11 +2378,13 @@ ssh_version=$(ssh -V 2>&1 | cut -f1 -d',')
 export ssh_version
 export ttylog='false'
 export telnet
-cowriebatchsize=20
-cowriedebug=0
+
 if [ "$BETA" == 1 ]; then
     export cowriebatchsize=2
-    export cowriedebug=1
+    export cowriedebug=True
+else
+    export cowriebatchsize=20
+    export cowriedebug=False    
 fi
 dsudorun "chmod 1777 ${COWRIEDIR}/etc"
 dsudorun "cat ..${COWRIEDIR}/cowrie.cfg | envsubst > ${COWRIEDIR}/etc/cowrie.cfg"
