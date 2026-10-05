@@ -130,7 +130,7 @@ fi
 if echo $status | grep -q '<result>ok</result>'; then
   echo "${GREEN}API Key configuration ok${NC}"
   if [ "$version" != "" ]; then
-    currentversion=$(echo $status | grep -E -o '<version>([0-9\.]+)</version>' | grep -E -o '[0-9\.]+')
+    currentversion=$(echo $status | egrep -o '<version>([0-9\.]+)</version>' | egrep -o '[0-9\.]+')
     if [ "$currentversion" != "$version" ]; then
       echo "
 ${RED}Software Version Mismatch
@@ -221,6 +221,25 @@ checkfile "/srv/dshield/etc/dshield.ini"
 TESTS['ini']=$?
 checkfile "/srv/cowrie/etc/cowrie.cfg"
 TESTS['cowriecfg']=$?
+
+# checking syntax issues in cowrie.cfg
+
+if [ -f /srv/cowrie/etc/cowrie.cfg ]; then
+    if grep batch_size /srv/cowrie/etc/cowrie.cfg | grep -q '[0-9]'; then
+	echo "   ${GREEN}OK${NC}: batch size set"
+    else
+        echo "   ${RED}ERROR${NC}: fixing batch size in cowrie.cfg"
+        sudo sed -E 's/^batch_size\s+=\s*$/batch_size = 10/' /srv/cowrie/etc/cowrie.cfg -i    
+    fi
+    if grep '^debug' /srv/cowrie/etc/cowrie.cfg | grep -v '^#' | egrep -ivq '(true)|(false)'; then
+        echo "   ${RED}ERROR${NC}: fixing debug in cowrie.cfg"
+        sudo sed -E 's/^debug\s+=\s*$/debug = False/' /srv/cowrie/etc/cowrie.cfg -i
+
+    else
+	echo "   ${GREEN}OK${NC}: debug set"	
+    fi    
+fi
+
 checkfile "/srv/cowrie/cowrie-env/bin/cowrie"
 TESTS['cowriecfg']=$?
 checkfile "/etc/rsyslog.d/10-dshield.conf"
